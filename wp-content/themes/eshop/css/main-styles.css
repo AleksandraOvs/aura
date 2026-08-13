@@ -287,8 +287,8 @@ svg {
 .page-title {
     font-size: 40px;
     text-align: center;
-    margin-bottom: 5vh;
-    margin-top: 3vh;
+    margin-bottom: 2vh;
+    margin-top: 7vh;
 }
 
 section.page-title-block {
@@ -1331,6 +1331,7 @@ section.partners h2 {
     gap: 1em;
     padding-top: 7vh;
     padding-bottom: 7vh;
+    padding-inline: 3vw;
 }
 
 .contacts__inner__left__col {

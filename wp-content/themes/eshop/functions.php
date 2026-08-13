@@ -38,6 +38,7 @@ function e_shop_enqueue_styles()
     wp_enqueue_style('mini-cart-styles', get_template_directory_uri() . '/css/mini-cart.css');
     wp_enqueue_style('projects-styles', get_template_directory_uri() . '/css/projects.css');
     wp_enqueue_style('cooperation-styles', get_template_directory_uri() . '/css/cooperation.css');
+    wp_enqueue_style('template-styles', get_template_directory_uri() . '/css/templates.css');
     // wp_enqueue_style('woo-styles', get_template_directory_uri() . '/assets/css/woo-styles.css');
 
     //wp_enqueue_style('e-shop-styles', get_stylesheet_directory_uri());
@@ -114,7 +115,7 @@ add_action('widgets_init', 'theme_widgets_init');
 add_action('enqueue_block_editor_assets', function () {
     wp_enqueue_style(
         'e-shop-editor-style',
-        get_stylesheet_directory_uri() . '/assets/css/editor.css',
+        get_stylesheet_directory_uri() . '/css/editor.css',
         ['wp-edit-blocks'], // <-- зависимость от базовых стилей Gutenberg
         '1.0'
     );
@@ -240,3 +241,35 @@ add_filter('woocommerce_get_order_address', function ($address, $type, $order) {
     }
     return $address;
 }, 10, 3);
+
+/**
+ * Получает дочерние страницы текущей страницы
+ * или дочерние страницы её родителя.
+ *
+ * @return WP_Post[]
+ */
+function get_page_siblings()
+{
+    $current_id = get_queried_object_id();
+
+    if (!$current_id) {
+        return [];
+    }
+
+    // Если текущая страница дочерняя —
+    // берем ID родительской страницы.
+    $parent_id = wp_get_post_parent_id($current_id);
+
+    // Если родителя нет — текущая страница является родительской.
+    if (!$parent_id) {
+        $parent_id = $current_id;
+    }
+
+    return get_children([
+        'post_parent' => $parent_id,
+        'post_type'   => 'page',
+        'post_status' => 'publish',
+        'orderby'     => 'menu_order',
+        'order'       => 'ASC',
+    ]);
+}

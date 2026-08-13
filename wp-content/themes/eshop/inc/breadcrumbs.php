@@ -238,7 +238,7 @@ function site_breadcrumbs()
 
             echo '<span>'
                 . esc_html(get_the_title())
-                . '</span';
+                . '</span>';
         }
 
 
@@ -248,7 +248,7 @@ function site_breadcrumbs()
 
             echo '<span>'
                 . esc_html(get_the_title())
-                . '</span';
+                . '</span>';
         }
 
 
