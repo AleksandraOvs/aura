@@ -37,6 +37,7 @@ function e_shop_enqueue_styles()
     // wp_enqueue_style('mob-menu-styles', get_template_directory_uri() . '/assets/css/mobile-menu.css');
     wp_enqueue_style('mini-cart-styles', get_template_directory_uri() . '/css/mini-cart.css');
     wp_enqueue_style('projects-styles', get_template_directory_uri() . '/css/projects.css');
+    wp_enqueue_style('cooperation-styles', get_template_directory_uri() . '/css/cooperation.css');
     // wp_enqueue_style('woo-styles', get_template_directory_uri() . '/assets/css/woo-styles.css');
 
     //wp_enqueue_style('e-shop-styles', get_stylesheet_directory_uri());

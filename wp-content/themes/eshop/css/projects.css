@@ -113,7 +113,7 @@ a.project-tag.active {
 
 .projects-cta {
     padding-top: 5vh;
-    padding-bottom: 3vh;
+    padding-bottom: 0;
     display: flex;
     gap: 2em;
     align-items: center;
@@ -124,6 +124,7 @@ a.project-tag.active {
 .projects-cta h3 {
     font-size: clamp(20px, 4vw, 40px);
     font-weight: 700;
+    margin: 0;
 }
 
 

@@ -115,6 +115,8 @@
         <div class="content">
             <?php the_content() ?>
         </div>
+
+        <?php get_template_part('sections/projects/projects-cta') ?>
     </div>
 </section>
 <?php get_footer() ?>

@@ -35,72 +35,44 @@
             <a href="/" class="project-tag">Частный дом</a>
         </div>
 
+        <?php
+        $animation_delay = 0.1;
+        ?>
         <div class="projects-list">
 
             <?php if (have_posts()): ?>
 
-                <?php
-                $animation_delay = 0.1;
-                ?>
 
                 <?php while (have_posts()): the_post(); ?>
 
-                    <div
-                        class="project-item"
-                        data-scroll-animation="fade"
-                        style="--animation-delay: <?= esc_attr($animation_delay); ?>s">
-                        <a
-                            class="project-item__link"
-                            href="<?= esc_url(get_permalink()); ?>">
-
-                            <?php if (has_post_thumbnail()) { ?>
-
-                                <?php the_post_thumbnail(
-                                    'large',
-                                    [
-                                        'class' => 'project-item__image',
-                                        'alt'   => get_the_title(),
-                                    ]
-                                ); ?>
-
-                            <?php } else {
-                                echo '<img class="project-item__image wp-post-image" src="' . get_stylesheet_directory_uri() . '/imgs/svg/placeholder.svg" alt="' . esc_html(get_the_title()) . '" />';
-                            } ?>
-
-                            <div class="project-item__content">
-
-                                <h3 class="project-item__title">
-                                    <?= esc_html(get_the_title()); ?>
-                                </h3>
-
-                                <?php if (has_excerpt()): ?>
-
-                                    <div class="project-item__desc">
-                                        <?= esc_html(get_the_excerpt()); ?>
-                                    </div>
-
-                                <?php endif; ?>
-
-                            </div>
-
-                        </a>
-                    </div>
-
                     <?php
+                    get_template_part(
+                        'sections/projects/project-item',
+                        null,
+                        [
+                            'animation_delay' => $animation_delay,
+                        ]
+                    );
+
                     $animation_delay += 0.1;
 
-                    // После 1 секунды начинаем задержку заново
                     if ($animation_delay > 1) {
                         $animation_delay = 0.1;
                     }
                     ?>
+
+
 
                 <?php endwhile; ?>
 
             <?php endif; ?>
 
         </div>
-    </div>
-</section>
 
+        <?php get_template_part('sections/projects/projects-cta') ?>
+
+    </div>
+
+</section>
+<?php get_template_part('sections/contacts') ?>
 <?php get_footer() ?>

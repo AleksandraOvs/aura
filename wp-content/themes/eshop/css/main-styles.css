@@ -634,12 +634,12 @@ header {
 ========================================= */
 
 .hero {
-    min-height: max-content;
+    height: max-content;
     display: flex;
-    height: 96vh;
+    min-height: 96vh;
     overflow: hidden;
-    padding-top: calc(5vh + 106px);
-    padding-bottom: 5vh;
+    padding-top: calc(5vh + 120px);
+    padding-bottom: 8vh;
     position: relative;
 }
 
