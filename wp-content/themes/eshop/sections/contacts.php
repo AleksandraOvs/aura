@@ -140,7 +140,7 @@
                 </div>
 
                 <div class="contacts__inner__left__col _map">
-                    <img src="imgs/map.png" alt="" />
+                    <img src="<?php echo get_stylesheet_directory_uri() . 'imgs/map.png' ?>" alt="" />
                 </div>
             </div>
 

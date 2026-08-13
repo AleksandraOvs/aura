@@ -1,5 +1,6 @@
 <section class="partners-form">
-    <img src="<?php get_stylesheet_directory_uri() ?>/imgs/lights-bg.webp" alt="" />
+
+    <img src=" <?php echo get_stylesheet_directory_uri() . '/imgs/lights-bg.webp' ?>" alt="" />
     <div class="fixed-container">
         <form class="wpcf7-form">
             <h2 class="small-heading">Стать партнером</h2>
