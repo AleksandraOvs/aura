@@ -16,7 +16,7 @@
                 foreach ($project_tags as $tag):
             ?>
 
-                    <a href="<?= esc_url(get_tag_link($tag->term_id)); ?>" class="project-category">
+                    <a href="<?= esc_url(get_tag_link($tag->term_id)); ?>" class="project-tag">
                         <?= esc_html($tag->name); ?>
                     </a>
 
