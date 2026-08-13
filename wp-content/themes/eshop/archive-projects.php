@@ -53,7 +53,7 @@
                             class="project-item__link"
                             href="<?= esc_url(get_permalink()); ?>">
 
-                            <?php if (has_post_thumbnail()): ?>
+                            <?php if (has_post_thumbnail()) { ?>
 
                                 <?php the_post_thumbnail(
                                     'large',
@@ -63,7 +63,9 @@
                                     ]
                                 ); ?>
 
-                            <?php endif; ?>
+                            <?php } else {
+                                echo '<img class="project-item__image wp-post-image" src="' . get_stylesheet_directory_uri() . '/imgs/svg/placeholder.svg" alt="' . esc_html(get_the_title()) . '" />';
+                            } ?>
 
                             <div class="project-item__content">
 
