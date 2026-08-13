@@ -1,10 +1,10 @@
-.projects-categories {
+.projects-tags {
     display: flex;
     gap: .5em;
     flex-wrap: wrap;
 }
 
-a.project-category {
+a.project-tag {
     padding: 7px 15px;
     max-width: max-content;
     display: flex;
@@ -15,12 +15,12 @@ a.project-category {
     transition: all .5s linear;
 }
 
-a.project-category:hover {
+a.project-tag:hover {
     background: var(--accent);
     color: var(--black);
 }
 
-a.project-category.active {
+a.project-tag.active {
     background: var(--accent);
     color: var(--black);
 }

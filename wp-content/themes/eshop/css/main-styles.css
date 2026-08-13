@@ -273,11 +273,11 @@ svg {
 .site-breadcrumbs * {
     font-size: 14px;
     text-transform: uppercase;
-    color: var(--theme-color-accent);
+    color: var(--theme-color-primary);
 }
 
 .site-breadcrumbs span {
-    color: var(--theme-color-primary);
+    color: var(--theme-color-accent);
 }
 
 .breadcrumbs {
