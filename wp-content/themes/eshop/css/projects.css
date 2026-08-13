@@ -16,13 +16,13 @@ a.project-tag {
 }
 
 a.project-tag:hover {
-    background: var(--accent);
-    color: var(--black);
+    background: var(--theme-color-accent);
+    color: var(--theme-color-primary);
 }
 
 a.project-tag.active {
-    background: var(--accent);
-    color: var(--black);
+    background: var(--theme-color-accent);
+    color: var(--theme-color-primary);
 }
 
 .projects-list {
@@ -88,11 +88,11 @@ a.project-tag.active {
 
 .project-item:hover:after {
     width: 100%;
-    background: var(--accent);
+    background: var(--theme-color-accent);
 }
 
 .project-item__link:hover {
-    color: var(--black);
+    color: var(--theme-color-primary);
 }
 
 .project-item__link h3 {
@@ -104,7 +104,7 @@ a.project-tag.active {
 }
 
 .project-item__link:hover h3 {
-    color: var(--grey);
+    color: var(--theme-color-grey);
 }
 
 .project-item__link:hover img {
@@ -219,7 +219,7 @@ a.project-tag.active {
 }
 
 .swiper-pagination-bullet-active {
-    background: var(--black);
+    background: var(--theme-color-primary);
 }
 
 .related-projects {

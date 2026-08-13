@@ -37,8 +37,8 @@ function register_projects_cpt()
         ],
 
         'has_archive'         => true,
-        'rewrite'             => [
-            'slug' => 'projects',
+        'rewrite' => [
+            'slug'       => 'projects',
             'with_front' => false,
         ],
 
