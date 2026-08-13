@@ -1,0 +1,120 @@
+<?php get_header() ?>
+<section class="page-title-block">
+    <div class="fixed-container">
+        <?php site_breadcrumbs() ?>
+
+
+        <h1 class="page-title"><?php the_title() ?></h1>
+        <div class="page-title__description">
+            <p></p>
+        </div>
+        <div class="project-tags">
+            <?php
+            $project_tags = get_the_tags();
+
+            if ($project_tags && !is_wp_error($project_tags)):
+                foreach ($project_tags as $tag):
+            ?>
+
+                    <a href="<?= esc_url(get_tag_link($tag->term_id)); ?>" class="project-category">
+                        <?= esc_html($tag->name); ?>
+                    </a>
+
+            <?php
+                endforeach;
+            endif;
+            ?>
+        </div>
+
+    </div>
+</section>
+
+<section class="project-content">
+    <div class="container">
+        <!-- PROJECT SLIDER-->
+        <?php
+        $project_slider = get_field('project_slider');
+
+        if ($project_slider):
+        ?>
+
+            <div class="project-slider swiper">
+                <div class="swiper-wrapper">
+
+                    <?php foreach ($project_slider as $slide): ?>
+
+                        <?php
+                        $image = $slide['project_slider_img'];
+
+                        if (!$image) {
+                            continue;
+                        }
+
+                        $image_url = $image['url'];
+                        $image_alt = $image['alt'] ?: get_the_title();
+
+                        // Дополнительный класс для широкого слайда
+                        $slide_class = !empty($slide['enabled_wide'])
+                            ? ' project-slider__slide--wide'
+                            : '';
+                        ?>
+
+                        <div class="swiper-slide project-slider__slide<?= esc_attr($slide_class); ?>">
+
+                            <a
+                                href="<?= esc_url($image_url); ?>"
+                                data-fancybox="project-photo">
+                                <img
+                                    src="<?= esc_url($image_url); ?>"
+                                    alt="<?= esc_attr($image_alt); ?>" />
+                            </a>
+
+                        </div>
+
+                    <?php endforeach; ?>
+
+                </div>
+
+                <div class="button-slider__prev">
+                    <svg
+                        width="21"
+                        height="35"
+                        viewBox="0 0 21 35"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            fill-rule="evenodd"
+                            clip-rule="evenodd"
+                            d="M17.6194 0.107826L20.2597 2.70776C20.4086 2.85592 20.4094 3.09479 20.2628 3.24219L6.22408 17.3886L20.2435 31.6211C20.3871 31.7674 20.3879 32.0029 20.2435 32.1495L17.6424 34.7926C17.495 34.9392 17.2561 34.9384 17.1095 34.791L0.109559 17.7087C-0.0363307 17.5621 -0.0367086 17.3243 0.109559 17.1773L17.0861 0.112739C17.2338 -0.0357963 17.4716 -0.037686 17.6194 0.107826Z"
+                            fill="#1D1D1F" />
+                    </svg>
+                </div>
+
+                <div class="button-slider__next">
+                    <svg
+                        width="21"
+                        height="35"
+                        viewBox="0 0 21 35"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            fill-rule="evenodd"
+                            clip-rule="evenodd"
+                            d="M2.75273 0.107826L0.112351 2.70776C-0.0365624 2.85592 -0.0373183 3.09479 0.109327 3.24219L14.148 17.3886L0.128603 31.6211C-0.0150191 31.7674 -0.015775 32.0029 0.128603 32.1495L2.72967 34.7926C2.87708 34.9392 3.11594 34.9384 3.26259 34.791L20.2625 17.7087C20.4084 17.5621 20.4088 17.3243 20.2625 17.1773L3.28602 0.112739C3.13824 -0.0357963 3.13824 -0.0357963 3.28602 0.112739Z"
+                            fill="#1D1D1F" />
+                    </svg>
+                </div>
+
+            </div>
+
+        <?php endif; ?>
+        <!-- end of PROJECT SLIDER-->
+
+    </div>
+    <div class="fixed-container">
+        <div class="content">
+            <?php the_content() ?>
+        </div>
+    </div>
+</section>
+<?php get_footer() ?>

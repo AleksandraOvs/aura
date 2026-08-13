@@ -1,0 +1,87 @@
+/* Появление снизу */
+[data-scroll-animation="fade-up"] {
+    opacity: 0;
+    transform: translateY(40px);
+    transition:
+        opacity 1s ease,
+        transform 1s ease;
+}
+
+[data-scroll-animation="fade-up"].is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+
+/* Появление сверху */
+[data-scroll-animation="fade-down"] {
+    opacity: 0;
+    transform: translateY(-40px);
+    transition:
+        opacity 0.7s ease,
+        transform 0.7s ease;
+}
+
+[data-scroll-animation="fade-down"].is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+
+/* Появление слева */
+[data-scroll-animation="fade-left"] {
+    opacity: 0;
+    transform: translateX(-40px);
+    transition:
+        opacity 0.7s ease,
+        transform 0.7s ease;
+}
+
+[data-scroll-animation="fade-left"].is-visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+
+/* Появление справа */
+[data-scroll-animation="fade-right"] {
+    opacity: 0;
+    transform: translateX(40px);
+    transition:
+        opacity 0.7s ease,
+        transform 0.7s ease;
+}
+
+[data-scroll-animation="fade-right"].is-visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+
+/* Простое появление */
+[data-scroll-animation="fade"] {
+    opacity: 0;
+    transition: opacity 2s ease;
+}
+
+[data-scroll-animation="fade"].is-visible {
+    opacity: 1;
+}
+
+/* Увеличение */
+[data-scroll-animation="scale"] {
+    opacity: 0;
+    transform: scale(0.9);
+    transition:
+        opacity 0.7s ease,
+        transform 0.7s ease;
+}
+
+[data-scroll-animation="scale"].is-visible {
+    opacity: 1;
+    transform: scale(1);
+}
+
+[data-scroll-animation] {
+    transition-delay: var(--animation-delay, 0s);
+}
