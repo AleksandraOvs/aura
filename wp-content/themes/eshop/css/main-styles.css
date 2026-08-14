@@ -2057,4 +2057,13 @@ footer.footer * .menu {
     .brand-card {
         height: 110px;
     }
+
+    .contacts__inner__right {
+        padding-bottom: 5vh;
+    }
+
+    .contacts__inner {
+        display: flex;
+        gap: 2em;
+    }
 }
