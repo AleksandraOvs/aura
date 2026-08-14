@@ -34,9 +34,8 @@ get_header() ?>
 </section>
 
 <section class="page-content">
-    <div class="fixed-container">
-        <?php the_content() ?>
-    </div>
+
+    <?php the_content() ?>
 
 </section>
 

@@ -1895,6 +1895,42 @@ footer.footer * .menu {
         width: 100%;
     }
 
+    .products-categories__list._grid-template {
+        display: grid;
+        gap: .5em;
+        grid-template-columns: repeat(4, 1fr);
+        grid-template-areas:
+            /* "one  two   two   three" */
+            "one  one one one"
+            "two two three three"
+            "four four four four"
+            "five five six six"
+            "seven seven seven seven "
+            "eight eight nine nine";
+    }
+
+    .products-categories__list__link::after {
+        content: '';
+        display: block;
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        background: linear-gradient(45deg, rgba(0, 0, 0, .7) 0%, rgba(0, 0, 0, 0) 100%);
+        z-index: 1;
+    }
+
+    .products-categories__list {
+        gap: .5em;
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .reviews-slider {
+        margin-top: 5vh;
+        overflow: visible;
+    }
+
     .contacts__inner__left {
         padding-top: 5vh;
     }
@@ -1938,6 +1974,10 @@ footer.footer * .menu {
 
 @media (max-width: 480px) {
 
+    .fixed-container {
+        padding-inline: .5em;
+    }
+
     .header__bottom-logo {
         order: 4;
     }
@@ -1973,7 +2013,18 @@ footer.footer * .menu {
         border: none;
     }
 
-    ._grid-template .products-categories__list__item:nth-child(1) {
+    .products-categories__list__link {
+        padding: .5em;
+    }
+
+    .products-categories__list__item__title {
+        font-size: 16px;
+        text-transform: none;
+        font-weight: 600;
+        width: 100%;
+    }
+
+    /* ._grid-template .products-categories__list__item:nth-child(1) {
         grid-area: unset;
     }
 
@@ -2007,7 +2058,7 @@ footer.footer * .menu {
 
     ._grid-template .products-categories__list__item:nth-child(9) {
         grid-area: unset;
-    }
+    } */
 
     .products-categories__list__item,
     .products-categories__list._grid-template {
@@ -2048,6 +2099,22 @@ footer.footer * .menu {
 
     .about-us__list {
         gap: 1em;
+    }
+
+    .offer-banner {
+        height: max-content;
+    }
+
+    .offer-banner__content {
+        padding: 1em;
+    }
+
+    .offer-banner__content h3 {
+        margin-bottom: 2vh;
+    }
+
+    .offer-banner__content__inner {
+        flex-direction: column;
     }
 
     .brand-card img {
