@@ -1,476 +1,111 @@
 <?php
-remove_action('woocommerce_after_shop_loop_item', 'woocommerce_template_loop_add_to_cart', 10);
 
-add_action('woocommerce_after_shop_loop_item', 'my_custom_more_link', 10);
+add_action('init', function () {
 
-function my_custom_more_link()
-{
-    global $product;
-
-    if (!$product) return;
-?>
-    <a href="<?php echo esc_url(get_permalink($product->get_id())); ?>" class="button product-more">
-        Подробнее
-    </a>
-<?php
-}
-
-/* ---------- Cart count fragment ---------- */
-add_filter('woocommerce_add_to_cart_fragments', function ($fragments) {
-    ob_start();
-?>
-    <span class="cart-count"><?= WC()->cart->get_cart_contents_count(); ?></span>
-<?php
-    $fragments['span.cart-count'] = ob_get_clean();
-    return $fragments;
-});
-
-//формат цены для вариативных товаров от...
-add_filter('woocommerce_get_price_html', 'custom_variable_price_from', 10, 2);
-
-function custom_variable_price_from($price, $product)
-{
-
-    if ($product->is_type('variable')) {
-
-        // Минимальная цена вариации
-        $min_price = $product->get_variation_price('min', true);
-
-        if ($min_price) {
-            $price = 'От ' . wc_price($min_price);
-        }
-    }
-
-    return $price;
-}
-
-add_filter('gettext', function ($translated, $text, $domain) {
-
-    // WooCommerce Blocks
-    if ($text === 'Estimated total' || $text === 'estimated total') {
-        return 'Итого';
-    }
-
-    return $translated;
-}, 20, 3);
-
-
-add_filter('gettext', 'change_coupon_text', 20, 3);
-function change_coupon_text($translated, $text, $domain)
-{
-
-    if ($domain === 'woocommerce') {
-
-        if ($text === 'Have a coupon?') {
-            return 'Есть промокод?';
-        }
-
-        if ($text === 'Have a coupon? Click here to enter your code') {
-            return 'Введите промокод';
-        }
-
-        if ($text === 'Add a coupon') {
-            return 'Добавить промокод';
-        }
-
-        if (stripos($text, 'coupon') !== false) {
-            return 'Добавить промокод';
-        }
-    }
-
-
-    return $translated;
-}
-
-
-//**
-// * 2. КАСТОМИЗАЦИЯ ПОЛЕЙ (billing)
-// * Управляем тем, какие поля показываются на checkout и как они выглядят
-
-add_filter('woocommerce_cart_needs_shipping_address', '__return_false');
-
-add_filter('woocommerce_checkout_fields', function ($fields) {
-
-    /** ===================================================
-     * BILLING FIELDS
-     * =================================================== */
-
-    // ❌ убираем стандартные WooCommerce поля
-    unset(
-        //$fields['billing']['billing_first_name'],
-        //$fields['billing']['billing_last_name'],
-        $fields['billing']['billing_address_2'],
-        $fields['billing']['billing_state'],
-        $fields['billing']['billing_country']
-    );
-
-    /** 📌 ФИО */
-    // $fields['billing']['billing_full_name'] = [
-    //     'type'        => 'text',
-    //     'priority'    => 10,
-    //     'class'       => ['form-row-wide'],
-    //     'placeholder' => 'Ф.И.О*',
-    //     'required'    => true,
-    // ];
-
-    /** 📞 Телефон */
-    $fields['billing']['billing_phone']['type'] = 'tel';
-    $fields['billing']['billing_phone']['priority'] = 20;
-    $fields['billing']['billing_phone']['placeholder'] = '+7 (___) ___-__-__*';
-    $fields['billing']['billing_phone']['required'] = true;
-    $fields['billing']['billing_phone']['custom_attributes'] = [
-        'inputmode' => 'tel',
-        'autocomplete' => 'tel',
-        'pattern' => '\+7\s\(\d{3}\)\s\d{3}-\d{2}-\d{2}'
-    ];
-
-    /** 📧 Email */
-    $fields['billing']['billing_email']['priority']    = 30;
-    $fields['billing']['billing_email']['placeholder'] = 'E-mail*';
-    $fields['billing']['billing_email']['required']    = true;
-
-    /** 🌍 Страна (если нужна — оставляем select WooCommerce) */
-    //$fields['billing']['billing_country']['priority'] = 40;
-
-    /** 📮 Индекс */
-    $fields['billing']['billing_postcode']['priority']    = 80;
-    $fields['billing']['billing_postcode']['placeholder'] = 'Индекс';
-    $fields['billing']['billing_postcode']['required']    = false;
-
-    /** 🏙 Город */
-    $fields['billing']['billing_city']['priority']    = 50;
-    $fields['billing']['billing_city']['placeholder'] = 'Город*';
-    $fields['billing']['billing_city']['required']    = true;
-
-    /** 🏠 Улица */
-    $fields['billing']['billing_address_1']['priority']    = 60;
-    $fields['billing']['billing_address_1']['placeholder'] = 'Улица*';
-    $fields['billing']['billing_address_1']['required']    = true;
-
-    /** 🏢 Дом */
-    $fields['billing']['billing_address_2'] = [
-        'type'        => 'text',
-        'priority'    => 70,
-        'class'       => ['form-row-first'],
-        'placeholder' => 'Дом*',
-        'required'    => true,
-    ];
-
-    /** ===================================================
-     * UI CLEANUP
-     * =================================================== */
-    foreach ($fields as $section_key => $section) {
-        foreach ($section as $field_key => $field) {
-
-            if (!empty($field['label']) && empty($field['placeholder'])) {
-                $fields[$section_key][$field_key]['placeholder'] = $field['label'];
-            }
-
-            $fields[$section_key][$field_key]['label'] = '';
-            $fields[$section_key][$field_key]['label_class'] = ['screen-reader-text'];
-        }
-    }
-
-    return $fields;
-});
-
-add_action('woocommerce_checkout_create_order', function ($order, $data) {
-
-    if (!empty($_POST['billing_full_name'])) {
-        $order->update_meta_data(
-            '_billing_full_name',
-            sanitize_text_field($_POST['billing_full_name'])
-        );
-    }
-}, 10, 2);
-
-
-/**
- * ❗ ВАЖНО: ОТКЛЮЧАЕМ SHIPPING ПРАВИЛЬНО
- */
-add_filter('woocommerce_cart_needs_shipping_address', '__return_false');
-
-
-/**
- * скрываем UI "доставка на другой адрес"
- */
-add_action('wp_head', function () {
-    if (is_checkout()) {
-        echo '<style>
-            #ship-to-different-address {
-                display: none !important;
-            }
-        </style>';
-    }
-});
-
-/**
- * 5. Убираем чекбокс "доставка по другому адресу"
- * (скрывает возможность ввода отдельного shipping-адреса)
- */
-//add_filter('woocommerce_checkout_show_shipping', '__return_true');
-
-// 🎨 дополнительно скрываем блок через CSS на странице checkout
-add_action('wp_head', function () {
-    if (is_checkout()) {
-        echo '<style>
-            #ship-to-different-address {
-                display: none !important;
-            }
-        </style>';
-    }
-});
-
-// ❌ полностью удаляем shipping-поля из формы оформления заказа
-add_filter('woocommerce_checkout_fields', function ($fields) {
-
-    unset($fields['shipping']); // убираем весь блок доставки
-
-    return $fields;
-});
-
-
-
-
-/**
- * 6. Меняем текст "Billing details" на "Данные заказа"
- * (локализация/переименование заголовка блока checkout)
- */
-add_filter('gettext', function ($translated, $text, $domain) {
-
-    // заменяем только текст WooCommerce блока billing
-    if ($domain === 'woocommerce' && ($text === 'Billing details' || $translated === 'Платёжные реквизиты')) {
-        return 'Данные заказа';
-    }
-
-    return $translated;
-}, 20, 3);
-
-/**
- * отключаем автосогласие с политикой конфиденциальности
- */
-add_filter('woocommerce_privacy_policy_checkbox_default_checked', '__return_false');
-
-/**
- * UI-логика кнопки оформления заказа:
- * блокируем кнопку "Оформить заказ", пока не принят чекбокс условий
- */
-add_action('wp_footer', function () {
-    if (!is_checkout()) return;
-?>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const checkbox = document.querySelector('#terms'); // чекбокс согласия с условиями
-            const placeOrderBtn = document.querySelector('#place_order'); // кнопка оформления заказа
-
-            if (!checkbox || !placeOrderBtn) return;
-
-            // включает/выключает состояние кнопки
-            function togglePlaceOrderClass() {
-                if (checkbox.checked) {
-                    placeOrderBtn.classList.remove('disabled');
-                } else {
-                    placeOrderBtn.classList.add('disabled');
-                }
-            }
-
-            // состояние при загрузке страницы
-            togglePlaceOrderClass();
-
-            // реакция на изменение чекбокса
-            checkbox.addEventListener('change', togglePlaceOrderClass);
-        });
-    </script>
-    <style>
-        /* визуальное состояние неактивной кнопки */
-        #place_order.disabled {
-            opacity: 0.5;
-            pointer-events: none;
-            cursor: not-allowed;
-        }
-    </style>
-<?php
-});
-
-
-/**
- * 7. Убираем блок "Спасибо за заказ" (order details)
- * после успешного оформления заказа
- */
-add_action('wp', function () {
-
-    // выполняем только на странице завершения заказа
-    if (!is_wc_endpoint_url('order-received')) {
-        return;
-    }
-
-    // убираем таблицу с деталями заказа
     remove_action(
-        'woocommerce_thankyou',
-        'woocommerce_order_details_table',
+        'woocommerce_after_shop_loop_item',
+        'woocommerce_template_loop_add_to_cart',
         10
     );
+});
 
-    // убираем блок с данными покупателя
-    remove_action(
-        'woocommerce_thankyou',
-        'woocommerce_order_details_customer_details',
-        20
+add_action('wp_enqueue_scripts', function () {
+
+    if (is_shop() || is_product_category() || is_product_tag() || is_product()) {
+
+        wp_enqueue_script(
+            'product-quantity',
+            get_stylesheet_directory_uri() . '/js/product-quantity.js',
+            ['jquery'],
+            '1.0.0',
+            true
+        );
+    }
+});
+
+//КНОПКА В КОРЗИНУ - ИКОНКОЙ
+
+add_filter('woocommerce_loop_add_to_cart_link', function ($html, $product) {
+
+    $svg = '
+        <svg width="15" height="16" viewBox="0 0 15 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M5.37647 12.9107C5.37647 12.9107 5.43301 12.9673 5.54611 13.0804C5.6592 13.1935 5.71575 13.4048 5.71575 13.7143C5.71575 14.0238 5.60266 14.2917 5.37647 14.5179C5.15027 14.744 4.88242 14.8571 4.57289 14.8571C4.26337 14.8571 3.99551 14.744 3.76932 14.5179C3.54313 14.2917 3.43004 14.0238 3.43004 13.7143C3.43004 13.4048 3.54313 13.1369 3.76932 12.9107C3.99551 12.6845 4.26337 12.5714 4.57289 12.5714C4.88242 12.5714 5.15027 12.6845 5.37647 12.9107ZM13.3765 12.9107C13.3765 12.9107 13.433 12.9673 13.5461 13.0804C13.6592 13.1935 13.7158 13.4048 13.7158 13.7143C13.7158 14.0238 13.6027 14.2917 13.3765 14.5179C13.1503 14.744 12.8824 14.8571 12.5729 14.8571C12.2634 14.8571 11.9955 14.744 11.7693 14.5179C11.5431 14.2917 11.43 14.0238 11.43 13.7143C11.43 13.4048 11.5431 13.1369 11.7693 12.9107C11.9955 12.6845 12.2634 12.5714 12.5729 12.5714C12.8824 12.5714 13.1503 12.6845 13.3765 12.9107ZM14.8586 4V8.57143C14.8586 8.71429 14.8095 8.84077 14.7113 8.95089C14.6131 9.06101 14.4925 9.125 14.3497 9.14286L5.02825 10.2321C5.10563 10.5893 5.14432 10.7976 5.14432 10.8571C5.14432 10.9524 5.07289 11.1429 4.93004 11.4286H13.1443C13.2991 11.4286 13.433 11.4851 13.5461 11.5982C13.6592 11.7113 13.7158 11.8452 13.7158 12C13.7158 12.1548 13.6592 12.2887 13.5461 12.4018C13.433 12.5149 13.2991 12.5714 13.1443 12.5714H4.00146C3.8467 12.5714 3.71277 12.5149 3.59968 12.4018C3.48658 12.2887 3.43004 12.1548 3.43004 12C3.43004 11.9345 3.45385 11.8408 3.50147 11.7188C3.54908 11.5967 3.5967 11.4896 3.64432 11.3973C3.69194 11.3051 3.75593 11.186 3.83629 11.0402C3.91664 10.8943 3.96277 10.8065 3.97468 10.7768L2.39432 3.42857H0.572893C0.418132 3.42857 0.284203 3.37202 0.171108 3.25893C0.0580125 3.14583 0.00146484 3.0119 0.00146484 2.85714C0.00146484 2.70238 0.0580125 2.56845 0.171108 2.45536C0.284203 2.34226 0.418132 2.28571 0.572893 2.28571H2.85861C2.95385 2.28571 3.03867 2.30506 3.11307 2.34375C3.18748 2.38244 3.24551 2.42857 3.28718 2.48214C3.32885 2.53571 3.36754 2.60863 3.40325 2.70089C3.43897 2.79315 3.46277 2.87054 3.47468 2.93304C3.48658 2.99554 3.50295 3.08333 3.52379 3.19643C3.54462 3.30952 3.55801 3.3869 3.56397 3.42857H14.2872C14.4419 3.42857 14.5759 3.48512 14.689 3.59821C14.8021 3.71131 14.8586 3.84524 14.8586 4Z" fill="white"/>
+</svg>';
+
+    $span = '<span>В корзину</span>';
+
+    return preg_replace(
+        '/(<a\b[^>]*>).*?(<\/a>)/s',
+        '$1' . $svg . $span . '$2',
+        $html
     );
-});
-
-add_action('wp_footer', function () {
-    if (!is_checkout()) return;
-?>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-
-            const input = document.querySelector('#billing_phone');
-            if (!input) return;
-
-            function getDigits(value) {
-                return value.replace(/\D/g, '');
-            }
-
-            function formatPhone(digits) {
-                if (digits.startsWith('8')) digits = '7' + digits.slice(1);
-                if (!digits.startsWith('7')) digits = '7' + digits;
-
-                let result = '+7';
-
-                if (digits.length > 1) result += ' (' + digits.substring(1, 4);
-                if (digits.length >= 5) result += ') ' + digits.substring(4, 7);
-                if (digits.length >= 8) result += '-' + digits.substring(7, 9);
-                if (digits.length >= 10) result += '-' + digits.substring(9, 11);
-
-                return result;
-            }
-
-            input.addEventListener('input', function() {
-
-                let digits = getDigits(this.value);
-
-                // ограничение длины
-                digits = digits.substring(0, 11);
-
-                const formatted = formatPhone(digits);
-
-                this.value = formatted;
-            });
-
-        });
-    </script>
-<?php
-});
-
-// add_filter('gettext', function ($translated, $text, $domain) {
-
-//     if ($text === 'Add coupon') {
-//         return 'Добавить промокод';
-//     }
-
-//     if ($text === 'Estimated total') {
-//         return 'Итог:';
-//     }
-
-//     return $translated;
-// }, 20, 3);
-
-add_filter('woocommerce_blocks_translate_text', function ($translation, $text, $domain) {
-
-    if ($text === 'privacy policy') {
-        return 'политике конфиденциальности';
-    }
-
-    return $translation;
-}, 10, 3);
-
-
-
-add_action('wp_footer', function () {
-?>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-
-            const replaceText = (node) => {
-                node.childNodes.forEach(child => {
-                    if (child.nodeType === Node.TEXT_NODE) {
-                        if (child.nodeValue.trim() === 'Добавить купоны') {
-                            child.nodeValue = 'Добавить промокод';
-                        }
-                    }
-                });
-            };
-
-            document.querySelectorAll('*').forEach(el => {
-                replaceText(el);
-            });
-
-        });
-    </script>
-<?php
-});
-
-add_filter('woocommerce_thankyou_order_received_text', function ($text, $order) {
-    return '<p class="thankyou-text" style="font-size: 28px; margin-bottom: 10px;">Благодарим Вас за заказ.</p> <p style="margin-bottom: 30px;">В ближайшее время наш менеджер свяжется с Вами для уточнения деталей доставки.</p>';
 }, 10, 2);
 
-add_filter('woocommerce_checkout_required_field_notice', function ($message, $field_label) {
 
-    // убираем "Выставление счёта "
-    $message = str_replace('Выставление счёта ', '', $message);
+/* удаляем заголовок товара из стандартного блока на странице товара */
+remove_action(
+    'woocommerce_single_product_summary',
+    'woocommerce_template_single_title',
+    5
+);
+// add_action('wp_enqueue_scripts', function () {
+//     wp_enqueue_script(
+//         'product-quantity',
+//         get_stylesheet_directory_uri() . '/js/product-quantity.js',
+//         [],
+//         '1.0.0',
+//         true
+//     );
+// });
 
-    return $message;
-}, 10, 2);
+// add_filter('woocommerce_quantity_input_html', function ($html, $product) {
 
-add_filter('woocommerce_checkout_fields', function ($fields) {
+//     $minus = '<button type="button" class="minus" aria-label="Уменьшить количество">−</button>';
 
-    // Имя
-    if (isset($fields['billing']['billing_first_name'])) {
-        $fields['billing']['billing_first_name']['placeholder'] = 'Имя*';
+//     $plus = '<button type="button" class="plus" aria-label="Увеличить количество">+</button>';
+
+//     return $minus . $html . $plus;
+// }, 10, 2);
+
+// remove_action(
+//     'woocommerce_after_shop_loop_item_title',
+//     'woocommerce_template_loop_price',
+//     10
+// );
+
+// remove_action(
+//     'woocommerce_after_shop_loop_item',
+//     'woocommerce_template_loop_add_to_cart',
+//     10
+// );
+
+
+/**
+ * ACF: список глобальных атрибутов WooCommerce
+ */
+add_filter(
+    'acf/load_field/name=attribute',
+    function ($field) {
+
+        if (!function_exists('wc_get_attribute_taxonomies')) {
+            return $field;
+        }
+
+        $field['choices'] = [];
+
+        $attributes = wc_get_attribute_taxonomies();
+
+        if (!$attributes) {
+            return $field;
+        }
+
+        foreach ($attributes as $attribute) {
+
+            $taxonomy = wc_attribute_taxonomy_name($attribute->attribute_name);
+
+            $field['choices'][$taxonomy] = $attribute->attribute_label;
+        }
+
+        return $field;
     }
-
-    // Фамилия
-    if (isset($fields['billing']['billing_last_name'])) {
-        $fields['billing']['billing_last_name']['placeholder'] = 'Фамилия*';
-    }
-
-    return $fields;
-});
-
-add_action('wp_footer', function () {
-?>
-    <script>
-        (function() {
-
-            function updateLabel() {
-
-                document.querySelectorAll('.wc-block-components-totals-item').forEach(function(row) {
-
-                    const label = row.querySelector('.wc-block-components-totals-item__label');
-
-                    if (!label) return;
-
-                    if (label.textContent.trim() === 'Скидка') {
-                        label.textContent = 'Скидка по промокоду';
-                    }
-
-                });
-
-            }
-
-            const observer = new MutationObserver(updateLabel);
-
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
-
-            document.addEventListener('DOMContentLoaded', function() {
-                setTimeout(updateLabel, 500);
-            });
-
-        })();
-    </script>
-<?php
-});
+);

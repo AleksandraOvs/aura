@@ -39,13 +39,20 @@ function e_shop_enqueue_styles()
     wp_enqueue_style('projects-styles', get_template_directory_uri() . '/css/projects.css');
     wp_enqueue_style('cooperation-styles', get_template_directory_uri() . '/css/cooperation.css');
     wp_enqueue_style('template-styles', get_template_directory_uri() . '/css/templates.css');
-    // wp_enqueue_style('woo-styles', get_template_directory_uri() . '/assets/css/woo-styles.css');
-
+    wp_enqueue_style('woo-styles', get_template_directory_uri() . '/css/woo-styles.css');
+    if (is_product()) {
+        wp_enqueue_style('product-tabs-styles', get_template_directory_uri() . '/css/woo-product-tabs-styles.css');
+    }
     //wp_enqueue_style('e-shop-styles', get_stylesheet_directory_uri());
     wp_enqueue_script('animations-script', get_stylesheet_directory_uri() . '/js/animations.js', array(), _S_VERSION, true);
+    wp_enqueue_script('woo-scripts', get_stylesheet_directory_uri() . '/js/woo-scripts.js', array(), _S_VERSION, true);
     wp_enqueue_script('sliders-script', get_stylesheet_directory_uri() . '/js/sliders.js', array(), _S_VERSION, true);
     wp_enqueue_script('minicart-script', get_stylesheet_directory_uri() . '/js/mini-cart-scripts.js', array(), _S_VERSION, true);
     wp_enqueue_script('header-search-script', get_stylesheet_directory_uri() . '/js/header-search.js', array(), _S_VERSION, true);
+    if (is_product()) {
+
+        wp_enqueue_script('cross-us-sales-sliders-script', get_stylesheet_directory_uri() . '/js/cross-up-sales-sliders.js', array(), _S_VERSION, true);
+    }
 }
 
 if (!function_exists('e_shop_theme_setup')) {
@@ -188,7 +195,9 @@ require get_stylesheet_directory() . '/inc/breadcrumbs.php';
 require get_stylesheet_directory() . '/inc/views.php';
 require get_stylesheet_directory() . '/inc/carbon-fields.php';
 require get_stylesheet_directory() . '/inc/woo.php';
-require get_stylesheet_directory() . '/inc/woo-atts.php';
+require get_stylesheet_directory() . '/inc/woo-minicart.php';
+//require get_stylesheet_directory() . '/inc/woo-test.php';
+//require get_stylesheet_directory() . '/inc/woo-atts.php';
 require get_stylesheet_directory() . '/inc/catalog-menu.php';
 require get_stylesheet_directory() . '/inc/cpt.php';
 

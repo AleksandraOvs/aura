@@ -177,29 +177,32 @@ Fancybox.bind('[data-fancybox="project-photo"]', {
 });
 
 
-const relatedSlider = new Swiper(".related-products", {
+// const relatedSlider = new Swiper(".related-products-slider", {
 
-    slidesPerView: 1.4,
-    spaceBetween: 24,
+//     slidesPerView: 1.4,
+//     spaceBetween: 24,
 
-    loop: true,
+//     loop: true,
 
-    pagination: {
-        el: ".related-products__pagination",
-        clickable: true,
-    },
+//     pagination: {
+//         el: ".related-products__pagination",
+//         clickable: true,
+//     },
 
-    breakpoints: {
+//     breakpoints: {
 
-        576: {
-            slidesPerView: 2.3,
-            spaceBetween: 20,
-        },
+//         576: {
+//             slidesPerView: 2.3,
+//             spaceBetween: 20,
+//         },
 
-        768: {
-            slidesPerView: 3,
-        }
+//         768: {
+//             slidesPerView: 4,
+//         },
+//         1400: {
+//             slidesPerView: 5,
+//         }
 
-    }
+//     }
 
-});
+// });

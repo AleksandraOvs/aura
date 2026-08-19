@@ -520,12 +520,10 @@ function aura_catalog_admin_assets($hook)
         }
         '
     );
-}
 
-
-wp_add_inline_script(
-    'jquery-ui-sortable',
-    '
+    wp_add_inline_script(
+        'jquery-ui-sortable',
+        '
     jQuery(function($) {
 
         /*
@@ -584,4 +582,5 @@ wp_add_inline_script(
 
     });
     '
-);
+    );
+}

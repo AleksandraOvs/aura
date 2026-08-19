@@ -4,6 +4,11 @@
     "color": {
       "palette": [
         {
+          "slug": "black",
+          "name": "Black",
+          "color": "var(--theme-color-black)"
+        },
+        {
           "slug": "primary",
           "name": "Primary",
           "color": "var(--theme-color-primary)"

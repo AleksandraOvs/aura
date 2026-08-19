@@ -337,6 +337,7 @@ function eshop_customize_partial_blogdescription()
  *
  * CSS-переменные:
  *
+ *  --theme-color-black
  * --theme-color-primary
  * --theme-color-secondary
  * --theme-color-accent
@@ -440,7 +441,7 @@ function eshop_get_theme_settings()
          * -------------------------------------------------
          */
 
-        'primary' => get_theme_mod(
+        'black' => get_theme_mod(
             'mytheme_black_color',
             '#000000'
         ),
