@@ -102,7 +102,7 @@
                     <div class="header__bottom-logo">
 
                         <?php if ($header_logo_url): ?>
-                            <a class="header__bottom-logo__image" href="">
+                            <a class="header__bottom-logo__image" href="<?php echo esc_url(home_url('/')); ?>">
                                 <img
                                     src="<?= esc_url($header_logo_url); ?>"
                                     alt="<?= esc_attr($site_name); ?>">
@@ -110,7 +110,7 @@
 
                         <?php endif; ?>
 
-                        <a href="<?php echo site_url() ?>" class="header__bottom-logo__site-info">
+                        <a href="<?php echo esc_url(home_url('/')); ?>" class="header__bottom-logo__site-info">
 
                             <?php if ($site_name): ?>
                                 <p class="site-name">
@@ -262,7 +262,7 @@
                                 </button>
                             </li>
                             <li class="_header-links__list__item">
-                                <a href="/">
+                                <a href="/wishlist">
                                     <svg
                                         width="16"
                                         height="15"
