@@ -378,6 +378,26 @@ header {
     align-items: center;
 }
 
+.header__bottom-logo__image {
+    display: block;
+    width: 33px;
+    height: 42px;
+}
+
+.header__bottom-logo__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+    transition: all .5s var(--transition), transform .2s var(--transition);
+}
+
+.header__bottom-logo__image:hover img {
+    filter: drop-shadow(0px 2px 10px yellow) brightness(10);
+    ;
+    transform: scale(1.02);
+}
+
 .header__bottom-logo__site-info p {
     margin: 0;
 }
@@ -424,6 +444,28 @@ header {
     color: var(--theme-color-accent);
 }
 
+.catalog-button__inner {
+    position: relative;
+}
+
+#menu-katalog {
+    margin-top: 2em;
+    list-style: none;
+    display: flex;
+    gap: 1em;
+    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 2em;
+}
+
+#menu-katalog li a {
+    display: block;
+    /* padding: .5em;
+    border: 1px solid var(--theme-color-accent);
+    border-radius: 25px; */
+}
+
 .header__bottom__catalog-link .header__bottom__catalog-link__icon path {
     transition: all .5s linear;
 }
@@ -459,6 +501,14 @@ header {
 
 .header__bottom__button-search span {
     font-weight: 700;
+}
+
+.header__bottom__messengers a {
+    transition: all .5s var(--transition);
+}
+
+.header__bottom__messengers a:hover {
+    transform: scale(1.02);
 }
 
 .header__bottom__actions {
@@ -543,6 +593,7 @@ header {
 .search-form {
     position: relative;
     flex-grow: 1;
+
 }
 
 .search-form__button {
@@ -566,7 +617,8 @@ header {
     align-items: center;
 }
 
-.header__search {
+.header__search,
+.header__catalog-menu {
     max-height: 0;
     overflow: hidden;
 
@@ -588,6 +640,33 @@ header {
     opacity: 1;
     visibility: visible;
     transform: translateY(0) scale(1);
+}
+
+.header__catalog-menu.show {
+    max-height: max-content;
+
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+}
+
+.collapse-menu-button {
+    width: 16px;
+    height: 16px;
+    position: absolute;
+    right: 0;
+}
+
+.header__catalog-menu .fixed-container {
+    position: relative;
+}
+
+.collapse-menu-button {
+    width: 16px;
+    height: 16px;
+    position: absolute;
+    right: 20px;
+    top: 0;
 }
 
 /*AJAX SEARCH STYLES*/

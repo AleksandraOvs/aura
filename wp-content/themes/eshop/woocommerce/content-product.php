@@ -32,6 +32,9 @@ $compare_img = '<svg width="20" height="16" viewBox="0 0 20 16" fill="none" xmln
     do_action('woocommerce_after_shop_loop_item');
     ?>
 
+    <?php custom_add_to_wishlist_button();
+    ?>
+
     <div class="product-card__actions">
 
         <div class="product-quantity">
@@ -68,9 +71,13 @@ $compare_img = '<svg width="20" height="16" viewBox="0 0 20 16" fill="none" xmln
     </div>
     <div class="product-card__bottom">
 
-        <div class="product-card__price">
-            <?php woocommerce_template_loop_price(); ?>
-        </div>
+        <?php
+        if ($product->is_type('variable')) {
+            echo '<span class="product-card__details">Подробнее</span>';
+        } else {
+            woocommerce_template_loop_price();
+        }
+        ?>
 
         <div class="product-card__cart">
             <?php woocommerce_template_loop_add_to_cart(); ?>

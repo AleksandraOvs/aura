@@ -49,6 +49,7 @@ function e_shop_enqueue_styles()
     wp_enqueue_script('sliders-script', get_stylesheet_directory_uri() . '/js/sliders.js', array(), _S_VERSION, true);
     wp_enqueue_script('minicart-script', get_stylesheet_directory_uri() . '/js/mini-cart-scripts.js', array(), _S_VERSION, true);
     wp_enqueue_script('header-search-script', get_stylesheet_directory_uri() . '/js/header-search.js', array(), _S_VERSION, true);
+    wp_enqueue_script('header-menu-script', get_stylesheet_directory_uri() . '/js/header-catalog-menu.js', array(), _S_VERSION, true);
     if (is_product()) {
 
         wp_enqueue_script('cross-us-sales-sliders-script', get_stylesheet_directory_uri() . '/js/cross-up-sales-sliders.js', array(), _S_VERSION, true);
@@ -200,6 +201,7 @@ require get_stylesheet_directory() . '/inc/woo-minicart.php';
 //require get_stylesheet_directory() . '/inc/woo-atts.php';
 require get_stylesheet_directory() . '/inc/catalog-menu.php';
 require get_stylesheet_directory() . '/inc/cpt.php';
+require get_template_directory() . '/wishlist/wl.php';
 
 
 add_action('init', function () {

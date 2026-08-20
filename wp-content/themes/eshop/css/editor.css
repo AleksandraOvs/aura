@@ -32,7 +32,7 @@ h3 {
 
 .container,
 .editor-styles-wrapper {
-    background: var(--theme-color-black);
+    background: #ffffff;
     width: 100%;
     padding: 0 20px;
     max-width: 1440px;

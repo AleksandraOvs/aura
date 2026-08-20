@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', function () {
         '.collapse-form-button'
     );
 
+    const catalogButton = document.querySelector('.header__bottom__catalog-link');
+
     if (!searchButton || !searchBlock || !closeButton) return;
 
     // Открытие / закрытие по кнопке поиска
@@ -21,6 +23,17 @@ document.addEventListener('DOMContentLoaded', function () {
     closeButton.addEventListener('click', function () {
         searchBlock.classList.remove('show');
     });
+
+    // Закрытие каталога при открытии меню
+    if (catalogButton) {
+
+        catalogButton.addEventListener('click', function () {
+
+            searchBlock.classList.remove('show');
+
+        });
+
+    }
 
     // Закрытие при клике вне поиска
     document.addEventListener('click', function (event) {

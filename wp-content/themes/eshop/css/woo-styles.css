@@ -117,7 +117,18 @@ li.product h2.woocommerce-loop-product__title {
     margin-top: 1em;
 }
 
-.product-card__bottom .product-card__cart a {
+.woocommerce a.added_to_cart {
+    padding: .5em;
+    display: inline-block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    background: rgba(255, 255, 255, .7);
+}
+
+.product-card__bottom .product-card__cart a.add_to_cart_button {
     width: 40px;
     height: 40px;
     padding: 10px;
@@ -127,6 +138,37 @@ li.product h2.woocommerce-loop-product__title {
     border-radius: 0 5px 5px 0;
     background: var(--theme-color-accent);
     transition: all .5s linear;
+}
+
+.button.product_type_simple.add_to_cart_button.ajax_add_to_cart.added::after {
+    top: 8px;
+    position: absolute;
+    margin: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: var(--white);
+}
+
+.button.product_type_simple.added svg {
+    opacity: 0;
+}
+
+.button.product_type_variable {
+    width: 40px;
+    height: 40px;
+}
+
+.button.product_type_variable {
+    width: 40px;
+    height: 40px;
+    padding: 10px !important;
+    display: flex;
+    border-radius: 0 5px 5px 0 !important;
+    background-color: var(--theme-color-accent) !important;
 }
 
 .product-card__cart a>span {
@@ -148,10 +190,20 @@ li.product h2.woocommerce-loop-product__title {
     margin-bottom: 0 !important;
 }
 
-.woocommerce:where(body:not(.woocommerce-uses-block-theme)) ul.products li.product .price {
+.product-card__bottom .price span {
     color: var(--theme-color-primary);
     font-size: 20px;
     font-weight: 500;
+    margin: 0;
+}
+
+.product-card__details {
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.product-card__bottom .product-card__cart {
+    height: 40px;
 }
 
 .product-card__stock {
@@ -168,6 +220,38 @@ li.product h2.woocommerce-loop-product__title {
     height: 18px;
     object-fit: contain;
     object-position: center;
+}
+
+/*NOTIFICATIONS */
+
+.woocommerce-message {
+    border: 1px solid var(--theme-color-primary);
+    position: fixed;
+    z-index: 100;
+    border-radius: 5px;
+    background: rgba(0, 0, 0, .75);
+    border-bottom-color: var(--theme-color-accent);
+    color: var(--white);
+    max-width: 60%;
+    width: 450px;
+    bottom: .5em;
+    margin: 0;
+    right: .5em;
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+}
+
+a.button.wc-forward {
+    background: var(--theme-color-accent);
+    color: var(--theme-color-primary);
+    border-radius: 25px;
+    padding: 1em 2em;
+    transition: all .5s var(--transition);
+}
+
+a.button.wc-forward:hover {
+    background: var(--white);
 }
 
 /* PRODUCTS */
@@ -203,6 +287,10 @@ li.product h2.woocommerce-loop-product__title {
 .product-title-block {
     margin-bottom: 2vh;
     margin-top: 7vh;
+}
+
+.product-title-block .product-title {
+    max-width: 60%;
 }
 
 /*SINGLE PRODUCT PAGE */
@@ -502,6 +590,11 @@ h2.woocommerce-loop-product__title {
 }
 
 @media (max-width: 768px) {
+
+    .product-title-block .product-title {
+        max-width: 100%;
+    }
+
     .products.products-5 {
         grid-template-columns: repeat(3, 1fr);
     }
