@@ -1,0 +1,200 @@
+.aura-compare {
+    width: 100%;
+    overflow-x: auto;
+    padding: 40px 0;
+}
+
+
+/*
+ * Товары
+ */
+
+.aura-compare__table {
+    width: 100%;
+}
+
+
+.aura-compare__column {
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+
+.aura-compare__product {
+    min-width: 0;
+    padding: 0 20px 30px;
+    box-sizing: border-box;
+}
+
+.aura-compare__products {
+    display: grid;
+
+    grid-template-columns:
+        repeat(var(--compare-products-count),
+            minmax(0, 1fr));
+    gap: 1em;
+}
+
+.product-card.aura-compare-product {
+    position: relative;
+}
+
+
+
+/*
+ * Изображение
+ */
+
+.aura-compare__image {
+    display: block;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.aura-compare-product .product-card__image a {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.aura-compare-product .product-card__image a img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+.aura-compare-product .product-card__title {
+    font-weight: 600;
+    height: 72px;
+    margin-top: 1em;
+}
+
+.aura-compare__image img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+
+/*
+ * Название
+ */
+
+.aura-compare__title {
+    display: block;
+
+    font-size: 18px;
+    line-height: 1.3;
+    font-weight: 600;
+
+    text-decoration: none;
+}
+
+
+/*
+ * Цена
+ */
+
+.aura-compare__price {
+    margin-top: 10px;
+
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.aura-compare__filter {
+    padding: 1em 0;
+}
+
+
+/*
+ * Кнопка удаления
+ */
+
+.aura-compare__remove {
+    padding: 5px 10px;
+    border: 1px solid var(--theme-color-accent);
+    background: transparent;
+    cursor: pointer;
+    position: absolute;
+    top: .5em;
+    left: .5em;
+    z-index: 5;
+    transition: all .5s var(--transition);
+}
+
+.aura-compare__remove:hover {
+    background: var(--theme-color-accent);
+}
+
+/*
+ * Характеристики
+ */
+
+.aura-compare__attributes {
+    width: 100%;
+}
+
+
+.aura-compare__attribute-row {
+    border-top: 1px solid #e5e5e5;
+}
+
+.aura-compare__attribute {
+    padding: 16px 20px;
+
+    border-top: 1px solid #e5e5e5;
+
+    box-sizing: border-box;
+}
+
+
+.aura-compare__attribute-name,
+.aura-compare__attribute-value {
+    padding: 1em 0 0 0;
+
+    box-sizing: border-box;
+}
+
+
+.aura-compare__attribute-name {
+    padding: 1em 0 .5em;
+    font-weight: 500;
+    font-size: 24px;
+}
+
+.aura-compare__attribute-value {
+    color: #555;
+}
+
+.aura-compare__spacer {
+    min-width: 220px;
+}
+
+/*
+ * Значения товаров
+ */
+
+.aura-compare__attribute-values {
+    display: grid;
+
+    grid-template-columns:
+        repeat(var(--compare-products-count),
+            minmax(0, 1fr));
+}
+
+
+/*
+ * Значение конкретного товара
+ */
+
+.aura-compare__attribute-value {
+    padding-bottom: .5em;
+
+    min-width: 0;
+
+    box-sizing: border-box;
+
+    color: #555;
+}

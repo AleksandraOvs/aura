@@ -51,6 +51,7 @@ if (is_shop()) {
         'hide_empty' => true,
     ]);
 
+    echo '<div class="shop-header">';
     if (!empty($categories) && !is_wp_error($categories)) {
         echo '<div class="categories-grid">';
         foreach ($categories as $cat) {
@@ -66,6 +67,8 @@ if (is_shop()) {
         echo '</div>';
     }
     echo do_shortcode('[shop_filters]');
+    echo '</div>';
+
     // Показываем все товары
     $args = [
         'post_type'      => 'product',
@@ -107,7 +110,7 @@ if (is_shop()) {
         'hide_empty' => true,
     ]);
     echo '<div class="container">';
-    echo do_shortcode('[shop_filters]');
+
     if (!empty($categories) && !is_wp_error($categories)) {
         echo '<div class="categories-grid">';
         foreach ($categories as $cat) {
@@ -122,6 +125,7 @@ if (is_shop()) {
         }
         echo '</div>';
     }
+    //echo do_shortcode('[shop_filters]');
 
     // Показываем товары текущей категории
     $args = [

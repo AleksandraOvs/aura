@@ -1,0 +1,246 @@
+jQuery(document).ready(function ($) {
+
+
+    /*
+     * Обновление счётчика сравнения
+     */
+    function updateCompareCount(count) {
+
+        $('.aura-compare-count').text(count);
+
+    }
+
+
+    /*
+     * Устанавливаем начальное значение
+     */
+    updateCompareCount(auraCompare.count);
+
+
+    /*
+     * Добавление / удаление товара
+     * из сравнения
+     */
+    $('body').on('click', '.aura-compare-btn', function (e) {
+
+        e.preventDefault();
+
+        const btn = $(this);
+        const productId = btn.data('product-id');
+
+        if (!productId || btn.hasClass('loading')) {
+            return;
+        }
+
+
+        const isAdded = btn.hasClass('added');
+
+        const action = isAdded
+            ? 'aura_compare_remove'
+            : 'aura_compare_add';
+
+
+        $.ajax({
+
+            url: auraCompare.ajax_url,
+
+            type: 'POST',
+
+            data: {
+
+                action: action,
+
+                nonce: auraCompare.nonce,
+
+                product_id: productId
+
+            },
+
+
+            beforeSend: function () {
+
+                btn.addClass('loading');
+
+            },
+
+
+            success: function (response) {
+
+                /*
+                 * Ошибка
+                 */
+                if (!response.success) {
+
+                    if (
+                        response.data &&
+                        response.data.message
+                    ) {
+
+                        alert(response.data.message);
+
+                    }
+
+                    return;
+                }
+
+
+                /*
+                 * Добавление
+                 */
+                if (action === 'aura_compare_add') {
+
+                    btn
+                        .addClass('added');
+
+                    btn.find('.aura-compare-btn__text')
+                        .text('В сравнении');
+
+                }
+
+
+                /*
+                 * Удаление
+                 */
+                else {
+
+                    btn
+                        .removeClass('added');
+
+                    btn.find('.aura-compare-btn__text')
+                        .text('Добавить в сравнение');
+
+                }
+
+
+                /*
+                 * Обновляем счётчик
+                 */
+                updateCompareCount(
+                    response.data.count
+                );
+
+            },
+
+
+            complete: function () {
+
+                btn.removeClass('loading');
+
+            }
+
+        });
+
+    });
+
+
+    /*
+     * Удаление товара
+     * со страницы сравнения
+     */
+    $('body').on('click', '.aura-compare__remove', function (e) {
+
+        e.preventDefault();
+
+        const btn = $(this);
+        const productId = btn.data('product-id');
+
+        if (!productId || btn.hasClass('loading')) {
+            return;
+        }
+
+
+        $.ajax({
+
+            url: auraCompare.ajax_url,
+
+            type: 'POST',
+
+            data: {
+
+                action: 'aura_compare_remove',
+
+                nonce: auraCompare.nonce,
+
+                product_id: productId
+
+            },
+
+
+            beforeSend: function () {
+
+                btn.addClass('loading');
+
+            },
+
+
+            success: function (response) {
+
+                if (!response.success) {
+
+                    if (
+                        response.data &&
+                        response.data.message
+                    ) {
+
+                        alert(response.data.message);
+
+                    }
+
+                    return;
+                }
+
+
+                /*
+                 * Обновляем счётчик
+                 */
+                updateCompareCount(
+                    response.data.count
+                );
+
+
+                /*
+                 * Пока обновляем страницу.
+                 */
+                window.location.reload();
+
+            },
+
+
+            complete: function () {
+
+                btn.removeClass('loading');
+
+            }
+
+        });
+
+    });
+
+    /*
+ * Фильтр различающихся характеристик
+ */
+    $('body').on('change', '.aura-compare__different', function () {
+
+        const checkbox = $(this);
+
+        const attributes = $('.aura-compare__attribute-row');
+
+        if (checkbox.is(':checked')) {
+
+            attributes
+                .filter('.is-same')
+                .hide();
+
+            attributes
+                .filter('.is-different')
+                .show();
+
+        } else {
+
+            attributes.show();
+
+        }
+
+    });
+
+});

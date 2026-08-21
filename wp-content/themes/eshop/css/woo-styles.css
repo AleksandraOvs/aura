@@ -85,6 +85,70 @@ li.product h2.woocommerce-loop-product__title {
     cursor: pointer;
 }
 
+.product-compare.aura-compare-btn {
+    position: relative;
+}
+
+
+.product-compare.aura-compare-btn.added svg {
+    display: none;
+}
+
+.product-compare.aura-compare-btn.added {
+    position: relative;
+}
+
+.product-compare.aura-compare-btn.added:after {
+    content: '';
+    width: 20px;
+    height: 20px;
+    background-image: url(../imgs/svg/check-yellow.svg);
+    background-position: center;
+    background-size: contain;
+    display: block;
+}
+
+.quantity input {
+    border-bottom: none;
+}
+
+.product-compare.aura-compare-btn:before {
+    content: 'Добавить в сравнение';
+    font-size: 12px;
+    color: var(--theme-color-primary);
+    display: block;
+    line-height: 1;
+    position: absolute;
+    top: -25px;
+    width: max-content;
+    opacity: 0;
+    transform: translatex(-10px);
+    transition: all .5s linear;
+    z-index: 5;
+    right: 0;
+    background: rgba(255, 255, 255, .7);
+    filter: drop-shadow(-1px 0 1px rgba(0, 0, 0, .2));
+    padding: .5em;
+    border-radius: 3px;
+}
+
+.product-compare.aura-compare-btn.added:before {
+    content: 'Добавлено в сравнение';
+
+}
+
+.product-compare.aura-compare-btn.added:hover:before {
+    opacity: 1;
+}
+
+.product-compare.aura-compare-btn:hover:before {
+    opacity: 1;
+}
+
+.product-compare.aura-compare-btn.added:hover {
+    background: transparent;
+}
+
 .product-compare span {
     display: none;
 }
@@ -277,6 +341,31 @@ a.button.wc-forward:hover {
 .woocommerce ul.products::after,
 .woocommerce ul.products::before {
     content: none;
+}
+
+.shop-header {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 1em;
+}
+
+.categories-grid {
+    width: calc(100% - 1em - 40px);
+    display: flex;
+    gap: 1em;
+    align-items: center;
+}
+
+.categories-grid a {
+    padding: .5em;
+    border-bottom: 2px solid #ededed;
+}
+
+.woocommerce .products ul,
+.woocommerce ul.products {
+    margin: 2em 0 1em;
 }
 
 .products.products-5 {

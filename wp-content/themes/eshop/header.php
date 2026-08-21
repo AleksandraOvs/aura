@@ -226,7 +226,7 @@
 
                         <ul class="header__bottom__actions__links__list">
                             <li class="_header-links__list__item">
-                                <a href="/">
+                                <a href="/compare">
                                     <svg
                                         width="21"
                                         height="16"
@@ -238,6 +238,7 @@
                                             fill="white" />
                                     </svg>
                                 </a>
+                                <span class="aura-compare-count">0</span>
                             </li>
                             <li class="_header-links__list__item">
                                 <button id="open-minicart">

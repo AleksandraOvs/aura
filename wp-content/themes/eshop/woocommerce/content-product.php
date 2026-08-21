@@ -60,13 +60,7 @@ $compare_img = '<svg width="20" height="16" viewBox="0 0 20 16" fill="none" xmln
 
         </div>
 
-        <button
-            type="button"
-            class="product-compare"
-            data-product-id="<?php echo esc_attr($product->get_id()); ?>">
-            <?php echo $compare_img; ?>
-            <span>Добавить в сравнение</span>
-        </button>
+        <?php echo do_shortcode('[aura_compare_button]'); ?>
 
     </div>
     <div class="product-card__bottom">
