@@ -49,3 +49,139 @@
 .woocommerce-MyAccount-content .woocommerce-info .button:hover {
     background: var(--theme-color-accent);
 }
+
+/**форма входа/регистрации **/
+#customer_login {
+    min-height: 390px;
+    border-radius: 8px;
+    width: 70%;
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.auth-tabs__panel {
+    display: none;
+}
+
+.auth-tabs__panel.is-active {
+    display: block;
+}
+
+.auth-tabs__title {
+    cursor: pointer;
+    font-size: 24px;
+    font-weight: 400;
+}
+
+.auth-tabs__title.is-active {
+    background: #fff;
+    border-right: 2px solid var(--theme-color-beige);
+    border-left: 2px solid var(--theme-color-beige);
+    border-bottom: 2px solid transparent;
+}
+
+.auth-tabs__panel {
+    display: block;
+    opacity: 0;
+    transform: translateY(8px);
+    pointer-events: none;
+    position: absolute;
+    width: 100%;
+}
+
+.auth-tabs__panel.is-active {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+    position: relative;
+    transition:
+        opacity .35s ease,
+        transform .35s ease;
+}
+
+.woocommerce form.login,
+.woocommerce form.register {
+    border: 2px solid var(--theme-color-beige);
+    padding: 20px;
+    margin: 0;
+    text-align: left;
+    border-radius: 0 0 5px 5px;
+}
+
+.auth-tabs__content {
+    position: relative;
+    background: #fff;
+}
+
+/* вкладки */
+
+.auth-tabs__title {
+    cursor: pointer;
+    position: relative;
+    background: var(--theme-color-beige-light);
+    padding: 10px;
+    transition: color .25s ease;
+}
+
+.auth-tabs__title::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 2px;
+    background: currentColor;
+    transition: width .3s ease;
+}
+
+.auth-tabs__title.is-active::after {
+    width: 100%;
+}
+
+.auth-tabs__nav {
+    display: flex;
+    gap: 0;
+    transform: translateY(2px);
+    z-index: 5;
+    position: relative;
+}
+
+.auth-tabs__nav>div {
+    flex-grow: 1;
+    width: 50%;
+    text-align: center;
+    border-bottom: 2px solid var(--theme-color-beige);
+}
+
+.woocommerce .woocommerce-form-login .woocommerce-form-login__rememberme {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+button.woocommerce-button.button.woocommerce-form-login__submit {
+    background: var(--theme-color-accent);
+    color: #fff;
+    font-weight: 400;
+    font-size: 18px;
+    width: 280px;
+    margin: 20px auto 0;
+}
+
+p.woocommerce-LostPassword.lost_password {
+    text-decoration: underline;
+    font-size: 14px;
+    text-align: center;
+}
+
+button.woocommerce-button.button.woocommerce-form-register__submit {
+    background: var(--theme-color-accent);
+    color: #fff;
+    font-weight: 400;
+    font-size: 18px;
+}
+
+.woocommerce-form-login__rememberme input {
+    width: 16px;
+    height: 16px;
+}

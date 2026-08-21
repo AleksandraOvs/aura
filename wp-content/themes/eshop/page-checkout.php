@@ -1,15 +1,23 @@
-<?php get_header() ?>
+<?php
+
+/**
+ * Template name: Cart
+ */
+get_header() ?>
+
 <section class="page-title-block">
     <div class="fixed-container">
         <?php site_breadcrumbs() ?>
+
+        <?php get_template_part('template-parts/checkout-steps') ?>
 
 
     </div>
 </section>
 
 <section class="page-content">
-    <div class="fixed-container">
-        <h1 class="page-title" data-scroll-animation="fade-down">
+    <div class="container">
+        <h1 class="small-heading" data-scroll-animation="fade-left">
             <?= the_title() ?>
         </h1>
         <?php the_content(); ?>
@@ -17,8 +25,8 @@
 
 </section>
 
-<?php //get_template_part('template-parts/section-contacts') 
-?>
+
+<?php get_template_part('sections/contacts') ?>
 
 
 <?php get_footer() ?>
