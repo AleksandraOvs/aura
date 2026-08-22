@@ -45,14 +45,69 @@ class AURA_Product_Compare
     /**
      * Получить ID товаров в сравнении
      */
+    // public function get_products()
+    // {
+
+    //     if (!function_exists('WC') || !WC()->session) {
+    //         return [];
+    //     }
+
+    //     $products = WC()->session->get(self::SESSION_KEY, []);
+
+    //     error_log(
+    //         'AURA COMPARE GET: ' .
+    //             print_r($products, true)
+    //     );
+
+    //     error_log(
+    //         'AURA WC SESSION ID: ' .
+    //             WC()->session->get_customer_id()
+    //     );
+
+    //     if (!is_array($products)) {
+    //         return [];
+    //     }
+
+    //     return array_map('absint', $products);
+    // }
+
     public function get_products()
     {
-
         if (!function_exists('WC') || !WC()->session) {
+            error_log('AURA GET: NO WC SESSION');
             return [];
         }
 
-        $products = WC()->session->get(self::SESSION_KEY, []);
+        $session_cookie_name = 'wp_woocommerce_session_' . COOKIEHASH;
+
+        error_log('--- AURA GET PRODUCTS ---');
+
+        error_log(
+            'COOKIE SESSION: ' .
+                ($_COOKIE[$session_cookie_name] ?? 'NO COOKIE')
+        );
+
+        error_log(
+            'WC CUSTOMER ID: ' .
+                WC()->session->get_customer_id()
+        );
+
+        error_log(
+            'WC HAS SESSION: ' .
+                (WC()->session->has_session() ? 'YES' : 'NO')
+        );
+
+        $products = WC()->session->get(
+            self::SESSION_KEY,
+            []
+        );
+
+        error_log(
+            'COMPARE PRODUCTS: ' .
+                print_r($products, true)
+        );
+
+        error_log('-------------------------');
 
         if (!is_array($products)) {
             return [];
@@ -67,67 +122,151 @@ class AURA_Product_Compare
     }
 
     /**
-     * Добавить товар
+     * Добавить товар в сравнение
+     *
+     * @param int $product_id
+     *
+     * @return array
+     */
+    /**
+     * Добавить товар в сравнение
+     *
+     * @param int $product_id
+     * @return array
      */
     public function add_product($product_id)
     {
-
-        $products = $this->get_products();
+        if (!function_exists('WC') || !WC()->session) {
+            error_log('AURA ADD: NO WC SESSION');
+            return [];
+        }
 
         $product_id = absint($product_id);
 
+        error_log('========== AURA ADD START ==========');
+        error_log('PRODUCT ID: ' . $product_id);
+
+        error_log(
+            'COOKIE: ' .
+                ($_COOKIE['wp_woocommerce_session_' . COOKIEHASH] ?? 'NO COOKIE')
+        );
+
+        error_log(
+            'CUSTOMER ID BEFORE: ' .
+                WC()->session->get_customer_id()
+        );
+
+        error_log(
+            'HAS SESSION BEFORE: ' .
+                (WC()->session->has_session() ? 'YES' : 'NO')
+        );
+
+        $products = $this->get_products();
+
+        error_log(
+            'PRODUCTS BEFORE: ' .
+                print_r($products, true)
+        );
+
         if (!$product_id) {
-            return [
-                'success' => false,
-                'products' => $products,
-                'message' => 'Некорректный товар.',
-            ];
+            return $products;
         }
 
-
-        /*
-     * Товар уже добавлен
-     */
         if (in_array($product_id, $products, true)) {
 
-            return [
-                'success' => true,
-                'products' => $products,
-                'message' => '',
-            ];
+            error_log('PRODUCT ALREADY EXISTS');
+
+            return $products;
         }
 
-
-        /*
-     * Проверяем лимит
-     */
         if (count($products) >= self::MAX_PRODUCTS) {
 
-            return [
-                'success' => false,
-                'products' => $products,
-                'message' => sprintf(
-                    'Можно сравнить не более %d товаров.',
-                    self::MAX_PRODUCTS
-                ),
-            ];
+            error_log('MAX PRODUCTS REACHED');
+
+            return $products;
         }
 
-
         $products[] = $product_id;
+
+        error_log(
+            'PRODUCTS TO SAVE: ' .
+                print_r($products, true)
+        );
 
         WC()->session->set(
             self::SESSION_KEY,
             $products
         );
 
+        error_log(
+            'PRODUCTS IMMEDIATELY AFTER SET: ' .
+                print_r(
+                    WC()->session->get(self::SESSION_KEY, []),
+                    true
+                )
+        );
 
-        return [
-            'success' => true,
-            'products' => $products,
-            'message' => '',
-        ];
+        error_log(
+            'CUSTOMER ID AFTER: ' .
+                WC()->session->get_customer_id()
+        );
+
+        error_log(
+            'COOKIE AFTER: ' .
+                ($_COOKIE['wp_woocommerce_session_' . COOKIEHASH] ?? 'NO COOKIE')
+        );
+
+        error_log('========== AURA ADD END ==========');
+
+        return $this->get_products();
     }
+    /***
+     * временно
+     */
+
+    
+
+    // public function add_product($product_id)
+    // {
+    //     $products = $this->get_products();
+
+    //     error_log('AURA ADD BEFORE: ' . print_r($products, true));
+
+    //     $product_id = absint($product_id);
+
+    //     if (!$product_id) {
+    //         return $products;
+    //     }
+
+    //     if (in_array($product_id, $products, true)) {
+    //         return $products;
+    //     }
+
+    //     if (count($products) >= self::MAX_PRODUCTS) {
+    //         return $products;
+    //     }
+
+    //     $products[] = $product_id;
+
+    //     error_log('AURA ADD SET: ' . print_r($products, true));
+
+    //     WC()->session->set(
+    //         self::SESSION_KEY,
+    //         $products
+    //     );
+
+    //     /*
+    //  * Проверяем сразу после сохранения
+    //  */
+    //     $check = WC()->session->get(
+    //         self::SESSION_KEY,
+    //         []
+    //     );
+
+    //     error_log('AURA ADD AFTER SET: ' . print_r($check, true));
+
+    //     return $products;
+    // }
 
 
     /**
@@ -145,6 +284,11 @@ class AURA_Product_Compare
         );
 
         WC()->session->set(self::SESSION_KEY, $products);
+
+        error_log(
+            'AURA COMPARE AFTER SET: ' .
+                print_r(WC()->session->get(self::SESSION_KEY), true)
+        );
 
         return $products;
     }
@@ -199,19 +343,9 @@ class AURA_Product_Compare
             'aura-compare',
             'auraCompare',
             [
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce'    => wp_create_nonce('aura_compare_nonce'),
-            ]
-        );
-
-        wp_localize_script(
-            'aura-compare',
-            'auraCompare',
-            [
-                'ajax_url' => admin_url('admin-ajax.php'),
+                'ajax_url' => home_url('/wp-admin/admin-ajax.php'),
                 'nonce'    => wp_create_nonce('aura_compare_nonce'),
                 'count'    => $this->get_count(),
-                'max_products' => self::MAX_PRODUCTS,
             ]
         );
     }

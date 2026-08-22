@@ -213,7 +213,7 @@ require get_template_directory() . '/my-account/ma-functions.php';
 
 add_action('init', function () {
     $patterns = WP_Block_Patterns_Registry::get_instance()->get_all_registered();
-    error_log(print_r(array_keys($patterns), true));
+    //error_log(print_r(array_keys($patterns), true));
 });
 
 // Добавляем новый столбец "ID"

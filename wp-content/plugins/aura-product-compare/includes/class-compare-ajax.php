@@ -41,9 +41,11 @@ class AURA_Product_Compare_Ajax
     /**
      * Добавление
      */
+    /**
+     * Добавление товара
+     */
     public function add_product()
     {
-
         check_ajax_referer(
             'aura_compare_nonce',
             'nonce'
@@ -59,7 +61,6 @@ class AURA_Product_Compare_Ajax
             ]);
         }
 
-
         $product = wc_get_product($product_id);
 
         if (!$product) {
@@ -68,29 +69,30 @@ class AURA_Product_Compare_Ajax
             ]);
         }
 
+        /*
+     * Добавляем товар в сравнение
+     */
+        $products = $this->compare->add_product($product_id);
 
-        $result = $this->compare->add_product($product_id);
-
-        if (!$result['success']) {
+        /*
+     * Проверяем, действительно ли товар добавился
+     */
+        if (!in_array($product_id, $products, true)) {
 
             wp_send_json_error([
-                'message' => $result['message'],
-                'products' => $result['products'],
-                'count' => count($result['products']),
-                'max_products' => AURA_Product_Compare::MAX_PRODUCTS,
+                'message' => 'Не удалось добавить товар в сравнение.',
+                'products' => $products,
+                'count'    => count($products),
             ]);
         }
 
-
         wp_send_json_success([
-            'products' => $result['products'],
-            'count' => count($result['products']),
+            'products'   => $products,
+            'count'      => count($products),
             'product_id' => $product_id,
             'max_products' => AURA_Product_Compare::MAX_PRODUCTS,
         ]);
     }
-
-
     /**
      * Удаление
      */
