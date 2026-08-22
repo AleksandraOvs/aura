@@ -42,7 +42,7 @@ do_action('woocommerce_before_main_content');
 <?php
 if (is_shop()) {
 
-
+    get_template_part('sections/categories-section');
     echo '<div class="container">';
     // Получаем родительские категории (только верхний уровень)
     $categories = get_terms([
@@ -50,6 +50,8 @@ if (is_shop()) {
         'parent'     => 0,
         'hide_empty' => true,
     ]);
+
+
 
     echo '<div class="shop-header">';
     if (!empty($categories) && !is_wp_error($categories)) {

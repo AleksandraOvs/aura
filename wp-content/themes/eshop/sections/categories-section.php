@@ -45,7 +45,7 @@ if (!empty($catalog) && is_array($catalog)):
 
 ?>
 
-    <section class="products-categories">
+    <section class="products-categories <?php echo is_shop() ? 'pt-0' : ''; ?>">
 
         <div class="fixed-container">
 

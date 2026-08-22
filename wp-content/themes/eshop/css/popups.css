@@ -1,0 +1,86 @@
+.popup {
+    max-width: 100%;
+    width: 640px;
+    background: var(--theme-color-accent);
+}
+
+.popup h3 {
+    margin-top: 0;
+    margin-bottom: .5em;
+    font-size: 32px;
+    text-align: center;
+}
+
+.form-description__inner {
+    display: flex;
+    gap: 1em;
+    align-items: center;
+    justify-content: center;
+}
+
+.form-description__inner img {
+    width: 69px;
+    height: 69px;
+    overflow: hidden;
+    border-radius: 100%;
+}
+
+.form-description__inner p {
+    margin: 0;
+}
+
+.form-description {
+    font-size: 16px;
+    color: var(--theme-color-primary);
+}
+
+.form-sign span {
+    color: var(--theme-color-grey);
+    font-size: 14px;
+}
+
+.wpcf7-form-control-wrap textarea {
+    max-height: 100px;
+    overflow-y: scroll;
+}
+
+.popup form input::placeholder,
+.popup form textarea::placeholder {
+    color: var(--theme-color-grey);
+}
+
+.required-text {
+    font-size: 14px;
+    color: var(--theme-color-grey);
+}
+
+.form-sign p span {
+    padding: 0;
+}
+
+.wpcf7-acceptance .wpcf7-list-item label {
+    display: flex;
+    align-items: flex-start;
+    gap: .5em;
+}
+
+.wpcf7-acceptance .wpcf7-list-item label span {
+    padding: 0;
+}
+
+.wpcf7-acceptance .wpcf7-list-item {
+    margin-left: 0;
+}
+
+.wpcf7-acceptance .wpcf7-list-item label>input {
+    transform: translatey(4px);
+}
+
+.popup form .button.button-black {
+    margin: 0 auto;
+}
+
+.popup .wpcf7 form p .button {
+    background: var(--theme-color-primary);
+    margin: 0 auto;
+}

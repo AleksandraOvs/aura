@@ -94,15 +94,12 @@ $site_description = get_bloginfo('description');
     </div>
 <?php endif; ?>
 
-<?php //get_template_part('template-parts/toggle-contacts'); 
-?>
+<div id="consultation-popup" class="popup" style="display:none;">
+    <?php echo do_shortcode('[contact-form-7 id="4070d6c" title="Бесплатная консультация"]'); ?>
+</div>
 
-<?php //get_template_part('template-parts/mobile-menu');
-?>
-
-<div id="main-form" style="display:none;max-width:600px;">
-    <?php //get_template_part('template-parts/main-form'); 
-    ?>
+<div id="partners-popup" class="popup" style="display:none;max-width:600px;">
+    <?php echo do_shortcode('[contact-form-7 id="afa0f23" title="Стать партнером"]'); ?>
 </div>
 
 <?php if (!is_cart()) : ?>

@@ -116,10 +116,12 @@ function custom_wishlist_shortcode()
 
     if (empty($wishlist)) {
         return '
-            <p class="empty-wl">Ваш список избранного пуст</p>
+            <div class="empty-wl"><p>Ваш список избранного пуст</p>
+
             <p class="return-to-shop">
-                <a href="' . esc_url(site_url('shop')) . '" class="button wc-backward">В магазин</a>
+                <a href="' . esc_url(site_url('shop')) . '" class="button wc-backward">В каталог</a>
             </p>
+            </div>
         ';
     }
 

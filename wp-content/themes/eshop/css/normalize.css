@@ -83,7 +83,7 @@ iframe {
 ========================== */
 
 :focus-visible {
-    outline: 2px solid #4d90fe;
+    outline: 1px dotted #252525;
     outline-offset: 2px;
 }
 

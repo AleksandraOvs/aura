@@ -4,6 +4,27 @@
     padding: 40px 0;
 }
 
+.aura-compare__empty p {
+    font-size: 20px;
+    text-align: center;
+}
+
+.aura-compare__empty {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+    align-items: center;
+    justify-content: center;
+}
+
+.aura-compare__empty:before {
+    content: '';
+    width: 75px;
+    height: 4px;
+    display: block;
+    margin: 0 auto;
+    background: var(--theme-color-accent);
+}
 
 /*
  * Товары
@@ -159,7 +180,7 @@
 
 
 .aura-compare__attribute-name {
-    padding: 1em 0 .5em;
+    padding: .5em 0;
     font-weight: 500;
     font-size: 24px;
 }
@@ -170,6 +191,21 @@
 
 .aura-compare__spacer {
     min-width: 220px;
+}
+
+.swiper-wrapper .aura-compare__item:not(:first-child) .aura-compare__attribute-values>div {
+    padding-top: calc(1em + 60px);
+}
+
+.aura-compare__filter {
+    position: fixed;
+    bottom: 1em;
+    left: 1em;
+    z-index: 200;
+    padding: 1em .5em;
+    background: rgba(0, 0, 0, .7);
+    color: #fff;
+    border-radius: 5px;
 }
 
 /*
@@ -197,4 +233,22 @@
     box-sizing: border-box;
 
     color: #555;
+}
+
+.aura-compare__prev.swiper-button-prev svg path,
+.aura-compare__next.swiper-button-prev svg path {
+    fill: var(--theme-color-primary);
+}
+
+.aura-compare__prev.swiper-button-prev.swiper-button-disabled,
+.aura-compare__next.swiper-button-next.swiper-button-disabled {
+    display: none;
+}
+
+@media(max-width: 1400px) {
+
+    .aura-compare__products.swiper,
+    .aura-compare {
+        overflow: visible;
+    }
 }

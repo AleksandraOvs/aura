@@ -217,30 +217,66 @@ jQuery(document).ready(function ($) {
     });
 
     /*
- * Фильтр различающихся характеристик
- */
+    * Фильтр различающихся характеристик
+    */
     $('body').on('change', '.aura-compare__different', function () {
 
         const checkbox = $(this);
 
-        const attributes = $('.aura-compare__attribute-row');
-
         if (checkbox.is(':checked')) {
 
-            attributes
-                .filter('.is-same')
-                .hide();
-
-            attributes
-                .filter('.is-different')
-                .show();
+            $('.aura-compare__attribute-value.is-same').hide();
+            $('.aura-compare__attribute-value.is-different').show();
 
         } else {
 
-            attributes.show();
+            $('.aura-compare__attribute-value').show();
 
         }
 
     });
 
 });
+
+const compareSlider = document.querySelector('.aura-compare__products');
+
+if (compareSlider) {
+
+    const slidesCount = compareSlider.querySelectorAll('.swiper-slide').length;
+
+    new Swiper(compareSlider, {
+
+        slidesPerView: Math.min(slidesCount, 5),
+
+        spaceBetween: 20,
+
+        watchOverflow: true,
+
+        navigation: {
+            nextEl: '.aura-compare__next',
+            prevEl: '.aura-compare__prev',
+        },
+
+        breakpoints: {
+
+            1400: {
+                slidesPerView: Math.min(slidesCount, 5),
+            },
+
+            1024: {
+                slidesPerView: 3.2,
+            },
+
+            768: {
+                slidesPerView: 2.4,
+            },
+
+            480: {
+                slidesPerView: 1.4,
+            }
+
+        },
+
+    });
+
+}

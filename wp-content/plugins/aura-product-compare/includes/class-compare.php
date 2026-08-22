@@ -8,7 +8,7 @@ class AURA_Product_Compare
 {
 
     const SESSION_KEY = 'aura_compare_products';
-    const MAX_PRODUCTS = 4;
+    const MAX_PRODUCTS = 10;
 
 
     public function __construct()

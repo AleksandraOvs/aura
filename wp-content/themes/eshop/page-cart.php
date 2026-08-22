@@ -17,7 +17,7 @@ get_header() ?>
 
 <section class="page-content">
     <div class="container">
-        <h1 class="small-heading" data-scroll-animation="fade-left">
+        <h1 style="text-align: center;" class="small-heading" data-scroll-animation="fade-left">
             <?= the_title() ?>
         </h1>
         <?php the_content(); ?>

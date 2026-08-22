@@ -299,7 +299,16 @@
     color: #fff;
 }
 
+
 .empty-wl {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+    align-items: center;
+    justify-content: center;
+
+
+
     background: transparent;
     border: none;
     position: relative;
@@ -310,15 +319,18 @@
 
 }
 
-.empty-wl:after {
+.empty-wl:before {
     content: '';
-    height: 2px;
-    width: 150px;
-    background: var(--theme-color-accent);
+    width: 75px;
+    height: 4px;
     display: block;
-    position: absolute;
-    bottom: 0;
-    left: calc(50% - 75px);
+    margin: 0 auto;
+    background: var(--theme-color-accent);
+}
+
+.empty-wl p {
+    font-size: 20px;
+    text-align: center;
 }
 
 @media(max-width: 768px) {

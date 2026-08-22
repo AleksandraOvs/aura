@@ -264,6 +264,10 @@ svg {
     flex-wrap: wrap;
 }
 
+.pt-0 {
+    padding-top: 0;
+}
+
 /* =========================================
    Breadcrumbs
 ========================================= */
@@ -1577,16 +1581,18 @@ section.partners h2 {
 .wpcf7-form p span {
     width: 100%;
     display: block;
+    padding: .5em 0;
 }
 
 .wpcf7-form p span textarea {
     width: 100%;
     background: transparent;
     border: none;
-    border-bottom: 1px solid var(--theme-color-accent);
+    border-bottom: 1px solid var(--theme-color-primary);
 }
 
-input {
+input,
+textarea {
     background: transparent;
     border: none;
     border-bottom-width: medium;
