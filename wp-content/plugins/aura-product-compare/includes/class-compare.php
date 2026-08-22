@@ -71,20 +71,40 @@ class AURA_Product_Compare
     //     return array_map('absint', $products);
     // }
 
+    private function ensure_session()
+    {
+        if (!function_exists('WC')) {
+            return false;
+        }
+
+        if (!WC()->session) {
+            return false;
+        }
+
+        if (!WC()->session->has_session()) {
+            WC()->session->set_customer_session_cookie(true);
+        }
+
+        return true;
+    }
+
     public function get_products()
     {
         if (!function_exists('WC') || !WC()->session) {
-            error_log('AURA GET: NO WC SESSION');
+            error_log('AURA: NO WC SESSION');
             return [];
         }
 
-        $session_cookie_name = 'wp_woocommerce_session_' . COOKIEHASH;
+        $this->ensure_session();
 
-        error_log('--- AURA GET PRODUCTS ---');
+        error_log('========== AURA SESSION DEBUG ==========');
 
         error_log(
             'COOKIE SESSION: ' .
-                ($_COOKIE[$session_cookie_name] ?? 'NO COOKIE')
+                print_r(
+                    $_COOKIE['wp_woocommerce_session_' . COOKIEHASH] ?? 'NO COOKIE',
+                    true
+                )
         );
 
         error_log(
@@ -107,7 +127,7 @@ class AURA_Product_Compare
                 print_r($products, true)
         );
 
-        error_log('-------------------------');
+        error_log('========================================');
 
         if (!is_array($products)) {
             return [];
