@@ -37,28 +37,7 @@ $compare_img = '<svg width="20" height="16" viewBox="0 0 20 16" fill="none" xmln
 
     <div class="product-card__actions">
 
-        <div class="product-quantity">
-
-            <button type="button" class="quantity-minus" aria-label="Уменьшить количество">
-                −
-            </button>
-
-            <?php
-            woocommerce_quantity_input(
-                [
-                    'min_value'   => $product->get_min_purchase_quantity(),
-                    'max_value'   => $product->get_max_purchase_quantity(),
-                    'input_value' => $product->get_min_purchase_quantity(),
-                ],
-                $product
-            );
-            ?>
-
-            <button type="button" class="quantity-plus" aria-label="Увеличить количество">
-                +
-            </button>
-
-        </div>
+        <?php aura_product_quantity($product); ?>
 
         <?php echo do_shortcode('[aura_compare_button]'); ?>
 

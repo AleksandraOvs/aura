@@ -27,31 +27,56 @@ add_action('wp_enqueue_scripts', function () {
 add_action('woocommerce_after_shop_loop_item', 'custom_add_to_wishlist_button', 15);
 add_action('woocommerce_single_product_summary', 'custom_add_to_wishlist_button', 32);
 
-function custom_add_to_wishlist_button()
+function custom_add_to_wishlist_button($product = null)
 {
-    global $product;
-    if (!$product) return;
+    if (!$product) {
+        global $product;
+    }
+
+    if (!$product instanceof WC_Product) {
+        return;
+    }
 
     $product_id = $product->get_id();
 
     // Получаем текущий вишлист
     $wishlist = [];
+
     if (is_user_logged_in()) {
-        $wishlist = get_user_meta(get_current_user_id(), 'custom_wishlist', true) ?: [];
+        $wishlist = get_user_meta(
+            get_current_user_id(),
+            'custom_wishlist',
+            true
+        ) ?: [];
     } elseif (!empty($_COOKIE['custom_wishlist'])) {
-        $wishlist = json_decode(stripslashes($_COOKIE['custom_wishlist']), true);
-        if (!is_array($wishlist)) $wishlist = [];
+        $wishlist = json_decode(
+            stripslashes($_COOKIE['custom_wishlist']),
+            true
+        );
+
+        if (!is_array($wishlist)) {
+            $wishlist = [];
+        }
     }
 
     $added = in_array($product_id, $wishlist) ? 'added' : '';
+
     $wishlist_icon = '<svg width="29" height="26" viewBox="0 0 29 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M19.9834 1C21.8169 1.00007 23.4892 1.6382 24.75 2.66895L24.9971 2.87988C26.3343 4.08409 27.1426 5.74037 27.1426 7.56152C27.1425 10.2866 25.8123 12.9936 23.6045 15.7686L23.1514 16.3242C20.8576 19.0761 17.913 21.7265 14.9033 24.4307V24.4316C14.4245 24.8621 13.7016 24.8523 13.2363 24.4287L13.2314 24.4238L10.9971 22.4043C8.79358 20.3905 6.70955 18.386 4.99023 16.3242L4.53711 15.7686C2.32944 12.9937 1.00007 10.2866 1 7.56152C1 5.73956 1.8084 4.08228 3.14648 2.88184L3.14844 2.88086C4.4316 1.72608 6.20631 1 8.15918 1C9.84003 1.00005 11.0995 1.37513 12.1807 2.09082L12.3945 2.23828C12.733 2.48229 13.0498 2.75975 13.3506 3.07227L14.0713 3.82129L14.792 3.07129C15.0925 2.75878 15.4094 2.48179 15.749 2.23828H15.75C16.8785 1.42685 18.1926 1 19.9834 1Z" stroke="#b6713d" stroke-width="2"/>
+<path d="M19.9834 1C21.8169 1.00007 23.4892 1.6382 24.75 2.66895L24.9971 2.87988C26.3343 4.08409 27.1426 5.74037 27.1426 7.56152C27.1425 10.2866 25.8123 12.9936 23.6045 15.7686L23.1514 16.3242C20.8576 19.0761 17.913 21.7265 14.9033 24.4307V24.4316C14.4245 24.8621 13.7016 24.8523 13.2363 24.4287L13.2314 24.4238L10.9971 22.4043C8.79358 20.3905 6.70955 18.386 4.99023 16.3242L4.53711 15.7686C2.32944 12.9937 1.00007 10.2866 1 7.56152C1 5.73956 1.8084 4.08228 3.14648 2.88184L3.14844 2.88086C4.4316 1.72608 6.20631 1 8.15918 1C9.84003 1.00005 11.0995 1.37513 12.1807 2.09082L12.3945 2.23828C12.733 2.48229 13.0498 2.75975 13.3506 3.07227L14.0713 3.82129L14.792 3.07129C15.0925 2.75878 15.4096 2.48179 15.749 2.23828H15.75C16.8785 1.42685 18.1926 1 19.9834 1Z" stroke="#b6713d" stroke-width="2"/>
 </svg>';
 
-    echo '<button class="custom-wishlist-btn ' . esc_attr($added) . '" data-product_id="' . esc_attr($product_id) . '">
-            <span class="wishlist-icon">' . $wishlist_icon . '</span>
-            <span class="wishlist-text">' . ($added ? 'В избранном' : 'Добавить в избранное') . '</span>
-          </button>';
+    echo '<button
+        type="button"
+        class="custom-wishlist-btn ' . esc_attr($added) . '"
+        data-product_id="' . esc_attr($product_id) . '">
+
+        <span class="wishlist-icon">' . $wishlist_icon . '</span>
+
+        <span class="wishlist-text">'
+        . ($added ? 'В избранном' : 'Добавить в избранное') .
+        '</span>
+
+    </button>';
 }
 
 // --------------------------------------------------

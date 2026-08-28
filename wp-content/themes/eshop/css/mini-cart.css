@@ -297,6 +297,12 @@ div#minicart-popup .close svg {
     font-weight: 600;
 }
 
+.minicart-btn-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
 @media (max-width: 480px) {
     #minicart-popup {
         min-width: 100%;

@@ -11,16 +11,16 @@ add_action('init', function () {
 
 add_action('wp_enqueue_scripts', function () {
 
-    if (is_shop() || is_product_category() || is_product_tag() || is_product()) {
+    //if (is_shop() || is_product_category() || is_product_tag() || is_product() || is_cart()) {
 
-        wp_enqueue_script(
-            'product-quantity',
-            get_stylesheet_directory_uri() . '/js/product-quantity.js',
-            ['jquery'],
-            '1.0.0',
-            true
-        );
-    }
+    wp_enqueue_script(
+        'product-quantity',
+        get_stylesheet_directory_uri() . '/js/product-quantity.js',
+        ['jquery'],
+        '1.0.0',
+        true
+    );
+    // }
 });
 
 //КНОПКА В КОРЗИНУ - ИКОНКОЙ
@@ -108,4 +108,174 @@ add_filter(
 
         return $field;
     }
+);
+
+/**
+ * QUANTITY
+ */
+
+function aura_product_quantity($product, $args = [])
+{
+    if (!$product instanceof WC_Product) {
+        return;
+    }
+
+    $defaults = [
+        'input_name'  => 'quantity',
+        'input_value' => $product->get_min_purchase_quantity(),
+    ];
+
+    $args = wp_parse_args($args, $defaults);
+
+    $min_value = $product->is_sold_individually()
+        ? 1
+        : $product->get_min_purchase_quantity();
+
+    $max_value = $product->is_sold_individually()
+        ? 1
+        : $product->get_max_purchase_quantity();
+
+?>
+
+    <div class="product-quantity">
+
+        <button
+            type="button"
+            class="quantity-minus"
+            aria-label="Уменьшить количество">
+            −
+        </button>
+
+        <?php
+        woocommerce_quantity_input(
+            [
+                'input_name'  => $args['input_name'],
+                'input_value' => $args['input_value'],
+                'min_value'   => $min_value,
+                'max_value'   => $max_value,
+                'product_name' => $product->get_name(),
+            ],
+            $product
+        );
+        ?>
+
+        <button
+            type="button"
+            class="quantity-plus"
+            aria-label="Увеличить количество">
+            +
+        </button>
+
+    </div>
+
+<?php
+}
+
+/* УДАЛИЛ БЛОК "ВАС МОЖЕТ ЗАИНТЕРЕСОВАТЬ" НА СТРАНИЦЕ КОРЗИНА */
+add_action('wp', function () {
+    if (is_cart()) {
+        remove_action(
+            'woocommerce_cart_collaterals',
+            'woocommerce_cross_sell_display'
+        );
+    }
+});
+
+/* CHECKOUT FIELDS */
+add_filter('woocommerce_checkout_fields', function ($fields) {
+
+    /*
+     * Billing
+     */
+
+    // Имя
+    $fields['billing']['billing_first_name']['label'] = 'Имя';
+    $fields['billing']['billing_first_name']['placeholder'] = 'Имя';
+    $fields['billing']['billing_first_name']['required'] = true;
+
+    // Фамилия
+    $fields['billing']['billing_last_name']['label'] = 'Фамилия';
+    $fields['billing']['billing_last_name']['placeholder'] = 'Фамилия';
+    $fields['billing']['billing_last_name']['required'] = true;
+
+    // Телефон
+    $fields['billing']['billing_phone']['label'] = 'Номер телефона';
+    $fields['billing']['billing_phone']['placeholder'] = '+7 (___) ___-__-__';
+    $fields['billing']['billing_phone']['required'] = true;
+
+    // E-mail
+    $fields['billing']['billing_email']['label'] = 'E-mail';
+    $fields['billing']['billing_email']['placeholder'] = 'E-mail';
+    $fields['billing']['billing_email']['required'] = true;
+
+    // Адрес
+    $fields['billing']['billing_address_1']['label'] = 'Адрес';
+    $fields['billing']['billing_address_1']['placeholder'] = 'Адрес';
+    $fields['billing']['billing_address_1']['required'] = true;
+
+    /*
+     * Убираем ненужные billing-поля
+     */
+
+    unset($fields['billing']['billing_company']);
+    unset($fields['billing']['billing_address_2']);
+    unset($fields['billing']['billing_city']);
+    unset($fields['billing']['billing_state']);
+    unset($fields['billing']['billing_postcode']);
+
+    /*
+     * Если страна уже определена/не нужна пользователю,
+     * её можно скрыть из формы.
+     */
+    // unset($fields['billing']['billing_country']);
+
+
+    /*
+     * Shipping нам здесь пока не нужен.
+     */
+
+    $fields['shipping'] = [];
+
+
+    /*
+     * Юридическое лицо
+     */
+
+    $fields['billing']['billing_legal_entity'] = [
+        'type'     => 'checkbox',
+        'label'    => 'Юридическое лицо',
+        'required' => false,
+        'class'    => ['form-row-wide'],
+        'priority' => 80,
+    ];
+
+
+    /*
+     * Примечание к заказу
+     */
+
+    $fields['order']['order_comments']['label'] = 'Примечание к заказу';
+    $fields['order']['order_comments']['placeholder'] = 'Примечание к заказу';
+    $fields['order']['order_comments']['required'] = false;
+    $fields['order']['order_comments']['class'] = ['form-row-wide'];
+    $fields['order']['order_comments']['priority'] = 90;
+
+
+    return $fields;
+});
+
+add_action('woocommerce_checkout_create_order', function ($order, $data) {
+
+    $legal_entity = ! empty($_POST['billing_legal_entity']) ? 'yes' : 'no';
+
+    $order->update_meta_data(
+        '_billing_legal_entity',
+        $legal_entity
+    );
+}, 10, 2);
+
+remove_action(
+    'woocommerce_before_checkout_form',
+    'woocommerce_checkout_coupon_form',
+    10
 );

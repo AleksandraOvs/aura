@@ -1,0 +1,34 @@
+.checkout-contacts__fields .woocommerce-billing-fields h3 {
+    display: none;
+}
+
+.checkout-contacts {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.checkout-section__inner {
+    display: flex;
+    gap: 2em;
+}
+
+.checkout-contacts__fields {
+    width: calc(70% - 2em);
+}
+
+.checkout-order {
+    width: 30%;
+}
+
+#checkout-order-summary {
+    padding: 1em;
+    border: 1px solid #dfdfdf;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+}
+
+.checkout-contacts__fields h2 {
+    margin-bottom: .5em;
+}
