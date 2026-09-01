@@ -30,7 +30,7 @@ get_header();
 
 <section class="page-content">
 
-    <div class="container">
+    <div class="fixed-container">
 
         <?= do_shortcode('[woocommerce_checkout]'); ?>
 
