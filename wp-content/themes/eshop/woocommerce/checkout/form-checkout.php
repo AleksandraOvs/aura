@@ -85,11 +85,13 @@ do_action('woocommerce_before_checkout_form', $checkout);
                     </div>
                     <div class="checkout-order__products">
 
+
                         В корзине
                         <span class="checkout-order__products-count">
                             <?php echo esc_html(WC()->cart->get_cart_contents_count()); ?>
+                            <?php echo esc_html(_n('товар', 'товаров', WC()->cart->get_cart_contents_count(), 'woocommerce')); ?>
                         </span>
-                        <?php echo esc_html(_n('товар', 'товаров', WC()->cart->get_cart_contents_count(), 'woocommerce')); ?>
+
 
                     </div>
 

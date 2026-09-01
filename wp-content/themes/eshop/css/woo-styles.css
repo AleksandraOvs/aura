@@ -209,6 +209,10 @@ li.product h2.woocommerce-loop-product__title {
     margin-top: 1em;
 }
 
+.product-card__bottom .price {
+    margin-bottom: 0;
+}
+
 .woocommerce a.added_to_cart {
     padding: .5em;
     display: inline-block;
