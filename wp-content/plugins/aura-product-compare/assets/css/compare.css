@@ -155,6 +155,7 @@
 
 .aura-compare__remove:hover {
     background: var(--theme-color-accent);
+    border-color: var(--theme-color-accent);
 }
 
 /*
