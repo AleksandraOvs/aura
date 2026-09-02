@@ -678,11 +678,10 @@ header {
 }
 
 .header__search.show {
-    max-height: 200px;
-
     opacity: 1;
     visibility: visible;
     transform: translateY(0) scale(1);
+    max-height: max-content;
 }
 
 .header__catalog-menu.show {
@@ -715,20 +714,13 @@ header {
 /*AJAX SEARCH STYLES*/
 .search-results {
     display: none;
-    margin-top: 20px;
     padding: 10px;
+    flex-wrap: wrap;
+    gap: 1em;
 }
 
 .search-results.show {
-    display: block;
-}
-
-.search-results__item {
-    display: block;
-    padding: 12px 0;
-    text-decoration: none;
-    color: #1d1d1f;
-    border-bottom: 1px solid #eee;
+    display: flex;
 }
 
 .search-results__item:last-child {
@@ -757,6 +749,112 @@ header {
 .search-results__loading {
     padding: 20px 0;
     text-align: center;
+}
+
+.search-results__item {
+    display: flex;
+    align-items: center;
+    gap: 1em;
+    color: inherit;
+    text-decoration: none;
+    width: calc(100% / 2 - .5em);
+    padding: .5em;
+    background: #060606;
+    transition: all .5s var(--transition);
+}
+
+.search-results__item:hover {
+    background: rgba(0, 0, 0, .5);
+}
+
+.search-results__image {
+    flex: 0 0 60px;
+    width: 60px;
+    height: 60px;
+}
+
+.search-results__image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+
+.search-results__content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: calc(100% - 60px - 1em);
+}
+
+.search-results__title {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.search-results__type {
+    font-size: 13px;
+    opacity: 0.6;
+}
+
+.search-results__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+
+    padding: 25px 15px;
+
+    font-size: 14px;
+    line-height: 1;
+    opacity: 0.6;
+}
+
+.search-results__dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.search-results__dots i {
+    display: block;
+
+    width: 4px;
+    height: 4px;
+
+    border-radius: 50%;
+    background: currentColor;
+
+    animation: search-dot 1.2s infinite ease-in-out;
+}
+
+.search-results__dots i:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.search-results__dots i:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+.search-results__dots i:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+@keyframes search-dot {
+
+    0%,
+    60%,
+    100% {
+        transform: translateY(0);
+        opacity: 0.35;
+    }
+
+    30% {
+        transform: translateY(-4px);
+        opacity: 1;
+    }
+
 }
 
 /* =========================================

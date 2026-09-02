@@ -238,7 +238,7 @@
                                             fill="white" />
                                     </svg>
                                 </a>
-                                <span class="aura-compare-count">0</span>
+
                             </li>
                             <li class="_header-links__list__item">
                                 <button id="open-minicart">
@@ -255,9 +255,15 @@
 
                                     <?php //if (WC()->cart->get_cart_contents_count() > 0): 
                                     ?>
-                                    <span class="cart-count">
-                                        <?php echo WC()->cart->get_cart_contents_count(); ?>
-                                    </span>
+                                    <?php
+                                    $cart_count = WC()->cart->get_cart_contents_count();
+
+                                    if ($cart_count > 0) :
+                                    ?>
+                                        <span class="cart-count">
+                                            <?php echo esc_html($cart_count); ?>
+                                        </span>
+                                    <?php endif; ?>
                                     <?php //endif; 
                                     ?>
                                 </button>
@@ -334,7 +340,10 @@
 
                 </div>
                 <!-- AJAX search results -->
-                <div class="search-results" id="search-results" aria-live="polite"></div>
+                <div class="fixed-container">
+                    <div class="search-results" id="search-results" aria-live="polite"></div>
+                </div>
+
             </div>
 
             <div class="header__catalog-menu">

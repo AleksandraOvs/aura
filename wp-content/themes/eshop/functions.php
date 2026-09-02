@@ -53,7 +53,17 @@ function e_shop_enqueue_styles()
     wp_enqueue_script('woo-scripts', get_stylesheet_directory_uri() . '/js/woo-scripts.js', array(), _S_VERSION, true);
     wp_enqueue_script('sliders-script', get_stylesheet_directory_uri() . '/js/sliders.js', array(), _S_VERSION, true);
     wp_enqueue_script('minicart-script', get_stylesheet_directory_uri() . '/js/mini-cart-scripts.js', array(), _S_VERSION, true);
+
     wp_enqueue_script('header-search-script', get_stylesheet_directory_uri() . '/js/header-search.js', array(), _S_VERSION, true);
+
+    wp_localize_script(
+        'header-search-script',
+        'auraSearch',
+        [
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+        ]
+    );
+
     wp_enqueue_script('header-menu-script', get_stylesheet_directory_uri() . '/js/header-catalog-menu.js', array(), _S_VERSION, true);
     wp_enqueue_script('popups-script', get_stylesheet_directory_uri() . '/js/popup.js', array(), _S_VERSION, true);
 
@@ -208,6 +218,7 @@ require get_template_directory() . '/inc/walker.php';
 require get_template_directory() . '/inc/customizer.php';
 require get_stylesheet_directory() . '/inc/breadcrumbs.php';
 require get_stylesheet_directory() . '/inc/views.php';
+require get_stylesheet_directory() . '/inc/search.php';
 require get_stylesheet_directory() . '/inc/woo.php';
 require get_stylesheet_directory() . '/inc/woo-minicart.php';
 //require get_stylesheet_directory() . '/inc/woo-filter.php';

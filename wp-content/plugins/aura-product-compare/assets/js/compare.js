@@ -4,10 +4,23 @@ jQuery(document).ready(function ($) {
     /*
      * Обновление счётчика сравнения
      */
+    /* * Обновление счётчика сравнения */
     function updateCompareCount(count) {
+        var item = $('a[href="/compare"]').closest('._header-links__list__item');
+        if (!item.length) { return; } count = parseInt(count, 10) || 0;
+        // Если товаров нет — полностью удаляем счётчик
+        if (count === 0) {
+            item.find('.aura-compare-count').remove(); return;
 
-        $('.aura-compare-count').text(count);
-
+        }
+        // Ищем существующий счётчик
+        var counter = item.find('.aura-compare-count');
+        // Если счётчика нет — создаём
+        if (!counter.length) {
+            item.append('<span class="aura-compare-count">' + count + '</span>');
+        } else {
+            counter.text(count);
+        }
     }
 
 
