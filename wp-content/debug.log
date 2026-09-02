@@ -32800,3 +32800,211 @@
 [02-Sep-2026 18:44:17 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
 [02-Sep-2026 18:44:17 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
 [02-Sep-2026 18:44:22 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:44:59 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:45:00 UTC] ========== AURA SESSION DEBUG ==========
+[02-Sep-2026 18:45:00 UTC] COOKIE SESSION: t_707ef4321a474738e284b1d11f39a1|1788518111|1788431711|b39e279a8530bc9be8561d0f69a1d2ff
+[02-Sep-2026 18:45:00 UTC] WC CUSTOMER ID: t_707ef4321a474738e284b1d11f39a1
+[02-Sep-2026 18:45:00 UTC] WC HAS SESSION: YES
+[02-Sep-2026 18:45:00 UTC] COMPARE PRODUCTS: Array
+(
+)
+
+[02-Sep-2026 18:45:00 UTC] ========================================
+[02-Sep-2026 18:45:00 UTC] ========== AURA SESSION DEBUG ==========
+[02-Sep-2026 18:45:00 UTC] COOKIE SESSION: t_707ef4321a474738e284b1d11f39a1|1788518111|1788431711|b39e279a8530bc9be8561d0f69a1d2ff
+[02-Sep-2026 18:45:00 UTC] WC CUSTOMER ID: t_707ef4321a474738e284b1d11f39a1
+[02-Sep-2026 18:45:00 UTC] WC HAS SESSION: YES
+[02-Sep-2026 18:45:00 UTC] COMPARE PRODUCTS: Array
+(
+)
+
+[02-Sep-2026 18:45:00 UTC] ========================================
+[02-Sep-2026 18:45:00 UTC] ========== AURA SESSION DEBUG ==========
+[02-Sep-2026 18:45:00 UTC] COOKIE SESSION: t_707ef4321a474738e284b1d11f39a1|1788518111|1788431711|b39e279a8530bc9be8561d0f69a1d2ff
+[02-Sep-2026 18:45:00 UTC] WC CUSTOMER ID: t_707ef4321a474738e284b1d11f39a1
+[02-Sep-2026 18:45:00 UTC] WC HAS SESSION: YES
+[02-Sep-2026 18:45:00 UTC] COMPARE PRODUCTS: Array
+(
+)
+
+[02-Sep-2026 18:45:00 UTC] ========================================
+[02-Sep-2026 18:45:00 UTC] ========== AURA SESSION DEBUG ==========
+[02-Sep-2026 18:45:00 UTC] COOKIE SESSION: t_707ef4321a474738e284b1d11f39a1|1788518111|1788431711|b39e279a8530bc9be8561d0f69a1d2ff
+[02-Sep-2026 18:45:00 UTC] WC CUSTOMER ID: t_707ef4321a474738e284b1d11f39a1
+[02-Sep-2026 18:45:00 UTC] WC HAS SESSION: YES
+[02-Sep-2026 18:45:00 UTC] COMPARE PRODUCTS: Array
+(
+)
+
+[02-Sep-2026 18:45:00 UTC] ========================================
+[02-Sep-2026 18:45:00 UTC] ========== AURA SESSION DEBUG ==========
+[02-Sep-2026 18:45:00 UTC] COOKIE SESSION: t_707ef4321a474738e284b1d11f39a1|1788518111|1788431711|b39e279a8530bc9be8561d0f69a1d2ff
+[02-Sep-2026 18:45:00 UTC] WC CUSTOMER ID: t_707ef4321a474738e284b1d11f39a1
+[02-Sep-2026 18:45:00 UTC] WC HAS SESSION: YES
+[02-Sep-2026 18:45:00 UTC] COMPARE PRODUCTS: Array
+(
+)
+
+[02-Sep-2026 18:45:00 UTC] ========================================
+[02-Sep-2026 18:45:00 UTC] ========== AURA SESSION DEBUG ==========
+[02-Sep-2026 18:45:00 UTC] COOKIE SESSION: t_707ef4321a474738e284b1d11f39a1|1788518111|1788431711|b39e279a8530bc9be8561d0f69a1d2ff
+[02-Sep-2026 18:45:00 UTC] WC CUSTOMER ID: t_707ef4321a474738e284b1d11f39a1
+[02-Sep-2026 18:45:00 UTC] WC HAS SESSION: YES
+[02-Sep-2026 18:45:00 UTC] COMPARE PRODUCTS: Array
+(
+)
+
+[02-Sep-2026 18:45:00 UTC] ========================================
+[02-Sep-2026 18:45:00 UTC] ========== AURA SESSION DEBUG ==========
+[02-Sep-2026 18:45:00 UTC] COOKIE SESSION: t_707ef4321a474738e284b1d11f39a1|1788518111|1788431711|b39e279a8530bc9be8561d0f69a1d2ff
+[02-Sep-2026 18:45:00 UTC] WC CUSTOMER ID: t_707ef4321a474738e284b1d11f39a1
+[02-Sep-2026 18:45:00 UTC] WC HAS SESSION: YES
+[02-Sep-2026 18:45:00 UTC] COMPARE PRODUCTS: Array
+(
+)
+
+[02-Sep-2026 18:45:00 UTC] ========================================
+[02-Sep-2026 18:45:00 UTC] ========== AURA SESSION DEBUG ==========
+[02-Sep-2026 18:45:00 UTC] COOKIE SESSION: t_707ef4321a474738e284b1d11f39a1|1788518111|1788431711|b39e279a8530bc9be8561d0f69a1d2ff
+[02-Sep-2026 18:45:00 UTC] WC CUSTOMER ID: t_707ef4321a474738e284b1d11f39a1
+[02-Sep-2026 18:45:00 UTC] WC HAS SESSION: YES
+[02-Sep-2026 18:45:00 UTC] COMPARE PRODUCTS: Array
+(
+)
+
+[02-Sep-2026 18:45:00 UTC] ========================================
+[02-Sep-2026 18:45:00 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:45:02 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:45:02 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:45:02 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:45:02 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:45:20 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:45:21 UTC] ========== AURA SESSION DEBUG ==========
+[02-Sep-2026 18:45:21 UTC] COOKIE SESSION: t_707ef4321a474738e284b1d11f39a1|1788518111|1788431711|b39e279a8530bc9be8561d0f69a1d2ff
+[02-Sep-2026 18:45:21 UTC] WC CUSTOMER ID: t_707ef4321a474738e284b1d11f39a1
+[02-Sep-2026 18:45:21 UTC] WC HAS SESSION: YES
+[02-Sep-2026 18:45:21 UTC] COMPARE PRODUCTS: Array
+(
+)
+
+[02-Sep-2026 18:45:21 UTC] ========================================
+[02-Sep-2026 18:45:21 UTC] ========== AURA SESSION DEBUG ==========
+[02-Sep-2026 18:45:21 UTC] COOKIE SESSION: t_707ef4321a474738e284b1d11f39a1|1788518111|1788431711|b39e279a8530bc9be8561d0f69a1d2ff
+[02-Sep-2026 18:45:21 UTC] WC CUSTOMER ID: t_707ef4321a474738e284b1d11f39a1
+[02-Sep-2026 18:45:21 UTC] WC HAS SESSION: YES
+[02-Sep-2026 18:45:21 UTC] COMPARE PRODUCTS: Array
+(
+)
+
+[02-Sep-2026 18:45:21 UTC] ========================================
+[02-Sep-2026 18:45:21 UTC] ========== AURA SESSION DEBUG ==========
+[02-Sep-2026 18:45:21 UTC] COOKIE SESSION: t_707ef4321a474738e284b1d11f39a1|1788518111|1788431711|b39e279a8530bc9be8561d0f69a1d2ff
+[02-Sep-2026 18:45:21 UTC] WC CUSTOMER ID: t_707ef4321a474738e284b1d11f39a1
+[02-Sep-2026 18:45:21 UTC] WC HAS SESSION: YES
+[02-Sep-2026 18:45:21 UTC] COMPARE PRODUCTS: Array
+(
+)
+
+[02-Sep-2026 18:45:21 UTC] ========================================
+[02-Sep-2026 18:45:22 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:45:22 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:45:22 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:45:22 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:46:38 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:46:39 UTC] ========== AURA SESSION DEBUG ==========
+[02-Sep-2026 18:46:39 UTC] COOKIE SESSION: t_707ef4321a474738e284b1d11f39a1|1788518111|1788431711|b39e279a8530bc9be8561d0f69a1d2ff
+[02-Sep-2026 18:46:39 UTC] WC CUSTOMER ID: t_707ef4321a474738e284b1d11f39a1
+[02-Sep-2026 18:46:39 UTC] WC HAS SESSION: YES
+[02-Sep-2026 18:46:39 UTC] COMPARE PRODUCTS: Array
+(
+)
+
+[02-Sep-2026 18:46:39 UTC] ========================================
+[02-Sep-2026 18:46:39 UTC] ========== AURA SESSION DEBUG ==========
+[02-Sep-2026 18:46:39 UTC] COOKIE SESSION: t_707ef4321a474738e284b1d11f39a1|1788518111|1788431711|b39e279a8530bc9be8561d0f69a1d2ff
+[02-Sep-2026 18:46:39 UTC] WC CUSTOMER ID: t_707ef4321a474738e284b1d11f39a1
+[02-Sep-2026 18:46:39 UTC] WC HAS SESSION: YES
+[02-Sep-2026 18:46:39 UTC] COMPARE PRODUCTS: Array
+(
+)
+
+[02-Sep-2026 18:46:39 UTC] ========================================
+[02-Sep-2026 18:46:39 UTC] ========== AURA SESSION DEBUG ==========
+[02-Sep-2026 18:46:39 UTC] COOKIE SESSION: t_707ef4321a474738e284b1d11f39a1|1788518111|1788431711|b39e279a8530bc9be8561d0f69a1d2ff
+[02-Sep-2026 18:46:39 UTC] WC CUSTOMER ID: t_707ef4321a474738e284b1d11f39a1
+[02-Sep-2026 18:46:39 UTC] WC HAS SESSION: YES
+[02-Sep-2026 18:46:39 UTC] COMPARE PRODUCTS: Array
+(
+)
+
+[02-Sep-2026 18:46:39 UTC] ========================================
+[02-Sep-2026 18:46:40 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:46:42 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:46:42 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:46:42 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:46:42 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:47:11 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:47:12 UTC] ========== AURA SESSION DEBUG ==========
+[02-Sep-2026 18:47:12 UTC] COOKIE SESSION: t_707ef4321a474738e284b1d11f39a1|1788518111|1788431711|b39e279a8530bc9be8561d0f69a1d2ff
+[02-Sep-2026 18:47:12 UTC] WC CUSTOMER ID: t_707ef4321a474738e284b1d11f39a1
+[02-Sep-2026 18:47:12 UTC] WC HAS SESSION: YES
+[02-Sep-2026 18:47:12 UTC] COMPARE PRODUCTS: Array
+(
+)
+
+[02-Sep-2026 18:47:12 UTC] ========================================
+[02-Sep-2026 18:47:12 UTC] ========== AURA SESSION DEBUG ==========
+[02-Sep-2026 18:47:12 UTC] COOKIE SESSION: t_707ef4321a474738e284b1d11f39a1|1788518111|1788431711|b39e279a8530bc9be8561d0f69a1d2ff
+[02-Sep-2026 18:47:12 UTC] WC CUSTOMER ID: t_707ef4321a474738e284b1d11f39a1
+[02-Sep-2026 18:47:12 UTC] WC HAS SESSION: YES
+[02-Sep-2026 18:47:12 UTC] COMPARE PRODUCTS: Array
+(
+)
+
+[02-Sep-2026 18:47:12 UTC] ========================================
+[02-Sep-2026 18:47:12 UTC] ========== AURA SESSION DEBUG ==========
+[02-Sep-2026 18:47:12 UTC] COOKIE SESSION: t_707ef4321a474738e284b1d11f39a1|1788518111|1788431711|b39e279a8530bc9be8561d0f69a1d2ff
+[02-Sep-2026 18:47:12 UTC] WC CUSTOMER ID: t_707ef4321a474738e284b1d11f39a1
+[02-Sep-2026 18:47:12 UTC] WC HAS SESSION: YES
+[02-Sep-2026 18:47:12 UTC] COMPARE PRODUCTS: Array
+(
+)
+
+[02-Sep-2026 18:47:12 UTC] ========================================
+[02-Sep-2026 18:47:14 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:47:14 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:47:14 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:47:14 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:47:53 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:47:54 UTC] ========== AURA SESSION DEBUG ==========
+[02-Sep-2026 18:47:54 UTC] COOKIE SESSION: t_707ef4321a474738e284b1d11f39a1|1788518111|1788431711|b39e279a8530bc9be8561d0f69a1d2ff
+[02-Sep-2026 18:47:54 UTC] WC CUSTOMER ID: t_707ef4321a474738e284b1d11f39a1
+[02-Sep-2026 18:47:54 UTC] WC HAS SESSION: YES
+[02-Sep-2026 18:47:54 UTC] COMPARE PRODUCTS: Array
+(
+)
+
+[02-Sep-2026 18:47:54 UTC] ========================================
+[02-Sep-2026 18:47:54 UTC] ========== AURA SESSION DEBUG ==========
+[02-Sep-2026 18:47:54 UTC] COOKIE SESSION: t_707ef4321a474738e284b1d11f39a1|1788518111|1788431711|b39e279a8530bc9be8561d0f69a1d2ff
+[02-Sep-2026 18:47:54 UTC] WC CUSTOMER ID: t_707ef4321a474738e284b1d11f39a1
+[02-Sep-2026 18:47:54 UTC] WC HAS SESSION: YES
+[02-Sep-2026 18:47:54 UTC] COMPARE PRODUCTS: Array
+(
+)
+
+[02-Sep-2026 18:47:54 UTC] ========================================
+[02-Sep-2026 18:47:54 UTC] ========== AURA SESSION DEBUG ==========
+[02-Sep-2026 18:47:54 UTC] COOKIE SESSION: t_707ef4321a474738e284b1d11f39a1|1788518111|1788431711|b39e279a8530bc9be8561d0f69a1d2ff
+[02-Sep-2026 18:47:54 UTC] WC CUSTOMER ID: t_707ef4321a474738e284b1d11f39a1
+[02-Sep-2026 18:47:54 UTC] WC HAS SESSION: YES
+[02-Sep-2026 18:47:54 UTC] COMPARE PRODUCTS: Array
+(
+)
+
+[02-Sep-2026 18:47:54 UTC] ========================================
+[02-Sep-2026 18:47:54 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:47:56 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:47:56 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:47:56 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
+[02-Sep-2026 18:47:57 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>acf</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in C:\OSPanel\home\aura.local\wp-includes\functions.php on line 6170
