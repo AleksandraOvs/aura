@@ -40,6 +40,21 @@
     fill: #DC3545;
 }
 
+.wishlist-counter {
+    position: absolute;
+    top: -5px;
+    right: -10px;
+    width: 16px;
+    height: 16px;
+    background: var(--theme-color-accent);
+    color: var(--theme-color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 100%;
+    font-size: 12px;
+    font-weight: 600;
+}
 
 .wishlist-text {
     font-size: 12px;

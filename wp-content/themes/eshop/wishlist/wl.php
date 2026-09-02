@@ -122,6 +122,43 @@ function custom_toggle_wishlist()
 }
 
 // --------------------------------------------------
+// AJAX ПОЛУЧЕНИЕ КОЛИЧЕСТВА ИЗБРАННЫХ
+// --------------------------------------------------
+add_action('wp_ajax_custom_get_wishlist_count', 'custom_get_wishlist_count');
+add_action('wp_ajax_nopriv_custom_get_wishlist_count', 'custom_get_wishlist_count');
+
+function custom_get_wishlist_count()
+{
+    $wishlist = [];
+
+    if (is_user_logged_in()) {
+
+        $wishlist = get_user_meta(
+            get_current_user_id(),
+            'custom_wishlist',
+            true
+        ) ?: [];
+    } elseif (!empty($_COOKIE['custom_wishlist'])) {
+
+        $wishlist = json_decode(
+            stripslashes($_COOKIE['custom_wishlist']),
+            true
+        );
+
+        if (!is_array($wishlist)) {
+            $wishlist = [];
+        }
+    }
+
+    // На всякий случай оставляем только уникальные ID
+    $wishlist = array_unique(array_map('intval', $wishlist));
+
+    wp_send_json_success([
+        'count' => count($wishlist)
+    ]);
+}
+
+// --------------------------------------------------
 // ШОРТКОД [custom_wishlist]
 // --------------------------------------------------
 add_shortcode('custom_wishlist', 'custom_wishlist_shortcode');
