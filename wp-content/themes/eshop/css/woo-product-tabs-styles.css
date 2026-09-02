@@ -80,6 +80,13 @@
     padding-top: 40px;
 }
 
+.product-tabs__content h3 {
+    font-size: 28px;
+    margin-top: 0;
+    margin-bottom: .5em;
+}
+
+
 .product-tabs__pane {
     display: none;
     padding: 0 2em;
@@ -259,12 +266,6 @@
     padding: 1em;
     border: 1px solid #dfdfdf;
     border-radius: 5px;
-}
-
-.delivery-items__list__item h3 {
-    font-size: 28px;
-    margin-top: 0;
-    margin-bottom: .5em;
 }
 
 .delivery-items__list__item ul {
