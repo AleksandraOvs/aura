@@ -187,6 +187,10 @@
     .product-attributes__list {
         padding-left: 0;
     }
+
+    .product-attributes {
+        padding: 0 1em;
+    }
 }
 
 /* =========================================================
