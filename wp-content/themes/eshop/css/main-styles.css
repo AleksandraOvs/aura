@@ -716,6 +716,7 @@ header {
     display: none;
     flex-wrap: wrap;
     gap: .5em;
+    width: 100%;
     padding-bottom: 2em;
 }
 
@@ -804,12 +805,11 @@ header {
 
 .search-results__loading {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-
-    padding: 25px 15px;
-
+    gap: 1em;
+    width: 100%;
     font-size: 14px;
     line-height: 1;
     opacity: 0.6;
@@ -824,10 +824,10 @@ header {
 .search-results__dots i {
     display: block;
 
-    width: 4px;
-    height: 4px;
+    width: 8px;
+    height: 8px;
 
-    border-radius: 50%;
+    border-radius: 100%;
     background: currentColor;
 
     animation: search-dot 1.2s infinite ease-in-out;
