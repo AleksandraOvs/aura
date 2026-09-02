@@ -153,6 +153,10 @@
     opacity: 1;
 }
 
+.aura-compare__remove:hover {
+    background: var(--theme-color-accent);
+}
+
 /*
  * Характеристики
  */
