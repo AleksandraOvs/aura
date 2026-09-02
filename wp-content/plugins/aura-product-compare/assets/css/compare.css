@@ -134,8 +134,8 @@
  */
 
 .aura-compare__remove {
-    padding: 5px 10px;
-    border: 1px solid var(--theme-color-accent);
+    padding: 3px 10px;
+    border: 1px solid var(--theme-color-grey);
     background: transparent;
     cursor: pointer;
     position: absolute;
@@ -143,10 +143,14 @@
     left: .5em;
     z-index: 5;
     transition: all .5s var(--transition);
+    background: rgba(0, 0, 0, .25);
+    transform: translateY(-.5em);
+    opacity: 0;
 }
 
-.aura-compare__remove:hover {
-    background: var(--theme-color-accent);
+.product-card.aura-compare-product:hover .aura-compare__remove {
+    transform: none;
+    opacity: 1;
 }
 
 /*
