@@ -714,9 +714,9 @@ header {
 /*AJAX SEARCH STYLES*/
 .search-results {
     display: none;
-    padding: 10px;
     flex-wrap: wrap;
-    gap: 1em;
+    gap: .5em;
+    padding-bottom: 2em;
 }
 
 .search-results.show {
@@ -757,14 +757,18 @@ header {
     gap: 1em;
     color: inherit;
     text-decoration: none;
-    width: calc(100% / 2 - .5em);
+    width: calc(100% / 3 - .67em);
     padding: .5em;
-    background: #060606;
+    background: transparent;
     transition: all .5s var(--transition);
+    border-radius: 5px;
+    border: 1px solid var(--theme-color-grey);
+    box-sizing: border-box;
 }
 
 .search-results__item:hover {
-    background: rgba(0, 0, 0, .5);
+    border-color: var(--white);
+    transform: translateY(-5px);
 }
 
 .search-results__image {
@@ -789,7 +793,7 @@ header {
 }
 
 .search-results__title {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 500;
 }
 
@@ -2089,6 +2093,15 @@ footer.footer * .menu {
         height: max-content;
     }
 
+    .search-results__item {
+        display: flex;
+        align-items: center;
+        gap: 1em;
+        color: inherit;
+        text-decoration: none;
+        width: calc(100% / 2 - .5em);
+    }
+
     .about-us__list__item {
         position: relative;
         width: calc(100% / 2 - 2em);
@@ -2283,9 +2296,72 @@ footer.footer * .menu {
         border: none;
     }
 
+    .search-results__item {
+        width: 100%;
+        border: none;
+        padding-bottom: 1em;
+        border-radius: 0;
+    }
+
+    .search-results__item:after {
+        content: '';
+        display: block;
+        position: absolute;
+        width: 100%;
+        height: 1px;
+        background: rgba(255, 255, 255, .2);
+        left: 0;
+        bottom: 0;
+    }
+
+    #search-results {
+        max-height: 100%;
+        overflow-y: scroll;
+    }
+
+    #search-results {
+        max-height: 100%;
+        overflow-y: scroll;
+    }
+
+    .search-form__button>span {
+        display: none;
+    }
+
+    #search-input {
+        background: #343A40;
+        width: 100%;
+        padding: 1em .5em;
+        border-radius: 50px;
+        color: var(--white);
+        height: 57px;
+    }
+
+    .search-form__button {
+        position: absolute;
+        right: 3.5px;
+        height: 50px;
+        display: flex;
+        top: 3.5px;
+        width: max-content;
+        align-items: center;
+        gap: .5em;
+        background: var(--theme-color-accent);
+        border-radius: 50px;
+        padding: 5px;
+        font-weight: 700;
+        width: 50px;
+        justify-content: center;
+    }
+
+    .search-form__button:active {
+        transform: scale(.85);
+    }
+
     .products-categories__list__link {
         padding: .5em;
     }
+
 
     .products-categories__list__item__title {
         font-size: 16px;
