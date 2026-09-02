@@ -904,6 +904,12 @@ h2.woocommerce-loop-product__title {
         align-items: flex-start;
     }
 
+    .product-card__bottom .product-card__cart a.add_to_cart_button {
+        width: max-content;
+        border-radius: 5px;
+        width: 100%;
+    }
+
     .product-card__cart {
         width: 100%;
     }
