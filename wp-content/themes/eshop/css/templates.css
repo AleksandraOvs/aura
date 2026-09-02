@@ -81,6 +81,10 @@ section.page-content {
         background: var(--theme-color-accent);
         display: block;
     }
+
+    .page-nav {
+        flex-direction: column;
+    }
 }
 
 @media (max-width: 576px) {
