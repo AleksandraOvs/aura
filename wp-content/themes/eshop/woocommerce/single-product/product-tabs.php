@@ -66,6 +66,8 @@ $guarantee_content = get_field('guarantee_text', 'option');
 
                 if (!empty($attribute_groups)) :
 
+                    echo '<h3>Характеристики</h3>';
+
                     // Флаг — есть ли вообще характеристики у товара
                     $has_attributes = false;
 
