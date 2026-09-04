@@ -1635,6 +1635,10 @@ section.partners h2 {
     padding-bottom: 7vh;
 }
 
+.contacts__inner__right h3 {
+    margin-top: 0;
+}
+
 .contacts-list {
     gap: 1em;
 }
