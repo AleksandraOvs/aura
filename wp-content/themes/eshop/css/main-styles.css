@@ -2181,6 +2181,10 @@ footer.footer * .menu {
         width: 100%;
     }
 
+    .about-company__inner__text {
+        padding-bottom: 5vh;
+    }
+
     .products-categories__list._grid-template {
         display: grid;
         gap: .5em;
