@@ -13,7 +13,7 @@
     /* Контейнеры по умолчанию */
     --container-width: 1920px;
     --fixed-container-width: 1080px;
-    --container-padding: 20px;
+    --container-padding: 5%;
     --transition: cubic-bezier(0.445, 0.05, 0.55, 0.95);
 }
 
