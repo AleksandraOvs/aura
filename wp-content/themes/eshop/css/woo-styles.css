@@ -188,6 +188,10 @@ li.product h2.woocommerce-loop-product__title {
     object-fit: contain;
 }
 
+.button.button-black.product-buy-one-click {
+    width: 100%;
+}
+
 .product-compare:hover {
     background: var(--theme-color-accent);
     border-color: var(--theme-color-accent);
@@ -306,8 +310,8 @@ li.product h2.woocommerce-loop-product__title {
     color: #53B423;
     font-size: 14px;
     display: flex;
-    justify-content: center;
     gap: .5em;
+    justify-content: center;
     margin-top: 1em;
 }
 
@@ -421,17 +425,25 @@ a.button.wc-forward:hover {
 /*SINGLE PRODUCT PAGE */
 .single-product__inner {
     display: flex;
-    gap: 2em;
+    gap: 1em;
     justify-content: space-between;
     align-items: flex-start;
 }
 
 .product-inner__images {
-    width: 40%;
+    width: 33%;
 }
 
 .single-product__inner__content {
-    width: calc(60% - 2em);
+    width: calc(66% - 1em);
+    display: flex;
+    gap: 2em;
+}
+
+.single-product__inner__content>div {
+    gap: 1em;
+    display: flex;
+    flex-direction: column;
 }
 
 /* .single-product__inner__content {
@@ -439,12 +451,6 @@ a.button.wc-forward:hover {
     gap: 1em;
     align-items: flex-start;
 } */
-
-.product-inner__content__col {
-    padding: 2em;
-    border: 1px solid rgba(101, 100, 100, .5);
-    border-radius: 5px;
-}
 
 /* .product-inner__content__col._info-col {
     max-width: 20%;
@@ -461,23 +467,34 @@ a.button.wc-forward:hover {
     gap: .5em;
     border: none;
     padding: 0;
-    margin-top: 2em;
 }
 
-.product-inner__content__col._benefits-col {
+.product-inner__content__col__benefits {
     border: none;
     padding: 0;
-    margin-top: 2em;
 }
 
 .product-inner__content__col__buy {
     display: flex;
     gap: 1em;
     flex-wrap: wrap;
+    padding: 2em;
+    border: 1px solid rgba(101, 100, 100, .5);
+    border-radius: 5px;
 }
 
 .woocommerce div.product-inner__content__col__buy form.product-buy-form {
     margin-bottom: 0;
+    margin-top: 2em;
+}
+
+.product-inner__content__col__info._info-col {
+    width: 20%;
+}
+
+.product-inner__content__col__buy,
+.product-inner__content__col__benefits {
+    width: calc(40% - 1em);
 }
 
 .product-inner__content__col__buy .product-card__price span {
@@ -485,16 +502,21 @@ a.button.wc-forward:hover {
     font-weight: 600;
 }
 
+.product-inner__content__col__buy .product-card__price {
+    align-items: center;
+    text-align: center;
+}
+
 .product-inner__content__col__buy .product-quantity {
     width: 100%;
     max-width: 200px;
 }
 
-.woocommerce div.product-inner__content__col__buy form.product-buy-form,
+/* .woocommerce div.product-inner__content__col__buy form.product-buy-form,
 .woocommerce div.product-inner__content__col__buy button {
     margin-bottom: 0;
     width: calc(50% - .5em);
-}
+} */
 
 .woocommerce div.product-inner__content__col__buy form.product-buy-form .button {
     width: 100%;
@@ -524,6 +546,13 @@ a.button.wc-forward:hover {
 .product-inner__content__col h3 {
     margin-top: 0;
     text-align: left;
+    font-size: 24px;
+}
+
+.product-inner__content__col__benefits._benefits-col h3 {
+    margin: 0;
+    font-size: 24px;
+    margin-bottom: 1em;
 }
 
 .order-benefits {
@@ -531,6 +560,12 @@ a.button.wc-forward:hover {
     display: flex;
     flex-direction: column;
     gap: 1em;
+}
+
+.order-benefits__item img {
+    height: max-content;
+    max-width: 30px;
+    transform: translateY(2px);
 }
 
 .order-benefits__item {
@@ -996,7 +1031,7 @@ h2.woocommerce-loop-product__title {
         justify-content: center;
     }
 
-    .product-inner__content__col._benefits-col {
+    .product-inner__content__col__benefits-col {
         width: 100%;
         padding: 1em;
         background: #f5f5f5;

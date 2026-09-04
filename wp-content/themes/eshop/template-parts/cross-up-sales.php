@@ -63,7 +63,7 @@ if (!empty($cross_sell_ids)) {
 
         <section class="single-product__cross-sells">
 
-            <div class="container">
+            <div class="fixed-container">
 
                 <div class="relative-products__head">
                     <h2 class="small-heading">Сопутствующие товары</h2>
@@ -212,7 +212,7 @@ if ($upsells_query->have_posts()) :
 
     <section class="single-product__related">
 
-        <div class="container">
+        <div class="fixed-container">
 
             <div class="relative-products__head">
                 <h2 class="small-heading">Похожие товары</h2>

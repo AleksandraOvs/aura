@@ -24,7 +24,7 @@ $product_faq_items_product = get_field('product_faq_items');
 $guarantee_content = get_field('guarantee_text', 'option');
 ?>
 
-<div class="container">
+<div class="fixed-container">
 
     <div class="product-tabs">
         <div class="product-tabs__nav">
