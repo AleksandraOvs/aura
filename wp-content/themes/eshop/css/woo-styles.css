@@ -964,6 +964,11 @@ h2.woocommerce-loop-product__title {
         padding: .5em;
     }
 
+    .product-inner__content__col__buy,
+    .product-inner__content__col__benefits {
+        width: 100%;
+    }
+
 }
 
 @media (max-width: 576px) {
