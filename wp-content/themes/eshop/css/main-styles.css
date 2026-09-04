@@ -1626,7 +1626,7 @@ section.partners h2 {
     background: #F5f5f5;
     padding-top: 0;
     padding-bottom: 0;
-    background: linear-gradient(90deg, rgba(245, 245, 245, 0.73) 0%, rgba(245, 245, 245, 1) 62.5%, rgba(255, 205, 26, 1) 62.5%);
+    background: linear-gradient(90deg, rgba(245, 245, 245, 0.73) 0%, rgba(245, 245, 245, 1) 62.5%, rgba(255, 205, 26, 1) 62%);
 }
 
 .contacts__inner__right {
