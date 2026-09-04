@@ -1246,7 +1246,7 @@ header {
     background-color: var(--theme-color-accent);
     z-index: 3;
     position: relative;
-    padding: 2em;
+    padding: 5%;
 }
 
 .quiz-banner__inner__content::after {
@@ -1318,8 +1318,9 @@ header {
 
 .about-company__inner__text {
     width: 60%;
-    padding-bottom: 7vh;
+    padding-bottom: 15vh;
 }
+
 
 .about-company__inner__text a.button {
     margin-top: 2em;
@@ -1625,7 +1626,7 @@ section.partners h2 {
     background: #F5f5f5;
     padding-top: 0;
     padding-bottom: 0;
-    background: linear-gradient(90deg, rgba(245, 245, 245, 0.73) 0%, rgba(245, 245, 245, 1) 66%, rgba(255, 205, 26, 1) 60%)
+    background: linear-gradient(90deg, rgba(245, 245, 245, 0.73) 0%, rgba(245, 245, 245, 1) 62.5%, rgba(255, 205, 26, 1) 62.5%);
 }
 
 .contacts__inner__right {
