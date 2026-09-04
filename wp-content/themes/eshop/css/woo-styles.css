@@ -723,6 +723,33 @@ h2.woocommerce-loop-product__title {
     width: max-content;
 }
 
+@media (max-width: 1024px) {
+    .single-product__inner__content {
+        flex-wrap: wrap;
+    }
+
+    .product-inner__content__col__info._info-col {
+        width: 100%;
+    }
+
+    .product-card__stock {
+        margin-top: 0;
+    }
+
+    .single-product__inner__content>div {
+        gap: .5em;
+    }
+
+    .product-inner__content__col__buy {
+        margin-right: 0;
+    }
+
+    .product-inner__content__col__buy,
+    .product-inner__content__col__benefits {
+        width: calc(50% - 1em);
+    }
+}
+
 @media (max-width: 1400px) {
     /* .product-inner__content__col._buy-col {
         order: 1;
