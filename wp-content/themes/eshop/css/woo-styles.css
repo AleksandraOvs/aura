@@ -744,6 +744,10 @@ h2.woocommerce-loop-product__title {
         margin-right: 0;
     }
 
+    .product-inner__content__col__buy {
+        padding: 1em;
+    }
+
     .product-inner__content__col__buy,
     .product-inner__content__col__benefits {
         width: calc(50% - 1em);
