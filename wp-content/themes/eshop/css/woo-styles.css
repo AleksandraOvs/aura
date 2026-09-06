@@ -723,6 +723,16 @@ h2.woocommerce-loop-product__title {
     width: max-content;
 }
 
+/*SHOP HERO*/
+
+.hero-content h1::after {
+    content: none;
+}
+
+.hero-content__description {
+    font-size: 24px;
+}
+
 @media (max-width: 1024px) {
     .single-product__inner__content {
         flex-wrap: wrap;
@@ -1089,7 +1099,13 @@ h2.woocommerce-loop-product__title {
         font-size: 14px;
         font-weight: 600;
     }
+
+    .hero-content__description {
+        font-size: 18px;
+    }
 }
+
+
 
 @media (max-width: 375px) {
     .products.products-5 {

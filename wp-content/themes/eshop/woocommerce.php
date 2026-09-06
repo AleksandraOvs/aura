@@ -23,85 +23,167 @@ get_header('shop');
 do_action('woocommerce_before_main_content');
 ?>
 
-<section class="page-title-block">
-    <div class="fixed-container">
-        <?php site_breadcrumbs() ?>
 
-        <?php if (!is_product()): ?>
-            <h1 class="page-title" data-scroll-animation="fade-down">
-                <?= esc_html(woocommerce_page_title('', false)); ?>
-            </h1>
-        <?php endif; ?>
-
-
-    </div>
-</section>
 <?php //get_template_part('template-parts/page-header') 
 ?>
-
 <?php
+
 if (is_shop()) {
 
-    get_template_part('sections/categories-section');
+    get_template_part('woocommerce/shop-page-hero');
+
+    /*
+     * Настройка WooCommerce:
+     *
+     * ''              — только товары
+     * 'subcategories' — только категории
+     * 'both'          — категории и товары
+     */
+    $shop_page_display = get_option('woocommerce_shop_page_display', '');
+
     echo '<div class="container">';
-    // Получаем родительские категории (только верхний уровень)
-    $categories = get_terms([
-        'taxonomy'   => 'product_cat',
-        'parent'     => 0,
-        'hide_empty' => true,
-    ]);
 
 
+    /*
+     * ============================================================
+     * КАТЕГОРИИ
+     * ============================================================
+     *
+     * Показываем categories-section:
+     *
+     * subcategories — да
+     * both          — да
+     * ''            — нет
+     */
 
-    echo '<div class="shop-header">';
-    if (!empty($categories) && !is_wp_error($categories)) {
-        echo '<div class="categories-grid">';
-        foreach ($categories as $cat) {
-            $cat_link = get_term_link($cat);
-            if (!is_wp_error($cat_link)) {
-?>
-                <a class="category-item__link" href="<?php echo esc_url($cat_link); ?>">
-                    <div class="category-title hover-effect"><?php echo esc_html($cat->name); ?></div>
-                </a>
-        <?php
-            }
-        }
-        echo '</div>';
+    if (
+        $shop_page_display === 'subcategories' ||
+        $shop_page_display === 'both'
+    ) {
+        get_template_part('sections/categories-section');
     }
-    echo do_shortcode('[shop_filters]');
-    echo '</div>';
 
-    // Показываем все товары
-    $args = [
-        'post_type'      => 'product',
-        'posts_per_page' => -1,
-        'orderby'        => 'menu_order',
-        'order'          => 'ASC',
-    ];
-    $products = new WP_Query($args);
 
-    if ($products->have_posts()) : ?>
-        <?php
-        // Получаем количество колонок (2,3,4,5 и т.д.)
-        $columns = wc_get_loop_prop('columns');
+    /*
+     * ============================================================
+     * SHOP + ТОВАРЫ
+     * ============================================================
+     *
+     * Показываем:
+     *
+     * ''     — да
+     * both   — да
+     * subcategories — нет
+     */
 
-        // Фолбек (если вдруг не задано)
-        if (!$columns) {
-            $columns = 4;
+    if (
+        $shop_page_display === '' ||
+        $shop_page_display === 'both'
+    ) {
+
+        /*
+         * SHOP HEADER
+         */
+
+        echo '<div class="shop-header">';
+
+        // Родительские категории
+        $categories = get_terms([
+            'taxonomy'   => 'product_cat',
+            'parent'     => 0,
+            'hide_empty' => true,
+        ]);
+
+        if (!empty($categories) && !is_wp_error($categories)) {
+
+            echo '<div class="categories-grid">';
+
+            foreach ($categories as $cat) {
+
+                $cat_link = get_term_link($cat);
+
+                if (!is_wp_error($cat_link)) {
+?>
+
+                    <a
+                        class="category-item__link"
+                        href="<?php echo esc_url($cat_link); ?>">
+                        <div class="category-title hover-effect">
+                            <?php echo esc_html($cat->name); ?>
+                        </div>
+                    </a>
+
+            <?php
+                }
+            }
+
+            echo '</div>';
         }
-        ?>
 
-        <ul class="products products-<?php echo esc_attr($columns); ?>">
-            <?php while ($products->have_posts()) : $products->the_post(); ?>
-                <?php wc_get_template_part('content', 'product'); ?>
-            <?php endwhile; ?>
-        </ul>
+        // Фильтры
+        echo do_shortcode('[shop_filters]');
 
-        <?php endif;
-    wp_reset_postdata();
+        echo '</div>';
+
+
+        /*
+         * ТОВАРЫ
+         */
+
+        $products = new WP_Query([
+            'post_type'      => 'product',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'orderby'        => 'menu_order',
+            'order'          => 'ASC',
+        ]);
+
+        if ($products->have_posts()) {
+
+            $columns = wc_get_loop_prop('columns');
+
+            if (!$columns) {
+                $columns = 4;
+            }
+            ?>
+
+            <ul class="products products-<?php echo esc_attr($columns); ?>">
+
+                <?php while ($products->have_posts()) : ?>
+
+                    <?php $products->the_post(); ?>
+
+                    <?php wc_get_template_part('content', 'product'); ?>
+
+                <?php endwhile; ?>
+
+            </ul>
+
+    <?php
+        }
+
+        wp_reset_postdata();
+    }
+
+    get_template_part('sections/offer');
+
     echo '</div>';
 } elseif (is_product_taxonomy()) {
+    ?>
+    <section class="page-title-block">
+        <div class="fixed-container">
+            <?php site_breadcrumbs() ?>
 
+            <?php if (!is_product()): ?>
+                <h1 class="page-title" data-scroll-animation="fade-down">
+                    <?= esc_html(woocommerce_page_title('', false)); ?>
+                </h1>
+            <?php endif; ?>
+
+
+        </div>
+    </section>
+    <?php
     $current_cat = get_queried_object();
     $parent_id = $current_cat->term_id;
 
@@ -118,7 +200,7 @@ if (is_shop()) {
         foreach ($categories as $cat) {
             $cat_link = get_term_link($cat);
             if (!is_wp_error($cat_link)) {
-        ?>
+    ?>
                 <a class="category-item__link" href="<?php echo esc_url($cat_link); ?>">
                     <div class="category-title hover-effect"><?php echo esc_html($cat->name); ?></div>
                 </a>
@@ -161,10 +243,25 @@ if (is_shop()) {
                 <?php wc_get_template_part('content', 'product'); ?>
             <?php endwhile; ?>
         </ul>
-<?php endif;
+    <?php endif;
     wp_reset_postdata();
     echo '</div>';
 } else {
+    ?>
+    <section class="page-title-block">
+        <div class="fixed-container">
+            <?php site_breadcrumbs() ?>
+
+            <?php if (!is_product()): ?>
+                <h1 class="page-title" data-scroll-animation="fade-down">
+                    <?= esc_html(woocommerce_page_title('', false)); ?>
+                </h1>
+            <?php endif; ?>
+
+
+        </div>
+    </section>
+<?php
     // Для других страниц WooCommerce (cart, checkout, account)
     woocommerce_content();
 }

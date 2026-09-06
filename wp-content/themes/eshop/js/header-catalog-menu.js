@@ -13,12 +13,18 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
 
-    // Открытие / закрытие каталога
+    // Открытие каталога / переход на страницу каталога
     catalogButton.addEventListener('click', function (event) {
 
         event.stopPropagation();
 
-        catalogMenu.classList.toggle('show');
+        if (catalogMenu.classList.contains('show')) {
+            // Второй клик — переход на страницу /shop
+            window.location.href = '/shop';
+        } else {
+            // Первый клик — открываем меню
+            catalogMenu.classList.add('show');
+        }
 
     });
 
@@ -43,7 +49,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
     }
-
 
     // Закрытие при клике вне меню
     document.addEventListener('click', function (event) {

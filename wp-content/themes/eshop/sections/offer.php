@@ -1,8 +1,8 @@
 <?php
-$offer_title          = get_field('offer_title');
-$offer_bg             = get_field('offer_bg');
-$offer_banner_heading = get_field('offer_banner_heading');
-$offer_banner_texts   = get_field('offer_banner_texts');
+$offer_title          = get_field('offer_title', 'option');
+$offer_bg             = get_field('offer_bg', 'option');
+$offer_banner_heading = get_field('offer_banner_heading', 'option');
+$offer_banner_texts   = get_field('offer_banner_texts', 'option');
 ?>
 
 <?php if ($offer_title || $offer_bg || $offer_banner_heading || $offer_banner_texts): ?>
@@ -52,9 +52,8 @@ $offer_banner_texts   = get_field('offer_banner_texts');
                         <img
                             src="<?= esc_url($offer_bg_url); ?>"
                             alt="<?= esc_attr(
-                                $offer_bg_alt ?: $offer_title
-                            ); ?>"
-                        >
+                                        $offer_bg_alt ?: $offer_title
+                                    ); ?>">
 
                     <?php endif; ?>
 
