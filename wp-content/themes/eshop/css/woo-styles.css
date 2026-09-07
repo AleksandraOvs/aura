@@ -909,6 +909,7 @@ h2.woocommerce-loop-product__title {
     }
 
     .product-inner__content__col__buy {
+        width: 100%;
         display: flex;
         gap: 1em;
         flex-wrap: wrap;
