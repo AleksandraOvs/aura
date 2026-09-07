@@ -100,6 +100,17 @@ li.product h2.woocommerce-loop-product__title {
     border: none;
 }
 
+.product-quantity input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.product-quantity input[type="number"]::-webkit-inner-spin-button,
+.product-quantity input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
 .product-compare {
     width: 40px;
     height: 40px;
@@ -189,7 +200,7 @@ li.product h2.woocommerce-loop-product__title {
 }
 
 .button.button-black.product-buy-one-click {
-    width: 90%;
+    /* width: 90%; */
     margin: 0 auto;
 }
 
@@ -541,7 +552,7 @@ a.button.wc-forward:hover {
 }
 
 .woocommerce div.product-inner__content__col__buy form.product-buy-form {
-    margin: 2em auto 0;
+    margin: 2em 0 0;
 }
 
 .product-inner__content__col__info._info-col {
