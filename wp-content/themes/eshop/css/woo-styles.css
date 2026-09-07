@@ -772,6 +772,19 @@ h2.woocommerce-loop-product__title {
     text-align: center;
 }
 
+.single-product__inner__content {
+    flex-direction: column;
+}
+
+.product-inner__content__col__info._info-col {
+    width: 100%;
+}
+
+.product-inner__content__col__info._info-col .product-card__stock {
+    justify-content: flex-start;
+    margin-top: 0;
+}
+
 .cart-empty.woocommerce-info::before {
     content: '';
     width: 75px;
