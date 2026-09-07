@@ -39,38 +39,6 @@ class AURA_Product_Compare
         'pa_vysota-mm',
     ];
 
-
-
-
-    /**
-     * Получить ID товаров в сравнении
-     */
-    // public function get_products()
-    // {
-
-    //     if (!function_exists('WC') || !WC()->session) {
-    //         return [];
-    //     }
-
-    //     $products = WC()->session->get(self::SESSION_KEY, []);
-
-    //     error_log(
-    //         'AURA COMPARE GET: ' .
-    //             print_r($products, true)
-    //     );
-
-    //     error_log(
-    //         'AURA WC SESSION ID: ' .
-    //             WC()->session->get_customer_id()
-    //     );
-
-    //     if (!is_array($products)) {
-    //         return [];
-    //     }
-
-    //     return array_map('absint', $products);
-    // }
-
     private function ensure_session()
     {
         if (!function_exists('WC')) {
@@ -97,37 +65,14 @@ class AURA_Product_Compare
 
         $this->ensure_session();
 
-        error_log('========== AURA SESSION DEBUG ==========');
 
-        error_log(
-            'COOKIE SESSION: ' .
-                print_r(
-                    $_COOKIE['wp_woocommerce_session_' . COOKIEHASH] ?? 'NO COOKIE',
-                    true
-                )
-        );
-
-        error_log(
-            'WC CUSTOMER ID: ' .
-                WC()->session->get_customer_id()
-        );
-
-        error_log(
-            'WC HAS SESSION: ' .
-                (WC()->session->has_session() ? 'YES' : 'NO')
-        );
 
         $products = WC()->session->get(
             self::SESSION_KEY,
             []
         );
 
-        error_log(
-            'COMPARE PRODUCTS: ' .
-                print_r($products, true)
-        );
 
-        error_log('========================================');
 
         if (!is_array($products)) {
             return [];
@@ -141,13 +86,43 @@ class AURA_Product_Compare
         return count($this->get_products());
     }
 
-    /**
-     * Добавить товар в сравнение
-     *
-     * @param int $product_id
-     *
-     * @return array
-     */
+    public function get_compare_categories($products)
+    {
+        if (empty($products)) {
+            return [];
+        }
+
+        $categories = [];
+
+        foreach ($products as $product) {
+
+            if (!$product instanceof WC_Product) {
+                continue;
+            }
+
+            $terms = get_the_terms(
+                $product->get_id(),
+                'product_cat'
+            );
+
+            if (empty($terms) || is_wp_error($terms)) {
+                continue;
+            }
+
+            foreach ($terms as $term) {
+
+                /*
+             * Ключом является ID категории.
+             * Поэтому одинаковая категория никогда
+             * не попадёт в список дважды.
+             */
+                $categories[$term->term_id] = $term;
+            }
+        }
+
+        return $categories;
+    }
+
     /**
      * Добавить товар в сравнение
      *
@@ -240,54 +215,6 @@ class AURA_Product_Compare
 
         return $this->get_products();
     }
-    /***
-     * временно
-     */
-
-    
-
-    // public function add_product($product_id)
-    // {
-    //     $products = $this->get_products();
-
-    //     error_log('AURA ADD BEFORE: ' . print_r($products, true));
-
-    //     $product_id = absint($product_id);
-
-    //     if (!$product_id) {
-    //         return $products;
-    //     }
-
-    //     if (in_array($product_id, $products, true)) {
-    //         return $products;
-    //     }
-
-    //     if (count($products) >= self::MAX_PRODUCTS) {
-    //         return $products;
-    //     }
-
-    //     $products[] = $product_id;
-
-    //     error_log('AURA ADD SET: ' . print_r($products, true));
-
-    //     WC()->session->set(
-    //         self::SESSION_KEY,
-    //         $products
-    //     );
-
-    //     /*
-    //  * Проверяем сразу после сохранения
-    //  */
-    //     $check = WC()->session->get(
-    //         self::SESSION_KEY,
-    //         []
-    //     );
-
-    //     error_log('AURA ADD AFTER SET: ' . print_r($check, true));
-
-    //     return $products;
-    // }
-
 
     /**
      * Удалить товар
@@ -513,6 +440,15 @@ class AURA_Product_Compare
 
         return $result;
     }
+
+    /**
+     * Получить уникальные категории товаров
+     * из текущего списка сравнения.
+     *
+     * @param array $products Массив WC_Product
+     * @return array
+     */
+
 
     /**
      * Получить общие характеристики

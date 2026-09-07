@@ -28,6 +28,15 @@ if (post_password_required()) {
             <!-- 1. Галерея -->
             <div class="product-inner__images">
                 <?php do_action('woocommerce_before_single_product_summary'); ?>
+
+                <div class="product-inner__images__buttons">
+                    <?php custom_add_to_wishlist_button();
+                    echo do_shortcode('[aura_compare_button]'); ?>
+                </div>
+
+                <?php aura_product_tags(); ?>
+
+
             </div>
 
             <div class="single-product__inner__content">

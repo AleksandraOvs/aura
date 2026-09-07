@@ -40,6 +40,16 @@ class AURA_Product_Compare_Shortcode
 
         $compare_attributes = $this->compare->get_compare_attributes($products);
 
+        /*
+         * Характеристики для сравнения
+         */
+        $compare_attributes = $this->compare->get_compare_attributes($products);
+
+        /*
+         * Категории товаров, находящихся в сравнении
+         */
+        $compare_categories = $this->compare->get_compare_categories($products);
+
         ob_start();
 
         include AURA_COMPARE_PATH . 'templates/compare.php';

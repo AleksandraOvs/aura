@@ -35,6 +35,16 @@ class AURA_Product_Compare_Ajax
             'wp_ajax_nopriv_aura_compare_remove',
             [$this, 'remove_product']
         );
+
+        add_action(
+            'wp_ajax_aura_compare_clear',
+            [$this, 'clear_products']
+        );
+
+        add_action(
+            'wp_ajax_nopriv_aura_compare_clear',
+            [$this, 'clear_products']
+        );
     }
 
     /**
@@ -118,6 +128,21 @@ class AURA_Product_Compare_Ajax
             'products' => $products,
             'count'    => count($products),
             'product_id' => $product_id,
+        ]);
+    }
+
+    public function clear_products()
+    {
+        check_ajax_referer(
+            'aura_compare_nonce',
+            'nonce'
+        );
+
+        $this->compare->clear_products();
+
+        wp_send_json_success([
+            'products' => [],
+            'count'    => 0,
         ]);
     }
 }

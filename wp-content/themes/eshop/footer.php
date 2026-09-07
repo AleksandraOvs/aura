@@ -102,6 +102,10 @@ $site_description = get_bloginfo('description');
     <?php echo do_shortcode('[contact-form-7 id="afa0f23" title="Стать партнером"]'); ?>
 </div>
 
+<div id="callback-popup" class="popup" style="display:none;max-width:600px;">
+    <?php echo do_shortcode('[contact-form-7 id="4400305" title="Обратный звонок"]'); ?>
+</div>
+
 <!-- ЗАКАЗАТЬ ЗВОНОК -->
 
 <?php if (!is_cart()) : ?>

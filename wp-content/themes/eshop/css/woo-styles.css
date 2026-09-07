@@ -355,6 +355,30 @@ a.button.wc-forward:hover {
     background: var(--white);
 }
 
+/*TAGS*/
+
+.product .product-tags {
+    position: absolute;
+    top: .5em;
+    left: .5em;
+    display: flex;
+    flex-direction: column;
+    gap: .3em;
+}
+
+.product-tags .product-tag {
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: .3em;
+    line-height: 1;
+    max-width: max-content;
+    border-radius: 3px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
 /* PRODUCTS */
 .woocommerce ul.products li.product,
 .woocommerce-page ul.products li.product {
@@ -433,6 +457,37 @@ a.button.wc-forward:hover {
 
 .product-inner__images {
     width: 33%;
+    position: relative;
+}
+
+.product-inner__images .custom-wishlist-btn {
+    position: relative;
+}
+
+.product-inner__images__buttons button {
+    width: 26px;
+    height: 25px;
+    padding: 3px;
+    border-radius: 3px;
+    top: unset;
+    right: unset;
+}
+
+.product-inner__images__buttons {
+    display: flex;
+    gap: .5em;
+    position: absolute;
+    top: .5em;
+    right: .5em;
+}
+
+.product-inner__images__buttons button.product-compare {
+    border: none;
+}
+
+.product-inner__images__buttons button.product-compare:hover,
+.product-inner__images__buttons .custom-wishlist-btn:hover {
+    background: rgba(255, 255, 255, .5);
 }
 
 .single-product__inner__content {

@@ -135,7 +135,7 @@
 
 .aura-compare__remove {
     padding: 3px 10px;
-    border: 1px solid var(--theme-color-grey);
+    border: none;
     background: transparent;
     cursor: pointer;
     position: absolute;
@@ -143,9 +143,10 @@
     left: .5em;
     z-index: 5;
     transition: all .5s var(--transition);
-    background: rgba(0, 0, 0, .25);
+    background: rgba(20, 20, 20, .25);
     transform: translateY(-.5em);
     opacity: 0;
+    border-radius: 30px;
 }
 
 .product-card.aura-compare-product:hover .aura-compare__remove {
@@ -254,10 +255,94 @@
     display: none;
 }
 
+.aura-compare__heading {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    gap: 2em;
+    margin-bottom: 2em;
+}
+
+.aura-compare__categories {
+    display: flex;
+    gap: .5em;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.aura-compare__category {
+    padding: .5em 1em;
+    background: #f8f8f8;
+    font-size: 14px;
+    border-radius: 30px;
+    transition: all .5s var(--transition);
+}
+
+.aura-compare__category:hover,
+.aura-compare__category.is-active {
+    background: var(--theme-color-accent);
+}
+
+.aura-compare__clear {
+    font-size: 14px;
+}
+
+.aura-compare__back-shop {
+    font-size: 14px;
+}
+
+.aura-compare__clear {
+    display: flex;
+    gap: .5em;
+    align-items: center;
+    min-width: max-content;
+}
+
+.aura-compare__back-shop {
+    display: flex;
+    gap: .5em;
+    align-items: center;
+    min-width: max-content;
+}
+
+.aura-compare__heading-actions {
+    display: flex;
+    gap: 1em;
+}
+
+.aura-compare__clear svg {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    object-position: center;
+}
+
+.aura-compare__back-shop svg {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    object-position: center;
+}
+
 @media(max-width: 1400px) {
 
     .aura-compare__products.swiper,
     .aura-compare {
         overflow: visible;
+    }
+}
+
+@media (max-width: 992px) {
+    .aura-compare__heading {
+        flex-direction: column;
+    }
+
+    .aura-compare__heading-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .aura-compare__categories {
+        justify-content: center;
     }
 }

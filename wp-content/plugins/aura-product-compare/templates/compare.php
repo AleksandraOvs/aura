@@ -41,6 +41,10 @@ if (!defined('ABSPATH')) {
 
         </div>
 
+        <?php
+        include AURA_COMPARE_PATH . 'templates/aura-compare-heading.php';
+        ?>
+
 
         <!-- Товары -->
 
@@ -61,8 +65,29 @@ if (!defined('ABSPATH')) {
 
                     ?>
 
+                    <?php
 
-                    <div class="aura-compare__item swiper-slide">
+                    $product_category_ids = [];
+
+                    $product_categories = get_the_terms(
+                        $product->get_id(),
+                        'product_cat'
+                    );
+
+                    if (
+                        !empty($product_categories) &&
+                        !is_wp_error($product_categories)
+                    ) {
+
+                        foreach ($product_categories as $category) {
+                            $product_category_ids[] = $category->term_id;
+                        }
+                    }
+
+                    ?>
+                    <div
+                        class="aura-compare__item swiper-slide"
+                        data-categories="<?php echo esc_attr(implode(',', $product_category_ids)); ?>">
 
 
                         <!-- Карточка товара -->

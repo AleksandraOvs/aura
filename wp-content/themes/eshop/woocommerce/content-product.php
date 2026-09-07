@@ -35,6 +35,9 @@ $compare_img = '<svg width="20" height="16" viewBox="0 0 20 16" fill="none" xmln
     <?php custom_add_to_wishlist_button();
     ?>
 
+    <?php //aura_product_tags(); 
+    ?>
+
     <div class="product-card__actions">
 
         <?php aura_product_quantity($product); ?>

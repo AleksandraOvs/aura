@@ -2,7 +2,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const fancyboxTargets = [
         "#consultation-popup",
-        "#partners-popup"
+        "#partners-popup",
+        "#callback-popup"
     ];
 
     document.querySelectorAll('a[href^="#"]').forEach(link => {

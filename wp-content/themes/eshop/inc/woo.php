@@ -279,3 +279,41 @@ remove_action(
     'woocommerce_checkout_coupon_form',
     10
 );
+
+/**
+ * Вывод тегов товара с индивидуальным цветом из ACF
+ */
+function aura_product_tags()
+{
+
+    global $product;
+
+    if (!$product) {
+        return;
+    }
+
+    $tags = get_the_terms($product->get_id(), 'product_tag');
+
+    if (empty($tags) || is_wp_error($tags)) {
+        return;
+    }
+
+    echo '<div class="product-tags">';
+
+    foreach ($tags as $tag) {
+
+        // Получаем цвет текущей метки из ACF
+        $bg_color = get_field('tags_color', $tag);
+
+        // Цвет по умолчанию
+        if (empty($bg_color)) {
+            $bg_color = '#213B67';
+        }
+
+        echo '<span class="product-tag" style="background-color: ' . esc_attr($bg_color) . ';">';
+        echo esc_html($tag->name);
+        echo '</span>';
+    }
+
+    echo '</div>';
+}

@@ -64,9 +64,13 @@
                                     <?= esc_html($phone); ?>
                                 </a>
 
-                                <a href="/" class="popup-button">
-                                    Заказать звонок
-                                </a>
+                                <?php $callback_text = get_field('callback_text', 'option');
+                                $callback_link = get_field('callback_link', 'option');
+                                if ($callback_text && $callback_link) : ?>
+                                    <a href="<?php echo esc_url($callback_link); ?>" class="popup-button">
+                                        <?php echo esc_html($callback_text); ?>
+                                    </a>
+                                <?php endif; ?>
                             </div>
 
                         <?php endif; ?>
