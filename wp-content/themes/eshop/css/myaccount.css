@@ -1,3 +1,26 @@
+.woocommerce form .form-row .input-text,
+.woocommerce form .form-row select {
+    font-family: inherit;
+    font-weight: 400;
+    letter-spacing: normal;
+    padding: .7em;
+}
+
+.woocommerce form .password-input,
+.woocommerce-page form .password-input {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    width: 100%;
+}
+
+.woocommerce form>.form-row {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+}
+
 .woocommerce-MyAccount-content h3 {
     margin-top: 0;
 }
@@ -165,7 +188,6 @@ button.woocommerce-button.button.woocommerce-form-login__submit {
     font-weight: 400;
     font-size: 18px;
     width: 280px;
-    margin: 20px auto 0;
 }
 
 p.woocommerce-LostPassword.lost_password {

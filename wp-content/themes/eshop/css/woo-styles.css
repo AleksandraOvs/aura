@@ -1,3 +1,12 @@
+:root {
+    --wc-form-color-background: #F8F8F8;
+    --wc-form-border-width: 1px;
+    --wc-form-border-color: #cccccc;
+    --wc-form-border-radius: 5px;
+    --wc-form-color-text: #6C757D;
+}
+
+
 .woocommerce:where(body:not(.woocommerce-block-theme-has-button-styles)) #respond input#submit,
 .woocommerce:where(body:not(.woocommerce-block-theme-has-button-styles)) a.button,
 .woocommerce:where(body:not(.woocommerce-block-theme-has-button-styles)) button.button,
@@ -24,6 +33,29 @@
     background-image: none;
     box-shadow: none;
     text-shadow: none;
+}
+
+.woocommerce:where(body:not(.woocommerce-block-theme-has-button-styles)) #respond input#submit.alt:hover,
+.woocommerce:where(body:not(.woocommerce-block-theme-has-button-styles)) a.button.alt:hover,
+.woocommerce:where(body:not(.woocommerce-block-theme-has-button-styles)) button.button.alt:hover,
+.woocommerce:where(body:not(.woocommerce-block-theme-has-button-styles)) input.button.alt:hover,
+:where(body:not(.woocommerce-block-theme-has-button-styles)):where(:not(.edit-post-visual-editor)) .woocommerce #respond input#submit.alt:hover,
+:where(body:not(.woocommerce-block-theme-has-button-styles)):where(:not(.edit-post-visual-editor)) .woocommerce a.button.alt:hover,
+:where(body:not(.woocommerce-block-theme-has-button-styles)):where(:not(.edit-post-visual-editor)) .woocommerce button.button.alt:hover,
+:where(body:not(.woocommerce-block-theme-has-button-styles)):where(:not(.edit-post-visual-editor)) .woocommerce input.button.alt:hover {
+    background-color: var(--theme-color-primary);
+    color: #fff;
+}
+
+.woocommerce #payment #place_order,
+.woocommerce-page #payment #place_order {
+    float: none;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 1em;
+    background: var(--theme-color-accent);
+    color: var(--theme-color-primary);
+    margin-top: 2em;
 }
 
 li.product h2.woocommerce-loop-product__title {
@@ -914,6 +946,10 @@ h2.woocommerce-loop-product__title {
         gap: 1em;
         flex-wrap: wrap;
         justify-content: space-between;
+    }
+
+    .product-inner__content__col__benefits {
+        width: 100%;
     }
 
     /* .product-inner__content__col._info-col {

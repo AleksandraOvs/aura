@@ -317,3 +317,16 @@ function aura_product_tags()
 
     echo '</div>';
 }
+
+
+add_filter('woocommerce_registration_errors', function ($errors, $username, $email) {
+
+    if (empty($_POST['privacy_consent'])) {
+        $errors->add(
+            'privacy_consent_error',
+            'Для регистрации необходимо дать согласие на обработку персональных данных.'
+        );
+    }
+
+    return $errors;
+}, 10, 3);

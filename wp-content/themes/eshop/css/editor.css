@@ -1,3 +1,7 @@
+#order_data .order_data_column .form-field {
+    float: none;
+}
+
 .editor-visual-editor {
     --wp-editor-canvas-background: #f5f5f5;
 }

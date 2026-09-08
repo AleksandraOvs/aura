@@ -24,78 +24,73 @@ do_action('woocommerce_before_checkout_form', $checkout);
     =========================================================== -->
     <section class="page-content">
 
-        <div class="container">
-            <div class="checkout-section__inner">
 
-                <div class="checkout-contacts__fields">
-                    <!-- ==========================================================
+        <div class="checkout-section__inner">
+
+            <div class="checkout-contacts__fields">
+                <!-- ==========================================================
          Авторизация
     =========================================================== -->
-                    <?php
-                    /*
+                <?php
+                /*
  * Если регистрация обязательна
  */
 
-                    if (
-                        ! $checkout->is_registration_enabled()
-                        && $checkout->is_registration_required()
-                        && ! is_user_logged_in()
-                    ) {
-                        echo esc_html(
-                            apply_filters(
-                                'woocommerce_checkout_must_be_logged_in_message',
-                                __('You must be logged in to checkout.', 'woocommerce')
-                            )
-                        );
+                if (
+                    ! $checkout->is_registration_enabled()
+                    && $checkout->is_registration_required()
+                    && ! is_user_logged_in()
+                ) {
+                    echo esc_html(
+                        apply_filters(
+                            'woocommerce_checkout_must_be_logged_in_message',
+                            __('You must be logged in to checkout.', 'woocommerce')
+                        )
+                    );
 
-                        return;
-                    }
-                    ?>
-                    <h2 class="checkout-section-title">
-                        Контактные данные
-                    </h2>
-                    <?php
-                    /*
+                    return;
+                }
+                ?>
+                <h2 class="checkout-section-title">
+                    Контактные данные
+                </h2>
+                <?php
+                /*
              * Billing-поля WooCommerce.
              *
              * Здесь остаются стандартные поля WooCommerce,
              * поэтому плагины доставки и оплаты продолжают
              * нормально с ними работать.
              */
-                    ?>
+                ?>
 
-                    <?php do_action('woocommerce_checkout_billing'); ?>
-                    <?php do_action('woocommerce_checkout_after_customer_details'); ?>
+                <?php do_action('woocommerce_checkout_billing'); ?>
+                <?php do_action('woocommerce_checkout_after_customer_details'); ?>
+            </div>
+
+
+            <div
+                class="checkout-order__summary"
+                id="checkout-order-summary">
+                <div class="checkout-order__total">
+
+                    <span class="checkout-order__total-label">
+                        Итого:
+                    </span>
+
+                    <span class="checkout-order__total-value">
+                        <?php echo WC()->cart->get_total(); ?>
+                    </span>
+
                 </div>
+                <div class="checkout-order__products">
 
 
-                <div
-                    class="checkout-order__summary"
-                    id="checkout-order-summary">
-                    <div class="checkout-order__total">
-
-                        <span class="checkout-order__total-label">
-                            Итого:
-                        </span>
-
-                        <span class="checkout-order__total-value">
-                            <?php echo WC()->cart->get_total(); ?>
-                        </span>
-
-                    </div>
-                    <div class="checkout-order__products">
-
-
-                        В корзине
-                        <span class="checkout-order__products-count">
-                            <?php echo esc_html(WC()->cart->get_cart_contents_count()); ?>
-                            <?php echo esc_html(_n('товар', 'товаров', WC()->cart->get_cart_contents_count(), 'woocommerce')); ?>
-                        </span>
-
-
-                    </div>
-
-
+                    В корзине
+                    <span class="checkout-order__products-count">
+                        <?php echo esc_html(WC()->cart->get_cart_contents_count()); ?>
+                        <?php echo esc_html(_n('товар', 'товаров', WC()->cart->get_cart_contents_count(), 'woocommerce')); ?>
+                    </span>
 
 
                 </div>
@@ -105,7 +100,12 @@ do_action('woocommerce_before_checkout_form', $checkout);
 
             </div>
 
+
+
+
         </div>
+
+
     </section>
 
     <!-- ==========================================================
@@ -130,10 +130,12 @@ do_action('woocommerce_before_checkout_form', $checkout);
         <section class="checkout-delivery">
 
             <h2 class="checkout-section-title">
-                Доставка
+                Способ получения:
             </h2>
 
             <div class="checkout-delivery__methods">
+
+                <?php get_template_part('woocommerce/checkout/delivery-methods') ?>
 
                 <?php
                 /*

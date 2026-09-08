@@ -145,6 +145,30 @@ do_action('woocommerce_before_customer_login_form');
 
                     <p class="form-row">
 
+                        <label class="woocommerce-form__label woocommerce-form__label-for-checkbox">
+                            <input
+                                type="checkbox"
+                                class="woocommerce-form__input-checkbox"
+                                name="privacy_consent"
+                                value="1"
+                                required />
+
+                            <span>
+                                Я даю согласие на обработку моих персональных данных
+                                в целях регистрации и использования учетной записи на сайте
+                                в соответствии с
+                                <a href="<?php echo esc_url(home_url('/politika-obrabotki-personalnyh-dannyh/')); ?>"
+                                    target="_blank"
+                                    rel="noopener">
+                                    Политикой обработки персональных данных
+                                </a>.
+                            </span>
+                        </label>
+
+                    </p>
+
+                    <p class="form-row submit-form">
+
                         <?php wp_nonce_field('woocommerce-register', 'woocommerce-register-nonce'); ?>
 
                         <button type="submit"
