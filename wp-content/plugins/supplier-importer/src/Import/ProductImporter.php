@@ -8,6 +8,15 @@ if (!defined('ABSPATH')) {
 
 class ProductImporter
 {
+    private AttributeMapper $attribute_mapper;
+
+
+    public function __construct()
+    {
+        $this->attribute_mapper =
+            new AttributeMapper();
+    }
+
     /**
      * Импорт одного нормализованного товара.
      *
@@ -200,21 +209,46 @@ class ProductImporter
         }
 
         /**
+         * Импортируем изображения.
+         */
+        $image_result = [
+            'imported' => 0,
+            'skipped'  => 0,
+            'failed'   => 0,
+        ];
+
+        if (
+            !empty($product['images']) &&
+            is_array($product['images'])
+        ) {
+
+            $image_importer = new ImageImporter();
+
+            $image_result = $image_importer->import(
+                $saved_product_id,
+                $product['images']
+            );
+        }
+
+        if (
+            !empty($product['attributes']) &&
+            is_array($product['attributes'])
+        ) {
+
+            $this->importAttributes(
+                $wc_product,
+                $product['attributes']
+            );
+        }
+
+
+        /**
          * Категории.
          */
         $this->importCategories(
             $saved_product_id,
             $product['categories'] ?? []
         );
-
-        /**
-         * Атрибуты.
-         */
-        $this->importAttributes(
-            $saved_product_id,
-            $product['attributes'] ?? []
-        );
-
         /**
          * Сохраняем связь с поставщиком.
          *
@@ -348,6 +382,7 @@ class ProductImporter
             'external_id'  => $external_id,
             'sku'          => $product['sku'] ?? '',
             'name'         => $product['name'],
+            'image_import' => $image_result,
         ];
     }
 
@@ -460,7 +495,7 @@ class ProductImporter
     }
 
     private function importAttributes(
-        int $product_id,
+        \WC_Product $product,
         array $attributes
     ): void {
 
@@ -468,202 +503,258 @@ class ProductImporter
             return;
         }
 
-        $product = wc_get_product($product_id);
+        /*
+     * Получаем уже существующие атрибуты товара.
+     *
+     * Мы НЕ будем их удалять.
+     */
+        $existing_attributes = $product->get_attributes();
 
-        if (!$product) {
-            return;
+        /*
+     * Индексируем существующие атрибуты по taxonomy.
+     */
+        $merged_attributes = [];
+
+        foreach ($existing_attributes as $existing_attribute) {
+
+            $name = $existing_attribute->get_name();
+
+            if (!$name) {
+                continue;
+            }
+
+            $merged_attributes[$name] = $existing_attribute;
         }
 
-        $wc_attributes = [];
 
-        foreach ($attributes as $attribute_name => $value) {
+        /*
+     * Обрабатываем атрибуты поставщика.
+     */
+        foreach ($attributes as $attribute_name => $attribute_data) {
 
+            /*
+         * Значение + единица измерения
+         */
+            $unit = '';
+
+            if (
+                is_array($attribute_data) &&
+                array_key_exists('value', $attribute_data)
+            ) {
+
+                $value = $attribute_data['value'];
+
+                if (
+                    isset($attribute_data['unit']) &&
+                    $attribute_data['unit'] !== null
+                ) {
+                    $unit = (string) $attribute_data['unit'];
+                }
+            } else {
+
+                $value = $attribute_data;
+            }
+
+
+            /*
+         * Пустое значение от поставщика
+         * не должно уничтожать существующий атрибут.
+         */
             if ($value === null || $value === '') {
                 continue;
             }
 
-            /**
-             * Название taxonomy.
-             *
-             * Например:
-             *
-             * collection → pa_collection
-             * lamp_type  → pa_lamp_type
-             */
-            $taxonomy = 'pa_' . sanitize_title(
+
+            /*
+         * Получаем существующий атрибут
+         * или создаём новый.
+         */
+            $attribute = $this->getOrCreateAttribute(
                 $attribute_name
             );
 
-            /**
-             * Значение + единица измерения.
-             */
-            if (
-                is_array($value) &&
-                array_key_exists('value', $value)
-            ) {
+            if (!$attribute) {
+                continue;
+            }
 
-                $attribute_value =
-                    (string) $value['value'];
+            $taxonomy = $attribute['taxonomy'];
+
+
+            /*
+         * Значение может быть одиночным:
+         *
+         * "LED"
+         *
+         * или массивом:
+         *
+         * ["ГЛН", "LED"]
+         */
+            $values = is_array($value)
+                ? $value
+                : [$value];
+
+
+            $term_ids = [];
+
+
+            foreach ($values as $term_value) {
 
                 if (
-                    isset($value['unit']) &&
-                    $value['unit'] !== ''
+                    $term_value === null ||
+                    $term_value === ''
                 ) {
-
-                    $attribute_value .= ' ' .
-                        $value['unit'];
+                    continue;
                 }
-            } else {
 
-                /**
-                 * Массив значений.
-                 *
-                 * Например:
-                 *
-                 * [
-                 *     'ГЛН',
-                 *     'LED'
-                 * ]
-                 */
-                if (is_array($value)) {
-
-                    $values = [];
-
-                    foreach ($value as $item) {
-
-                        if (
-                            is_array($item) &&
-                            isset($item['value'])
-                        ) {
-
-                            $item_value =
-                                (string) $item['value'];
-
-                            if (
-                                isset($item['unit']) &&
-                                $item['unit'] !== ''
-                            ) {
-
-                                $item_value .= ' ' .
-                                    $item['unit'];
-                            }
-
-                            $values[] = $item_value;
-                        } else {
-
-                            $values[] =
-                                (string) $item;
-                        }
-                    }
-
-                    $attribute_value =
-                        implode(', ', $values);
-                } else {
-
-                    $attribute_value =
-                        (string) $value;
-                }
-            }
-
-            $attribute_value = trim(
-                $attribute_value
-            );
-
-            if ($attribute_value === '') {
-                continue;
-            }
-
-            /**
-             * Создаём глобальный атрибут,
-             * если его ещё нет.
-             */
-            $attribute_id =
-                $this->getOrCreateAttribute(
-                    $attribute_name
+                $term_value = trim(
+                    (string) $term_value
                 );
 
-            if (!$attribute_id) {
-                continue;
-            }
+                if ($term_value === '') {
+                    continue;
+                }
 
-            /**
-             * Проверяем, существует ли taxonomy.
+
+                /*
+             * Ищем существующее значение.
              */
-            if (!taxonomy_exists($taxonomy)) {
-                continue;
-            }
-
-            /**
-             * Создаём term.
-             */
-            $term = term_exists(
-                $attribute_value,
-                $taxonomy
-            );
-
-            if (!$term) {
-
-                $term = wp_insert_term(
-                    $attribute_value,
+                $term = term_exists(
+                    $term_value,
                     $taxonomy
                 );
+
+
+                /*
+             * Если значения нет — создаём.
+             */
+                if (!$term) {
+
+                    $term = wp_insert_term(
+                        $term_value,
+                        $taxonomy
+                    );
+                }
+
+
+                if (is_wp_error($term)) {
+
+                    throw new \RuntimeException(
+                        'Не удалось создать значение "' .
+                            $term_value .
+                            '" для атрибута "' .
+                            $attribute['name'] .
+                            '": ' .
+                            $term->get_error_message()
+                    );
+                }
+
+
+                if (is_array($term)) {
+
+                    $term_ids[] = (int) $term['term_id'];
+                } else {
+
+                    $term_ids[] = (int) $term;
+                }
             }
 
-            if (
-                is_wp_error($term) ||
-                empty($term['term_id'])
-            ) {
+
+            /*
+         * Если ни одного значения не получилось,
+         * существующий атрибут оставляем как есть.
+         */
+            if (empty($term_ids)) {
                 continue;
             }
 
-            $term_id = (int) $term['term_id'];
 
-            /**
-             * Привязываем term к товару.
-             */
+            /*
+         * Привязываем новые значения к товару.
+         *
+         * false = полностью заменяем значения
+         * ИМЕННО ЭТОГО атрибута.
+         *
+         * Другие атрибуты товара не затрагиваются.
+         */
             wp_set_object_terms(
-                $product_id,
-                [$term_id],
+                $product->get_id(),
+                $term_ids,
                 $taxonomy,
                 false
             );
 
-            /**
-             * Формируем объект WooCommerce attribute.
-             */
-            $attribute = new \WC_Product_Attribute();
 
-            $attribute->set_id(
-                $attribute_id
+            /*
+         * Создаём объект атрибута товара.
+         */
+            $wc_attribute = new \WC_Product_Attribute();
+
+            $wc_attribute->set_id(
+                $attribute['id']
             );
 
-            $attribute->set_name(
+            $wc_attribute->set_name(
                 $taxonomy
             );
 
-            $attribute->set_options(
-                [$term_id]
+            $wc_attribute->set_options(
+                $term_ids
             );
 
-            /**
-             * Видимость на странице товара.
-             */
-            $attribute->set_visible(true);
+            /*
+         * Если такой атрибут уже существовал,
+         * сохраняем его позицию.
+         */
+            if (isset($merged_attributes[$taxonomy])) {
 
-            /**
-             * Использовать в вариациях.
-             *
-             * Пока false.
-             */
-            $attribute->set_variation(false);
+                $position =
+                    $merged_attributes[$taxonomy]
+                    ->get_position();
+            } else {
 
-            $wc_attributes[] = $attribute;
+                $position = count($merged_attributes);
+            }
+
+            $wc_attribute->set_position(
+                $position
+            );
+
+            $wc_attribute->set_visible(true);
+
+            $wc_attribute->set_variation(false);
+
+
+            /*
+         * Обновляем только этот атрибут
+         * в общем массиве.
+         */
+            $merged_attributes[$taxonomy] =
+                $wc_attribute;
+
+
+            /*
+         * Единицу сохраняем отдельно.
+         */
+            if ($unit !== '') {
+
+                update_post_meta(
+                    $product->get_id(),
+                    '_supplier_attribute_' .
+                        sanitize_key($attribute_name) .
+                        '_unit',
+                    $unit
+                );
+            }
         }
 
-        if (!empty($wc_attributes)) {
+
+        /*
+     * Сохраняем объединённый набор атрибутов.
+     */
+        if (!empty($merged_attributes)) {
 
             $product->set_attributes(
-                $wc_attributes
+                array_values($merged_attributes)
             );
 
             $product->save();
@@ -671,76 +762,131 @@ class ProductImporter
     }
 
     private function getOrCreateAttribute(
-        string $attribute_name
-    ): int {
+        string $normalized_name
+    ): ?array {
 
-        $taxonomy = 'pa_' . sanitize_title(
-            $attribute_name
+        $attribute = $this->attribute_mapper->get(
+            $normalized_name
         );
 
-        /**
-         * Атрибут уже существует.
-         */
-        $attribute_id =
-            wc_attribute_taxonomy_id_by_name(
-                $attribute_name
-            );
-
-        if ($attribute_id) {
-            return (int) $attribute_id;
+        if (!$attribute) {
+            return null;
         }
 
-        /**
-         * Создаём новый глобальный атрибут.
+        $slug = $attribute['slug'];
+        $name = $attribute['name'];
+
+        $taxonomy = 'pa_' . $slug;
+
+
+        /*
+     * 1. Ищем существующий атрибут WooCommerce
+     */
+        $attribute_id = wc_attribute_taxonomy_id_by_name(
+            $slug
+        );
+
+
+        /*
+     * Атрибут уже существует
+     */
+        if ($attribute_id) {
+
+            /*
+         * На всякий случай проверяем,
+         * зарегистрирована ли taxonomy.
          */
-        $attribute_id =
-            wc_create_attribute([
-                'name'         => $attribute_name,
-                'slug'         => sanitize_title(
-                    $attribute_name
-                ),
-                'type'         => 'select',
-                'order_by'     => 'menu_order',
-                'has_archives' => false,
-            ]);
+            if (!taxonomy_exists($taxonomy)) {
+
+                $this->registerAttributeTaxonomy(
+                    $taxonomy
+                );
+            }
+
+            return [
+                'id'       => (int) $attribute_id,
+                'slug'     => $slug,
+                'taxonomy' => $taxonomy,
+                'name'     => $name,
+            ];
+        }
+
+
+        /*
+     * 2. Атрибута нет — создаём
+     */
+        $attribute_id = wc_create_attribute([
+            'name'         => $name,
+            'slug'         => $slug,
+            'type'         => 'select',
+            'order_by'     => 'menu_order',
+            'has_archives' => false,
+        ]);
+
 
         if (is_wp_error($attribute_id)) {
-            return 0;
+
+            throw new \RuntimeException(
+                'Не удалось создать атрибут "' .
+                    $name .
+                    '": ' .
+                    $attribute_id->get_error_message()
+            );
         }
 
-        /**
-         * WooCommerce не всегда сразу
-         * регистрирует taxonomy после создания
-         * атрибута.
-         *
-         * Обновляем taxonomies.
-         */
+
+        /*
+     * 3. Сбрасываем кэш атрибутов WooCommerce
+     */
         delete_transient(
             'wc_attribute_taxonomies'
         );
 
-        \WC_Cache_Helper::invalidate_cache_group(
-            'woocommerce-attributes'
-        );
 
-        /**
-         * Регистрируем taxonomy вручную,
-         * если она ещё не зарегистрирована.
-         */
+        /*
+     * 4. Регистрируем taxonomy
+     * прямо в текущем запросе.
+     */
         if (!taxonomy_exists($taxonomy)) {
 
-            register_taxonomy(
-                $taxonomy,
-                ['product'],
-                [
-                    'hierarchical' => false,
-                    'show_ui'      => false,
-                    'query_var'    => true,
-                    'rewrite'      => false,
-                ]
+            $this->registerAttributeTaxonomy(
+                $taxonomy
             );
         }
 
-        return (int) $attribute_id;
+
+        return [
+            'id'       => (int) $attribute_id,
+            'slug'     => $slug,
+            'taxonomy' => $taxonomy,
+            'name'     => $name,
+        ];
+    }
+
+    /**
+     * Регистрирует taxonomy глобального атрибута
+     * в текущем запросе WordPress.
+     */
+    private function registerAttributeTaxonomy(
+        string $taxonomy
+    ): void {
+
+        if (taxonomy_exists($taxonomy)) {
+            return;
+        }
+
+        register_taxonomy(
+            $taxonomy,
+            ['product'],
+            [
+                'hierarchical'      => false,
+                'show_ui'           => false,
+                'show_admin_column' => false,
+                'query_var'         => true,
+                'rewrite'           => false,
+                'public'            => false,
+                'show_in_nav_menus' => false,
+            ]
+        );
     }
 }

@@ -26,6 +26,8 @@ $required_files = [
     'src/Normalizer/ValueCleaner.php',
     'src/Normalizer/ProductNormalizer.php',
     'src/Import/ProductImporter.php',
+    'src/Import/AttributeMapper.php',
+    'src/Import/ImageImporter.php',
 ];
 
 
@@ -76,6 +78,17 @@ add_action('admin_menu', function () {
         'supplier-importer-xml-test',
         function () {
             require SUPPLIER_IMPORTER_PATH . 'test-xml.php';
+        }
+    );
+
+    add_submenu_page(
+        'supplier-importer',
+        'Документация',
+        'Документация',
+        'manage_woocommerce',
+        'supplier-importer-docs',
+        function () {
+            require SUPPLIER_IMPORTER_PATH . 'documentation.php';
         }
     );
 });

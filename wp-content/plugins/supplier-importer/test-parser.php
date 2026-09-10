@@ -161,9 +161,14 @@ if (
                 );
         }
 
+
+
         /**
          * Импортируем.
          */
+
+
+
         $importer = new ProductImporter();
 
         $import_result = [];
@@ -297,7 +302,7 @@ if (
         $test_rows = array_slice(
             $parsed['rows'],
             0,
-            7
+            1
         );
 
         foreach ($test_rows as $row) {
@@ -455,6 +460,9 @@ $base_url = admin_url('admin.php');
     <?php endif; ?>
 
 
+
+
+
     <?php if ($import_result): ?>
 
         <hr>
@@ -511,6 +519,39 @@ $base_url = admin_url('admin.php');
                                 $item['external_id']
                             ); ?>
                         </code>
+
+                        <?php if (!empty($item['image_import'])): ?>
+
+                            <br><br>
+
+                            Изображения:
+
+                            импортировано:
+                            <strong>
+                                <?php echo esc_html(
+                                    $item['image_import']['imported']
+                                ); ?>
+                            </strong>
+
+                            |
+
+                            пропущено:
+                            <strong>
+                                <?php echo esc_html(
+                                    $item['image_import']['skipped']
+                                ); ?>
+                            </strong>
+
+                            |
+
+                            ошибок:
+                            <strong>
+                                <?php echo esc_html(
+                                    $item['image_import']['failed']
+                                ); ?>
+                            </strong>
+
+                        <?php endif; ?>
 
                     </p>
 

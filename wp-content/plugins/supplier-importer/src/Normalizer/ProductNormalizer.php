@@ -61,6 +61,17 @@ class ProductNormalizer
             'sku'
         );
 
+        /*
+ * Если поставщик не передал external_id,
+ * используем SKU как резервный идентификатор.
+ */
+        if (
+            empty($product['external_id']) &&
+            !empty($product['sku'])
+        ) {
+            $product['external_id'] = $product['sku'];
+        }
+
         $product['barcode'] = $this->getMappedValue(
             $row,
             $config,
