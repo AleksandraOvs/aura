@@ -45,6 +45,10 @@
     margin-bottom: .5em;
 }
 
+.checkout-payment {
+    padding-top: 0;
+}
+
 @media (max-width: 768px) {
     .checkout-section__inner {
         flex-direction: column;

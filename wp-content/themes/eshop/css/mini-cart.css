@@ -7,12 +7,6 @@
     height: 100%;
 }
 
-.header__bottom__actions__links__list li {
-    width: 24px;
-    height: 20px;
-    position: relative;
-}
-
 .shopping-cart-icon {
     width: 24px;
     height: 24px;
@@ -301,6 +295,21 @@ div#minicart-popup .close svg {
     display: flex;
     align-items: center;
     justify-content: space-between;
+}
+
+@media (max-width: 768px) {
+    #open-minicart {
+        width: 34px;
+        height: 34px;
+        padding: 7px;
+        background: #303030;
+        border-radius: 100%;
+    }
+
+    #open-minicart svg {
+        opacity: .5;
+    }
+
 }
 
 @media (max-width: 480px) {

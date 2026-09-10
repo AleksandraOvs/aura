@@ -24,6 +24,23 @@ document.addEventListener('DOMContentLoaded', () => {
         observer.observe(element);
     });
 
+    /* * ======================================== * Header при скролле * ======================================== */
+    const header = document.querySelector('.header'); if (header) {
+        const toggleHeaderScroll = () => {
+            if (window.scrollY > 300) {
+                header.classList.add('scroll');
+            } else {
+                header.classList.remove('scroll');
+            }
+        };
+        window.addEventListener('scroll', toggleHeaderScroll, {
+            passive: true
+        });
+
+        // Проверяем состояние сразу при загрузке 
+        toggleHeaderScroll();
+    }
+
     /*
      * ========================================
      * Кнопка "Наверх"

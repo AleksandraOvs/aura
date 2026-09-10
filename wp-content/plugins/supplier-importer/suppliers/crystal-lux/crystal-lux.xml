@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE yml_catalog SYSTEM "shops.dtd">
+<yml_catalog date="2026-09-09T09:00:02+03:00">
+    <shop>
+        <name>Crystal Lux</name>
+        <company>ООО «КРИСТАЛ ЛЮКС»</company>
+        <url>https://crystallux.ru</url>
+        <platform>BSM/Yandex/Market</platform>
+        <version>3.0.2</version>
+        <currencies>
+            <currency id="RUR" rate="1"/>
+        </currencies>
+        <categories>
+            <category id="152">Декоративный свет</category>
+            <category id="17" parentId="152">Люстры</category>
+            <category id="28" parentId="17">Люстры потолочные</category>
+            <category id="232" parentId="17">Потолочные светильники</category>
+            <category id="21" parentId="152">Напольные светильники (Торшеры)</category>
+            <category id="19" parentId="152">Настенные светильники (Бра)</category>
+            <category id="20" parentId="152">Настольные светильники</category>
+            <category id="18" parentId="152">Подвесные светильники</category>
+            <category id="22" parentId="152">Потолочные базы</category>
+            <category id="174" parentId="152">Потолочные светильники</category>
+            <category id="48">Функциональный свет</category>
+            <category id="91" parentId="48">Магнитная трековая система SPACE 48V</category>
+            <category id="86" parentId="91">Светильники</category>
+            <category id="87" parentId="91">Комплектующие</category>
+            <category id="85" parentId="91">Шинопровод</category>
+            <category id="154" parentId="91">Драйвер</category>
+            <category id="228" parentId="91">SPACE SMART</category>
+            <category id="229" parentId="228">3CCT-SMART Светильники</category>
+            <category id="230" parentId="228">SMART драйвер для магнитной трековой системы SPACE</category>
+            <category id="210" parentId="48">Магнитная система SPACE EASY</category>
+            <category id="178" parentId="48">Умный дом SPACE</category>
+            <category id="184" parentId="178">Комплектующие</category>
+            <category id="179" parentId="178">Светильники</category>
+            <category id="164" parentId="48">Однофазная трековая система Basic</category>
+            <category id="165" parentId="164">Комплектующие</category>
+            <category id="166" parentId="164">Светильники</category>
+            <category id="167" parentId="164">Шинопровод</category>
+            <category id="212" parentId="48">Трековая система SPACE 220</category>
+            <category id="214" parentId="212">Комплектующие</category>
+            <category id="215" parentId="212">Светильники</category>
+            <category id="213" parentId="212">Шинопровод</category>
+            <category id="216" parentId="48">Магнитная трековая система 5мм UX5</category>
+            <category id="220" parentId="216">Драйвер</category>
+            <category id="218" parentId="216">Комплектующие</category>
+            <category id="221" parentId="216">Светильник</category>
+            <category id="219" parentId="216">Шинопровод</category>
+            <category id="217" parentId="48">Уникальная трековая SMART система освещения TRACE48</category>
+            <category id="222" parentId="217">Драйвер</category>
+            <category id="223" parentId="217">Комплектующие</category>
+            <category id="224" parentId="217">Светильник</category>
+            <category id="225" parentId="217">Шинопровод</category>
+            <category id="79" parentId="48">Встраиваемые светильники</category>
+            <category id="153" parentId="79">Комплектующие</category>
+            <category id="181" parentId="48">Светодиодный модуль</category>
+            <category id="161" parentId="48">Потолочные светильники</category>
+            <category id="162" parentId="161">Влагозащищенные светильники</category>
+            <category id="168" parentId="48">Подвесные светильники</category>
+            <category id="169" parentId="168">Комплектующие</category>
+            <category id="156" parentId="48">Настенные светильники (Бра)</category>
+            <category id="157" parentId="156">Влагозащищенные светильники</category>
+            <category id="160" parentId="157">Уличные светильники</category>
+            <category id="159" parentId="156">Светильники IP20</category>
+            <category id="226" parentId="48">Решения для натяжных потолков</category>
+            <category id="227" parentId="48">Уличные светильники</category>
+            <category id="234" parentId="48">Светодиодная подсветка</category>
+            <category id="236" parentId="234">Комплектующие</category>
+            <category id="235" parentId="234">Светодиодная лента</category>
+        </categories>
+        <offers>
+            <offer id="4993" type="vendor.model" available="true">
+                <url>https://crystallux.ru/produktsiya/dekorativnyy-svet/svetilniki/armando-sp4-chrome/</url>
+                <price>17500</price>
+                <currencyId>RUR</currencyId>
+                <categoryId>18</categoryId>
+                <picture>https://crystallux.ru/upload/iblock/9dd/ta7v0m01haiacygd3m1jbh8ppk4cz6h8/ARMANDO_SP4_CHROME.jpg</picture>
+                <picture>https://crystallux.ru/upload/iblock/646/ARMANDO_SP4_CHROME_1.jpg</picture>
+                <picture>https://crystallux.ru/upload/iblock/9fb/ARMANDO_SP4_CHROME_2.jpg</picture>
+                <picture>https://crystallux.ru/upload/iblock/7dc/7xmup4svjlcxt8i4sypr09m6anobfi77/ARMANDO_SP4.jpg</picture>
+                <vendor>Crystal Lux</vendor>
+                <model>Светильник подвесной Crystal Lux ARMANDO SP4 CHROME</model>
+                <param name="Стиль">Дизайнерский</param>
+                <param name="Коллекция">ARMANDO CHROME</param>
+                <param name="Тип">Светильник подвесной</param>
+                <param name="Артикул">ARMANDO SP4 CHROME</param>
+                <param name="Код">0180/304</param>
+                <param name="Высота изделия, мм">420</param>
+                <param name="Высота цепи/троса, мм">600</param>
+                <param name="Высота с цепью/тросом, мм">1020</param>
+                <param name="Диаметр, мм">450</param>
+                <param name="Цоколь">E14</param>
+                <param name="Количество лампочек:">4</param>
+                <param name="Мощность лампочек, Вт">60W</param>
+                <param name="Рекомендации">CRYSTAL LUX рекомендует использовать LED лампы</param>
+                <param name="IP">20</param>
+                <param name="Вес">3.500</param>
+                <param name="Объём">0.0668</param>
+                <param name="Материал арматуры">Металл</param>
+                <param name="Покрытие арматуры">Гальваника</param>
+                <param name="Цвет арматуры">Хром</param>
+                <param name="Материал абажура/плафона">Пластик/Текстиль</param>
+                <param name="Цвет абажура/плафона">Хром/Белый</param>
+                <param name="Декоративный элемент">Хрусталь</param>
+                <param name="Пульт">нет</param>
+                <param name="Страна производитель">Испания</param>
+                <param name="Штрихкод">8400000031318</param>
+                <param name="stock">3</param>
+                <param name="Напряжение">220V</param>
+                <param name="Объем коробки 1">0.0668</param>
+                <param name="Вес коробки 1">3.500</param>
+                <param name="Длина коробки 1">48.0</param>
+                <param name="Ширина коробки 1">48.0</param>
+                <param name="Высота коробки 1">29.0</param>
+                <param name="ТН ВЭД">9405110039</param>
+                <count>3</count>
+            </offer>
+            <offer id="4997" type="vendor.model" available="true">
+                <url>https://crystallux.ru/produktsiya/dekorativnyy-svet/bra/armando-ap1-2-chrome/</url>
+                <price>10500</price>
+                <currencyId>RUR</currencyId>
+                <categoryId>19</categoryId>
+                <picture>https://crystallux.ru/upload/iblock/144/plc213s63d44rxc921x1n9jfu10r0weo/ARMANDO_AP1_2_CHROME.jpg</picture>
+                <picture>https://crystallux.ru/upload/iblock/300/ARMANDO_AP1_2_CHROME_2.jpg</picture>
+                <picture>https://crystallux.ru/upload/iblock/87b/9jj54zdmwdn4ywijdz8t1j82ncvnjjbt/ARMANDO_AP1_2.jpg</picture>
+                <vendor>Crystal Lux</vendor>
+                <model>Бра Crystal Lux ARMANDO AP1.2 CHROME</model>
+                <param name="Стиль">Дизайнерский</param>
+                <param name="Коллекция">ARMANDO CHROME</param>
+                <param name="Тип">Бра</param>
+                <param name="Артикул">ARMANDO AP1.2 CHROME</param>
+                <param name="Код">0180/401.2</param>
+                <param name="Высота изделия, мм">420</param>
+                <param name="Отступ от стены, мм">190</param>
+                <param name="Цоколь">E14</param>
+                <param name="Количество лампочек:">1</param>
+                <param name="Мощность лампочек, Вт">60W</param>
+                <param name="Длина, мм">240</param>
+                <param name="Рекомендации">CRYSTAL LUX рекомендует использовать LED лампы</param>
+                <param name="IP">20</param>
+                <param name="Вес">1.900</param>
+                <param name="Объём">0.0203</param>
+                <param name="Материал арматуры">Металл</param>
+                <param name="Покрытие арматуры">Гальваника</param>
+                <param name="Цвет арматуры">Хром</param>
+                <param name="Материал абажура/плафона">Пластик/Текстиль</param>
+                <param name="Цвет абажура/плафона">Хром/Белый</param>
+                <param name="Декоративный элемент">Хрусталь</param>
+                <param name="Пульт">нет</param>
+                <param name="Страна производитель">Испания</param>
+                <param name="Штрихкод">8400000031363</param>
+                <param name="stock">9</param>
+                <param name="Напряжение">220V</param>
+                <param name="Объем коробки 1">0.0203</param>
+                <param name="Вес коробки 1">1.900</param>
+                <param name="Длина коробки 1">30.0</param>
+                <param name="Ширина коробки 1">30.0</param>
+                <param name="Высота коробки 1">22.5</param>
+                <param name="ТН ВЭД">9405110039</param>
+                <count>9</count>
+            </offer>
+            <offer id="4998" type="vendor.model" available="true">
+                <url>https://crystallux.ru/produktsiya/dekorativnyy-svet/nastolnye-lampy/armando-lg1-chrome/</url>
+                <price>10900</price>
+                <currencyId>RUR</currencyId>
+                <categoryId>20</categoryId>
+                <picture>https://crystallux.ru/upload/iblock/ba8/wd0q0w0fhhrysrx63ed0yjy8fzp9pp9n/ARMANDO_LG1_CHROME.jpg</picture>
+                <picture>https://crystallux.ru/upload/iblock/4f8/ARMANDO_LG1_CHROME_2.jpg</picture>
+                <picture>https://crystallux.ru/upload/iblock/073/29cusjeconjkgu1pw2g7d04cq75efpvn/ARMANDO_LG1.jpg</picture>
+                <vendor>Crystal Lux</vendor>
+                <model>Настольная лампа Crystal Lux ARMANDO LG1 CHROME</model>
+                <param name="Стиль">Дизайнерский</param>
+                <param name="Коллекция">ARMANDO CHROME</param>
+                <param name="Тип">Настольная лампа</param>
+                <param name="Артикул">ARMANDO LG1 CHROME</param>
+                <param name="Код">0180/501</param>
+                <param name="Высота изделия, мм">440</param>
+                <param name="Высота с цепью/тросом, мм">440</param>
+                <param name="Диаметр, мм">220</param>
+                <param name="Цоколь">E14</param>
+                <param name="Количество лампочек:">1</param>
+                <param name="Мощность лампочек, Вт">60W</param>
+                <param name="Рекомендации">CRYSTAL LUX рекомендует использовать LED лампы</param>
+                <param name="IP">20</param>
+                <param name="Вес">2.600</param>
+                <param name="Объём">0.0203</param>
+                <param name="Материал арматуры">Металл</param>
+                <param name="Покрытие арматуры">Гальваника</param>
+                <param name="Цвет арматуры">Хром</param>
+                <param name="Материал абажура/плафона">Пластик/Текстиль</param>
+                <param name="Цвет абажура/плафона">Хром/Белый</param>
+                <param name="Декоративный элемент">Хрусталь</param>
+                <param name="Пульт">нет</param>
+                <param name="Страна производитель">Испания</param>
+                <param name="Штрихкод">8400000031370</param>
+                <param name="stock">1</param>
+                <param name="Напряжение">220V</param>
+                <param name="Объем коробки 1">0.0203</param>
+                <param name="Вес коробки 1">2.600</param>
+                <param name="Длина коробки 1">24.0</param>
+                <param name="Ширина коробки 1">23.5</param>
+                <param name="Высота коробки 1">36.0</param>
+                <param name="ТН ВЭД">9405210039</param>
+                <count>1</count>
+            </offer>
+        </offers>
+    </shop>
+</yml_catalog>
