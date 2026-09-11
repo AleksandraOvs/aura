@@ -640,6 +640,13 @@ a.button.wc-forward:hover {
     margin-bottom: 0;
 }
 
+.cart.product-buy-form button {
+    border-radius: 25px;
+}
+
+.button.button-black.product-buy-one-click {
+    border-radius: 25px;
+}
 
 
 .product-inner__content__col__buy form.cart.product-buy-form {
