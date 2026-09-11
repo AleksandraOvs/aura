@@ -646,6 +646,12 @@ a.button.wc-forward:hover {
 
 .button.button-black.product-buy-one-click {
     border-radius: 25px;
+    transition: all .5s var(--transition);
+}
+
+.button.button-black.product-buy-one-click:hover {
+    background: var(--theme-color-accent);
+    color: var(--theme-color-primary);
 }
 
 
