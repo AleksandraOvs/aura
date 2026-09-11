@@ -592,6 +592,7 @@ a.button.wc-forward:hover {
 
 .product-inner__content__col__info._info-col {
     width: 30%;
+    align-items: flex-start;
 }
 
 .product-inner__content__col__buy,
