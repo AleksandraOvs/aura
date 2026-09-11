@@ -750,6 +750,10 @@ h2.woocommerce-loop-product__title {
     overflow: visible;
 }
 
+.swiper.related-products-slider .swiper-wrapper .swiper-slide .product img {
+    aspect-ratio: 1/1;
+}
+
 /*CART STEPS */
 .checkout-steps__list {
     display: flex;
