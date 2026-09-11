@@ -7,7 +7,7 @@
 }
 
 
-.woocommerce:where(body:not(.woocommerce-block-theme-has-button-styles)) #respond input#submit,
+/* .woocommerce:where(body:not(.woocommerce-block-theme-has-button-styles)) #respond input#submit,
 .woocommerce:where(body:not(.woocommerce-block-theme-has-button-styles)) a.button,
 .woocommerce:where(body:not(.woocommerce-block-theme-has-button-styles)) button.button,
 .woocommerce:where(body:not(.woocommerce-block-theme-has-button-styles)) input.button,
@@ -33,7 +33,7 @@
     background-image: none;
     box-shadow: none;
     text-shadow: none;
-}
+} */
 
 .woocommerce:where(body:not(.woocommerce-block-theme-has-button-styles)) #respond input#submit.alt:hover,
 .woocommerce:where(body:not(.woocommerce-block-theme-has-button-styles)) a.button.alt:hover,
