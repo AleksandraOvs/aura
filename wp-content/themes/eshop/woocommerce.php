@@ -94,32 +94,6 @@ if (is_shop()) {
             'hide_empty' => true,
         ]);
 
-        if (!empty($categories) && !is_wp_error($categories)) {
-
-            echo '<div class="categories-grid">';
-
-            foreach ($categories as $cat) {
-
-                $cat_link = get_term_link($cat);
-
-                if (!is_wp_error($cat_link)) {
-?>
-
-                    <a
-                        class="category-item__link"
-                        href="<?php echo esc_url($cat_link); ?>">
-                        <div class="category-title hover-effect">
-                            <?php echo esc_html($cat->name); ?>
-                        </div>
-                    </a>
-
-            <?php
-                }
-            }
-
-            echo '</div>';
-        }
-
         // Фильтры
         echo do_shortcode('[shop_filters]');
 
@@ -145,7 +119,7 @@ if (is_shop()) {
             if (!$columns) {
                 $columns = 4;
             }
-            ?>
+?>
 
             <ul class="products products-<?php echo esc_attr($columns); ?>">
 
