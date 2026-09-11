@@ -579,7 +579,7 @@ a.button.wc-forward:hover {
     display: flex;
     gap: 1em;
     flex-wrap: wrap;
-    padding: 2em;
+    padding: 1em;
     border: 1px solid rgba(101, 100, 100, .5);
     border-radius: 5px;
     margin-right: 2em;
