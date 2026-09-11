@@ -142,7 +142,7 @@ if (
         $test_rows = array_slice(
             $parsed['rows'],
             0,
-            7
+            25
         );
 
         /**
@@ -917,7 +917,7 @@ $base_url = admin_url('admin.php');
                         array_slice(
                             $parsed['rows'],
                             0,
-                            3
+                            20
                         ),
                         true
                     )
