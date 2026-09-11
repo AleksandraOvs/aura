@@ -1,4 +1,11 @@
 wp-config.php
-wp-content/debug.log
 wp-content/uploads/wc-logs
-wp-content\plugins\supplier-importer\suppliers
+
+# Игнорировать директорию с импортами поставщиков
+/wp-content/plugins/supplier-importer/suppliers/
+
+# Игнорировать загрузки WordPress
+/wp-content/uploads/
+
+# Игнорировать debug.log
+/wp-content/debug.log
