@@ -15,6 +15,9 @@ define(
     plugin_dir_path(__FILE__)
 );
 
+/**
+ * Подключаем необходимые классы.
+ */
 $required_files = [
     'src/Parsers/CsvParser.php',
     'src/Parsers/YmlParser.php',
@@ -25,12 +28,12 @@ $required_files = [
     'src/Import/ImageImporter.php',
 ];
 
-
 foreach ($required_files as $file) {
 
     $path = SUPPLIER_IMPORTER_PATH . $file;
 
     if (!file_exists($path)) {
+
         add_action('admin_notices', function () use ($file) {
 
             echo '<div class="notice notice-error">';
@@ -48,89 +51,132 @@ foreach ($required_files as $file) {
     require_once $path;
 }
 
+
 /**
  * AJAX: импорт одной порции товаров.
+ *
+ * Поддерживает:
+ *
+ * CSV:
+ * - denkirs
+ * - maytoni
+ * - lightstar
+ *
+ * XML/YML:
+ * - crystal-lux
+ * - citilux
  */
 add_action(
     'wp_ajax_supplier_import_chunk',
     function () {
 
         /*
-     * Не позволяем PHP Warning от обработки изображений
-     * попадать в AJAX-ответ и ломать JSON.
-     */
-        $previous_error_reporting = error_reporting();
-
-        error_reporting(
-            $previous_error_reporting & ~E_WARNING
-        );
-
+         * Проверяем права.
+         */
         if (!current_user_can('manage_woocommerce')) {
+
             wp_send_json_error([
                 'message' => 'Недостаточно прав.',
             ]);
         }
 
+        /*
+         * Проверяем nonce.
+         */
         check_ajax_referer(
             'supplier_import_chunk',
             'nonce'
         );
 
+        /*
+         * Поставщик.
+         */
         $supplier_key = isset($_POST['supplier'])
             ? sanitize_key($_POST['supplier'])
             : '';
 
+        /*
+         * Текущая позиция.
+         */
         $offset = isset($_POST['offset'])
             ? max(0, (int) $_POST['offset'])
             : 0;
 
+        /*
+         * Размер порции.
+         *
+         * Максимум 50.
+         *
+         * На практике для этого проекта
+         * сейчас используем 5.
+         */
         $limit = isset($_POST['limit'])
             ? max(1, min(50, (int) $_POST['limit']))
-            : 2;
+            : 5;
 
+
+        /**
+         * Настройки поставщиков.
+         */
         $suppliers = [
+
             'denkirs' => [
                 'type' => 'csv',
+
                 'file' => SUPPLIER_IMPORTER_PATH .
                     'suppliers/denkirs/denkirs.csv',
+
                 'config' => SUPPLIER_IMPORTER_PATH .
                     'configs/denkirs.php',
             ],
 
             'maytoni' => [
                 'type' => 'csv',
+
                 'file' => SUPPLIER_IMPORTER_PATH .
                     'suppliers/maytoni/maytoni.csv',
+
                 'config' => SUPPLIER_IMPORTER_PATH .
                     'configs/maytoni.php',
             ],
 
             'crystal-lux' => [
                 'type' => 'yml',
+
                 'file' => SUPPLIER_IMPORTER_PATH .
                     'suppliers/crystal-lux/crystal-lux.xml',
+
                 'config' => SUPPLIER_IMPORTER_PATH .
                     'configs/crystal-lux.php',
             ],
 
             'citilux' => [
                 'type' => 'yml',
+
                 'file' => SUPPLIER_IMPORTER_PATH .
                     'suppliers/citilux/citilux.xml',
+
                 'config' => SUPPLIER_IMPORTER_PATH .
                     'configs/citilux.php',
             ],
 
             'lightstar' => [
                 'type' => 'csv',
+
                 'file' => SUPPLIER_IMPORTER_PATH .
                     'suppliers/lightstar/lightstar.csv',
+
                 'config' => SUPPLIER_IMPORTER_PATH .
                     'configs/lightstar.php',
             ],
         ];
 
+
+        /*
+         * Проверяем поставщика.
+         */
         if (!isset($suppliers[$supplier_key])) {
+
             wp_send_json_error([
                 'message' => 'Неизвестный поставщик.',
             ]);
@@ -138,35 +184,86 @@ add_action(
 
         $supplier = $suppliers[$supplier_key];
 
+
+        /*
+         * Значения для логирования.
+         *
+         * Инициализируем заранее, чтобы catch
+         * не обращался к несуществующим переменным.
+         */
+        $absolute_index = 0;
+        $product = [];
+
+
         try {
 
+            /*
+             * Проверяем конфигурацию.
+             */
             if (!file_exists($supplier['config'])) {
+
                 throw new \RuntimeException(
-                    'Конфигурация не найдена.'
+                    'Конфигурация не найдена: ' .
+                        $supplier['config']
                 );
             }
 
-            if (!file_exists($supplier['file'])) {
-                throw new \RuntimeException(
-                    'Файл поставщика не найден.'
-                );
-            }
-
-            $config = require $supplier['config'];
 
             /*
-             * Сейчас порционный импорт делаем для CSV.
+             * Проверяем файл поставщика.
              */
-            if ($supplier['type'] !== 'csv') {
+            if (!file_exists($supplier['file'])) {
+
                 throw new \RuntimeException(
-                    'Порционный импорт пока реализован для CSV.'
+                    'Файл поставщика не найден: ' .
+                        $supplier['file']
                 );
             }
 
-            $parser = new \SupplierImporter\Parsers\CsvParser(';');
+
+            if (!is_readable($supplier['file'])) {
+
+                throw new \RuntimeException(
+                    'Файл поставщика недоступен для чтения: ' .
+                        $supplier['file']
+                );
+            }
+
+
+            /*
+             * Загружаем конфигурацию поставщика.
+             */
+            $config = require $supplier['config'];
+
+
+            /**
+             * Выбираем нужный потоковый парсер.
+             */
+            if ($supplier['type'] === 'csv') {
+
+                $parser =
+                    new \SupplierImporter\Parsers\CsvParser(';');
+            } elseif ($supplier['type'] === 'yml') {
+
+                $parser =
+                    new \SupplierImporter\Parsers\YmlParser();
+            } else {
+
+                throw new \RuntimeException(
+                    'Неизвестный тип файла поставщика: ' .
+                        $supplier['type']
+                );
+            }
+
 
             /*
              * Получаем только текущую порцию.
+             *
+             * CSV:
+             * CsvParser::parseChunk()
+             *
+             * XML/YML:
+             * YmlParser::parseChunk()
              */
             $parsed = $parser->parseChunk(
                 $supplier['file'],
@@ -174,41 +271,88 @@ add_action(
                 $limit
             );
 
-            $rows = $parsed['rows'];
+
+            $rows = $parsed['rows'] ?? [];
+
+
+            /*
+             * Для XML/YML parser может вернуть свой
+             * признак finished.
+             *
+             * Для CSV пока используем количество строк.
+             */
+            $parser_finished =
+                isset($parsed['finished'])
+                ? (bool) $parsed['finished']
+                : count($rows) < $limit;
+
 
             supplier_import_log(
                 sprintf(
-                    'CHUNK START | supplier=%s | offset=%d | limit=%d | rows=%d',
+                    'CHUNK START | supplier=%s | type=%s | offset=%d | limit=%d | rows=%d',
                     $supplier_key,
+                    $supplier['type'],
                     $offset,
                     $limit,
                     count($rows)
                 )
             );
 
+
+            /*
+             * Если товаров больше нет.
+             */
             if (empty($rows)) {
 
                 supplier_import_log(
-                    'CHUNK EMPTY | import finished'
+                    sprintf(
+                        'CHUNK EMPTY | supplier=%s | offset=%d | import finished',
+                        $supplier_key,
+                        $offset
+                    )
                 );
 
                 wp_send_json_success([
+
                     'finished' => true,
-                    'offset' => $offset,
-                    'next_offset' => $offset,
-                    'processed' => 0,
-                    'created' => 0,
-                    'updated' => 0,
-                    'errors' => 0,
-                    'results' => [],
+
+                    'offset' =>
+                    $offset,
+
+                    'next_offset' =>
+                    $offset,
+
+                    'processed' =>
+                    0,
+
+                    'created' =>
+                    0,
+
+                    'updated' =>
+                    0,
+
+                    'errors' =>
+                    0,
+
+                    'results' =>
+                    [],
                 ]);
             }
 
+
+            /*
+             * Нормализатор.
+             */
             $normalizer =
                 new \SupplierImporter\Normalizer\ProductNormalizer();
 
+
+            /*
+             * Импортер WooCommerce.
+             */
             $importer =
                 new \SupplierImporter\Import\ProductImporter();
+
 
             $created = 0;
             $updated = 0;
@@ -216,60 +360,98 @@ add_action(
 
             $results = [];
 
+
+            /**
+             * Обрабатываем товары текущей порции.
+             */
             foreach ($rows as $index => $row) {
 
                 $absolute_index =
                     $offset + $index + 1;
+
                 $product = [];
+
+
                 try {
 
+                    /*
+                     * Нормализуем строку поставщика.
+                     */
                     $product =
                         $normalizer->normalize(
                             $row,
                             $config
                         );
 
+
                     supplier_import_log(
                         sprintf(
-                            '[%d] START | external_id=%s | sku=%s | name=%s',
+                            '[%d] START | supplier=%s | external_id=%s | sku=%s | name=%s',
                             $absolute_index,
+                            $supplier_key,
                             $product['external_id'] ?? '',
                             $product['sku'] ?? '',
                             $product['name'] ?? ''
                         )
                     );
 
-                    $result =
-                        $importer->import($product);
 
+                    /*
+                     * Импортируем товар.
+                     */
+                    $result =
+                        $importer->import(
+                            $product
+                        );
+
+
+                    /*
+                     * Считаем результат.
+                     */
                     if (
                         ($result['action'] ?? '') === 'created'
                     ) {
+
                         $created++;
                     } elseif (
                         ($result['action'] ?? '') === 'updated'
                     ) {
+
                         $updated++;
                     }
 
+
                     supplier_import_log(
                         sprintf(
-                            '[%d] SUCCESS | action=%s | product_id=%s',
+                            '[%d] SUCCESS | supplier=%s | action=%s | product_id=%s',
                             $absolute_index,
+                            $supplier_key,
                             $result['action'] ?? '',
                             $result['product_id'] ?? ''
                         )
                     );
 
+
+                    /*
+                     * Успешный результат.
+                     */
                     $results[] = [
-                        'success' => true,
-                        'action' => $result['action'] ?? '',
+
+                        'success' =>
+                        true,
+
+                        'action' =>
+                        $result['action'] ?? '',
+
                         'product_id' =>
                         $result['product_id'] ?? 0,
+
                         'external_id' =>
                         $product['external_id'] ?? '',
+
                         'sku' =>
                         $product['sku'] ?? '',
+
                         'name' =>
                         $product['name'] ?? '',
                     ];
@@ -277,45 +459,77 @@ add_action(
 
                     $errors++;
 
+
                     supplier_import_log(
                         sprintf(
-                            '[%d] ERROR | external_id=%s | sku=%s | %s',
+                            '[%d] ERROR | supplier=%s | external_id=%s | sku=%s | %s | file=%s | line=%d',
                             $absolute_index,
+                            $supplier_key,
                             $product['external_id'] ?? '',
                             $product['sku'] ?? '',
-                            $e->getMessage()
+                            $e->getMessage(),
+                            $e->getFile(),
+                            $e->getLine()
                         )
                     );
 
+
+                    /*
+                     * Ошибка одного товара не останавливает
+                     * весь chunk.
+                     */
                     $results[] = [
-                        'success' => false,
-                        'action' => 'error',
-                        'product_id' => 0,
+
+                        'success' =>
+                        false,
+
+                        'action' =>
+                        'error',
+
+                        'product_id' =>
+                        0,
+
                         'external_id' =>
                         $product['external_id'] ?? '',
+
                         'sku' =>
                         $product['sku'] ?? '',
+
                         'name' =>
                         $product['name'] ?? '',
+
                         'error' =>
                         $e->getMessage(),
                     ];
                 }
             }
 
+
+            /*
+             * Следующий offset.
+             */
             $next_offset =
                 $offset + count($rows);
 
+
             /*
-             * Если получили меньше limit,
-             * значит CSV закончился.
+             * Определяем конец файла.
+             *
+             * Для YML используем finished,
+             * который вычисляет XMLReader.
+             *
+             * Для CSV тоже будет корректно.
              */
             $finished =
+                $parser_finished ||
                 count($rows) < $limit;
+
 
             supplier_import_log(
                 sprintf(
-                    'CHUNK END | offset=%d | next_offset=%d | processed=%d | created=%d | updated=%d | errors=%d | finished=%s | memory=%d',
+                    'CHUNK END | supplier=%s | type=%s | offset=%d | next_offset=%d | processed=%d | created=%d | updated=%d | errors=%d | finished=%s | memory=%d',
+                    $supplier_key,
+                    $supplier['type'],
                     $offset,
                     $next_offset,
                     count($rows),
@@ -327,8 +541,14 @@ add_action(
                 )
             );
 
+
+            /*
+             * Возвращаем JSON.
+             */
             wp_send_json_success([
-                'finished' => $finished,
+
+                'finished' =>
+                $finished,
 
                 'offset' =>
                 $offset,
@@ -353,125 +573,238 @@ add_action(
             ]);
         } catch (\Throwable $e) {
 
+            /*
+             * Ошибка самого chunk,
+             * а не отдельного товара.
+             */
             supplier_import_log(
                 sprintf(
-                    '[%d] ERROR | external_id=%s | sku=%s | %s | file=%s | line=%d',
-                    $absolute_index,
-                    $product['external_id'] ?? '',
-                    $product['sku'] ?? '',
+                    'CHUNK FATAL | supplier=%s | type=%s | offset=%d | limit=%d | message=%s | file=%s | line=%d',
+                    $supplier_key,
+                    $supplier['type'] ?? '',
+                    $offset,
+                    $limit,
                     $e->getMessage(),
                     $e->getFile(),
                     $e->getLine()
                 )
             );
 
+
             wp_send_json_error([
+
                 'message' =>
                 $e->getMessage(),
+
+                'offset' =>
+                $offset,
+
+                'supplier' =>
+                $supplier_key,
             ]);
         }
     }
 );
 
-function supplier_import_log(string $message): void
-{
+
+/**
+ * Лог импортера.
+ */
+function supplier_import_log(
+    string $message
+): void {
+
     $log_dir =
         WP_CONTENT_DIR .
         '/uploads/supplier-importer';
 
+
     if (!is_dir($log_dir)) {
-        wp_mkdir_p($log_dir);
+
+        wp_mkdir_p(
+            $log_dir
+        );
     }
+
 
     $log_file =
         $log_dir .
         '/import.log';
 
-    $time = date('Y-m-d H:i:s');
+
+    $time =
+        date('Y-m-d H:i:s');
+
 
     file_put_contents(
+
         $log_file,
-        '[' . $time . '] ' .
+
+        '[' .
+            $time .
+            '] ' .
             $message .
             PHP_EOL,
-        FILE_APPEND | LOCK_EX
+
+        FILE_APPEND |
+            LOCK_EX
     );
 }
+
 
 /**
  * Подключение JS для импорта товаров.
  */
-add_action('admin_enqueue_scripts', function ($hook) {
+add_action(
+    'admin_enqueue_scripts',
+    function ($hook) {
 
-    if ($hook !== 'toplevel_page_supplier-importer') {
-        return;
-    }
-
-    $script_path = SUPPLIER_IMPORTER_PATH . 'js/import.js';
-    $script_url  = plugins_url('js/import.js', __FILE__);
-
-    if (!file_exists($script_path)) {
-        return;
-    }
-
-    wp_enqueue_script(
-        'supplier-importer',
-        $script_url,
-        [],
-        filemtime($script_path),
-        true
-    );
-
-    wp_localize_script(
-        'supplier-importer',
-        'supplierImportData',
-        [
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('supplier_import_chunk'),
-            'supplier' => isset($_GET['supplier'])
-                ? sanitize_key($_GET['supplier'])
-                : 'denkirs',
-            'chunkSize' => 5,
-        ]
-    );
-});
-
-//require_once SUPPLIER_IMPORTER_PATH . 'test-parser.php';
-
-add_action('admin_menu', function () {
-
-    add_menu_page(
-        'Supplier Importer',
-        'Supplier Importer',
-        'manage_woocommerce',
-        'supplier-importer',
-        function () {
-            require SUPPLIER_IMPORTER_PATH . 'test-parser.php';
-        },
-        'dashicons-database-import',
-        56
-    );
-
-
-    add_submenu_page(
-        'supplier-importer',
-        'XML диагностика',
-        'XML диагностика',
-        'manage_woocommerce',
-        'supplier-importer-xml-test',
-        function () {
-            require SUPPLIER_IMPORTER_PATH . 'test-xml.php';
+        if (
+            $hook !==
+            'toplevel_page_supplier-importer'
+        ) {
+            return;
         }
-    );
 
-    add_submenu_page(
-        'supplier-importer',
-        'Документация',
-        'Документация',
-        'manage_woocommerce',
-        'supplier-importer-docs',
-        function () {
-            require SUPPLIER_IMPORTER_PATH . 'documentation.php';
+
+        $script_path =
+            SUPPLIER_IMPORTER_PATH .
+            'js/import.js';
+
+
+        $script_url =
+            plugins_url(
+                'js/import.js',
+                __FILE__
+            );
+
+
+        if (!file_exists($script_path)) {
+            return;
         }
-    );
-});
+
+
+        wp_enqueue_script(
+
+            'supplier-importer',
+
+            $script_url,
+
+            [],
+
+            filemtime(
+                $script_path
+            ),
+
+            true
+        );
+
+
+        wp_localize_script(
+
+            'supplier-importer',
+
+            'supplierImportData',
+
+            [
+
+                'ajaxUrl' =>
+                admin_url(
+                    'admin-ajax.php'
+                ),
+
+                'nonce' =>
+                wp_create_nonce(
+                    'supplier_import_chunk'
+                ),
+
+                'supplier' =>
+                isset($_GET['supplier'])
+                    ? sanitize_key(
+                        $_GET['supplier']
+                    )
+                    : 'denkirs',
+
+                'chunkSize' =>
+                5,
+            ]
+        );
+    }
+);
+
+
+// require_once SUPPLIER_IMPORTER_PATH . 'test-parser.php';
+
+
+/**
+ * Административное меню.
+ */
+add_action(
+    'admin_menu',
+    function () {
+
+        add_menu_page(
+
+            'Supplier Importer',
+
+            'Supplier Importer',
+
+            'manage_woocommerce',
+
+            'supplier-importer',
+
+            function () {
+
+                require
+                    SUPPLIER_IMPORTER_PATH .
+                    'test-parser.php';
+            },
+
+            'dashicons-database-import',
+
+            56
+        );
+
+
+        add_submenu_page(
+
+            'supplier-importer',
+
+            'XML диагностика',
+
+            'XML диагностика',
+
+            'manage_woocommerce',
+
+            'supplier-importer-xml-test',
+
+            function () {
+
+                require
+                    SUPPLIER_IMPORTER_PATH .
+                    'test-xml.php';
+            }
+        );
+
+
+        add_submenu_page(
+
+            'supplier-importer',
+
+            'Документация',
+
+            'Документация',
+
+            'manage_woocommerce',
+
+            'supplier-importer-docs',
+
+            function () {
+
+                require
+                    SUPPLIER_IMPORTER_PATH .
+                    'documentation.php';
+            }
+        );
+    }
+);
