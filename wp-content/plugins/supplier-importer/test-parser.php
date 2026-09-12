@@ -4,6 +4,42 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+
+register_shutdown_function(function () {
+
+    $error = error_get_last();
+
+    if (!$error) {
+        return;
+    }
+
+    $fatal_types = [
+        E_ERROR,
+        E_PARSE,
+        E_CORE_ERROR,
+        E_COMPILE_ERROR,
+        E_USER_ERROR,
+    ];
+
+    if (!in_array($error['type'], $fatal_types, true)) {
+        return;
+    }
+
+    supplier_import_log(
+        'FATAL ERROR: ' .
+            $error['message'] .
+            ' | file=' .
+            $error['file'] .
+            ' | line=' .
+            $error['line']
+    );
+
+    supplier_import_log(
+        'Memory end: ' .
+            memory_get_usage(true)
+    );
+});
+
 use SupplierImporter\Parsers\CsvParser;
 use SupplierImporter\Parsers\YmlParser;
 use SupplierImporter\Normalizer\ProductNormalizer;
@@ -97,6 +133,11 @@ if (
     $_GET['import'] === '1'
 ) {
 
+    supplier_import_log('========================================');
+    supplier_import_log('IMPORT START');
+    supplier_import_log('Supplier: ' . ($supplier_key ?? 'unknown'));
+    supplier_import_log('Memory start: ' . memory_get_usage(true));
+
     try {
 
         if (!file_exists($supplier['config'])) {
@@ -136,13 +177,17 @@ if (
             $supplier['file']
         );
 
+        supplier_import_log(
+            'Parser finished. Rows: ' . count($parsed['rows'])
+        );
+
         /**
          * Только тестовые товары.
          */
-        $test_rows = array_slice(
-            $parsed['rows'],
-            0,
-            25
+        $test_rows = $parsed['rows'];
+
+        supplier_import_log(
+            'Rows selected for import: ' . count($test_rows)
         );
 
         /**
@@ -161,6 +206,9 @@ if (
                 );
         }
 
+        supplier_import_log(
+            'Normalized products: ' . count($normalized_products)
+        );
 
 
         /**
@@ -177,14 +225,44 @@ if (
             $normalized_products as $index => $product
         ) {
 
+            supplier_import_log(
+                sprintf(
+                    '[%d/%d] START | external_id=%s | sku=%s | name=%s',
+                    $index + 1,
+                    count($normalized_products),
+                    $product['external_id'] ?? '',
+                    $product['sku'] ?? '',
+                    $product['name'] ?? ''
+                )
+            );
+
             try {
 
                 $import_result[] =
                     $importer->import(
                         $product
                     );
-            } catch (\Throwable $e) {
 
+                supplier_import_log(
+                    sprintf(
+                        '[%d/%d] SUCCESS | external_id=%s | product_id=%s',
+                        $index + 1,
+                        count($normalized_products),
+                        $product['external_id'] ?? '',
+                        $import_result[count($import_result) - 1]['product_id'] ?? ''
+                    )
+                );
+            } catch (\Throwable $e) {
+                supplier_import_log(
+                    sprintf(
+                        '[%d/%d] ERROR | external_id=%s | sku=%s | %s',
+                        $index + 1,
+                        count($normalized_products),
+                        $product['external_id'] ?? '',
+                        $product['sku'] ?? '',
+                        $e->getMessage()
+                    )
+                );
                 $import_result[] = [
                     'success' => false,
                     'action' => 'error',
@@ -432,16 +510,58 @@ $base_url = admin_url('admin.php');
             name="import"
             value="1">
 
-        <button
-            type="submit"
-            class="button"
-            onclick="return confirm(
-            'Импортировать тестовые товары?'
-        );">
 
-            Импортировать тестовые товары
 
-        </button>
+        <div id="supplier-import">
+
+            <button
+                type="button"
+                id="supplier-import-start"
+                class="button button-primary">
+                Импортировать все товары
+            </button>
+
+            <div
+                id="supplier-import-status"
+                style="
+            display:none;
+            margin-top:20px;
+            padding:15px;
+            background:#fff;
+            border:1px solid #ccd0d4;
+        ">
+
+                <div
+                    id="supplier-import-progress"
+                    style="font-size:16px;font-weight:600;">
+                    Подготовка импорта...
+                </div>
+
+                <div
+                    style="
+                margin-top:12px;
+                height:20px;
+                background:#eee;
+                border-radius:4px;
+                overflow:hidden;
+            ">
+                    <div
+                        id="supplier-import-progress-bar"
+                        style="
+                    width:0%;
+                    height:100%;
+                    background:#2271b1;
+                    transition:width .2s;
+                "></div>
+                </div>
+
+                <div
+                    id="supplier-import-message"
+                    style="margin-top:12px;"></div>
+
+            </div>
+
+        </div>
 
     </form>
 

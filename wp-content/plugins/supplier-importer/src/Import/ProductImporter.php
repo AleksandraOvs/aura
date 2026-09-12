@@ -230,6 +230,19 @@ class ProductImporter
             );
         }
 
+        /**
+         * Импорт изображений временно отключён.
+         *
+         * Используем этот режим для проверки
+         * скорости и стабильности импорта товаров
+         * без обработки изображений через Imagick.
+         */
+        // $image_result = [
+        //     'imported' => 0,
+        //     'skipped'  => 0,
+        //     'failed'   => 0,
+        // ];
+
         if (
             !empty($product['attributes']) &&
             is_array($product['attributes'])

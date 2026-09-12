@@ -144,6 +144,151 @@ class CsvParser
         ];
     }
 
+    public function parseChunk(
+        string $file,
+        int $offset,
+        int $limit
+    ): array {
+
+        if (!file_exists($file)) {
+            throw new \RuntimeException(
+                'CSV-файл не найден: ' . $file
+            );
+        }
+
+        if (!is_readable($file)) {
+            throw new \RuntimeException(
+                'CSV-файл недоступен для чтения: ' . $file
+            );
+        }
+
+        $handle = fopen($file, 'rb');
+
+        if (!$handle) {
+            throw new \RuntimeException(
+                'Не удалось открыть CSV-файл.'
+            );
+        }
+
+        /*
+     * Заголовки.
+     */
+        $headers = fgetcsv(
+            $handle,
+            0,
+            $this->delimiter,
+            $this->enclosure,
+            $this->escape
+        );
+
+        if ($headers === false) {
+            fclose($handle);
+
+            throw new \RuntimeException(
+                'Не удалось прочитать заголовок CSV.'
+            );
+        }
+
+        $headers = $this->normalizeHeaders($headers);
+
+        /*
+     * Пропускаем уже обработанные строки.
+     */
+        $current_row = 0;
+
+        while ($current_row < $offset) {
+
+            $row = fgetcsv(
+                $handle,
+                0,
+                $this->delimiter,
+                $this->enclosure,
+                $this->escape
+            );
+
+            if ($row === false) {
+                fclose($handle);
+
+                return [
+                    'headers' => $headers,
+                    'rows'    => [],
+                    'count'   => 0,
+                    'offset'  => $offset,
+                    'limit'   => $limit,
+                    'next'    => false,
+                ];
+            }
+
+            if ($this->isEmptyRow($row)) {
+                continue;
+            }
+
+            $current_row++;
+        }
+
+        /*
+     * Читаем только нужную порцию.
+     */
+        $rows = [];
+
+        while (count($rows) < $limit) {
+
+            $row = fgetcsv(
+                $handle,
+                0,
+                $this->delimiter,
+                $this->enclosure,
+                $this->escape
+            );
+
+            if ($row === false) {
+                break;
+            }
+
+            if ($this->isEmptyRow($row)) {
+                continue;
+            }
+
+            if (count($row) < count($headers)) {
+                $row = array_pad(
+                    $row,
+                    count($headers),
+                    null
+                );
+            }
+
+            if (count($row) > count($headers)) {
+                $row = array_slice(
+                    $row,
+                    0,
+                    count($headers)
+                );
+            }
+
+            $item = [];
+
+            foreach ($headers as $index => $header) {
+
+                $value = $row[$index] ?? null;
+
+                $item[$header] =
+                    ValueCleaner::clean($value);
+            }
+
+            $rows[] = $item;
+        }
+
+        fclose($handle);
+
+        return [
+            'headers' => $headers,
+            'rows'    => $rows,
+            'count'   => count($rows),
+            'offset'  => $offset,
+            'limit'   => $limit,
+            'next'    => count($rows) === $limit,
+        ];
+    }
 
     /**
      * Читаем только первые строки файла.
