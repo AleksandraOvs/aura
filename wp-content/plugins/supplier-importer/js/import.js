@@ -397,18 +397,62 @@ document.addEventListener('DOMContentLoaded', () => {
             );
 
             /*
-             * Сначала проверяем HTTP.
-             */
+ * Сначала проверяем HTTP.
+ */
             if (!response.ok) {
+                const responseText = await response.text();
+
+                console.error(
+                    'Supplier Importer: HTTP ошибка',
+                    response.status
+                );
+
+                console.error(
+                    'Supplier Importer: RAW response',
+                    responseText
+                );
+
                 throw new Error(
-                    `HTTP ошибка ${response.status}`
+                    `HTTP ошибка ${response.status}. Смотри RAW response в консоли.`
                 );
             }
 
             /*
-             * Получаем JSON.
+             * Получаем сначала обычный текст.
+             *
+             * Это нужно для диагностики:
+             * если PHP/WordPress выведет warning, notice,
+             * fatal error или HTML вместо JSON,
+             * response.json() сразу выдаст только
+             * "SyntaxError", и мы не увидим причину.
              */
-            const data = await response.json();
+            const responseText = await response.text();
+
+            console.log(
+                'Supplier Importer: RAW response',
+                responseText
+            );
+
+            let data;
+
+            try {
+                data = JSON.parse(responseText);
+            } catch (error) {
+
+                console.error(
+                    'Supplier Importer: сервер вернул НЕ JSON',
+                    error
+                );
+
+                console.error(
+                    'Supplier Importer: RAW response',
+                    responseText
+                );
+
+                throw new Error(
+                    'Сервер вернул некорректный JSON. Смотри RAW response в консоли.'
+                );
+            }
 
             console.log(
                 'Supplier Importer: ответ AJAX',
