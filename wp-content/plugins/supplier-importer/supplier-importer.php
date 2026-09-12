@@ -76,7 +76,7 @@ add_action(
 
         $limit = isset($_POST['limit'])
             ? max(1, min(50, (int) $_POST['limit']))
-            : 25;
+            : 2;
 
         $suppliers = [
             'denkirs' => [
@@ -421,7 +421,7 @@ add_action('admin_enqueue_scripts', function ($hook) {
             'supplier' => isset($_GET['supplier'])
                 ? sanitize_key($_GET['supplier'])
                 : 'denkirs',
-            'chunkSize' => 25,
+            'chunkSize' => 5,
         ]
     );
 });

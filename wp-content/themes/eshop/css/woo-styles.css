@@ -976,6 +976,10 @@ h2.woocommerce-loop-product__title {
         width: 100%;
     }
 
+    .button.button-black.product-buy-one-click {
+        width: 100%;
+    }
+
     /* .product-inner__content__col._info-col {
         order: unset;
         width: 100%;

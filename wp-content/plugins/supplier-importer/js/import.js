@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     const state = {
         offset: 0,
-        chunkSize: Number(supplierImportData.chunkSize) || 25,
+        chunkSize: Number(supplierImportData.chunkSize) || 2,
 
         processed: 0,
         created: 0,
