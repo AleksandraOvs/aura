@@ -55,6 +55,16 @@ add_action(
     'wp_ajax_supplier_import_chunk',
     function () {
 
+        /*
+     * Не позволяем PHP Warning от обработки изображений
+     * попадать в AJAX-ответ и ломать JSON.
+     */
+        $previous_error_reporting = error_reporting();
+
+        error_reporting(
+            $previous_error_reporting & ~E_WARNING
+        );
+
         if (!current_user_can('manage_woocommerce')) {
             wp_send_json_error([
                 'message' => 'Недостаточно прав.',

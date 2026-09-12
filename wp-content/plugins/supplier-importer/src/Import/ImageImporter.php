@@ -213,10 +213,48 @@ class ImageImporter
             'tmp_name' => $tmp,
         ];
 
-        $attachment_id = media_handle_sideload(
-            $file_array,
-            $product_id
+        /*
+     * WordPress при обработке изображения может вызвать
+     * exif_read_data() и вывести PHP Warning, если у JPEG
+     * повреждён или некорректен EXIF.
+     *
+     * Такой Warning ломает JSON-ответ AJAX.
+     *
+     * Подавляем только предупреждения, связанные
+     * непосредственно с EXIF.
+     */
+        $previous_handler = set_error_handler(
+            function (
+                int $severity,
+                string $message,
+                string $file,
+                int $line
+            ) {
+
+                if (
+                    $severity === E_WARNING &&
+                    (
+                        strpos($message, 'exif_read_data') !== false ||
+                        strpos($message, 'Incorrect APP1 Exif Identifier Code') !== false
+                    )
+                ) {
+                    return true;
+                }
+
+                return false;
+            }
         );
+
+        try {
+
+            $attachment_id = media_handle_sideload(
+                $file_array,
+                $product_id
+            );
+        } finally {
+
+            restore_error_handler();
+        }
 
         if (is_wp_error($attachment_id)) {
 
@@ -226,10 +264,10 @@ class ImageImporter
         }
 
         /*
-         * Сохраняем исходный URL.
-         * По нему будем понимать, что изображение
-         * уже было импортировано.
-         */
+     * Сохраняем исходный URL.
+     * По нему будем понимать, что изображение
+     * уже было импортировано.
+     */
         update_post_meta(
             $attachment_id,
             '_supplier_image_url',
