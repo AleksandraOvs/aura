@@ -297,6 +297,12 @@ div#minicart-popup .close svg {
     justify-content: space-between;
 }
 
+.minicart-btn-group a.button {
+    width: max-content;
+    border-radius: 5px;
+    text-align: center;
+}
+
 @media (max-width: 768px) {
     #open-minicart {
         width: 34px;
