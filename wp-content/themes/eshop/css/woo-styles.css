@@ -328,7 +328,7 @@ li.product h2.woocommerce-loop-product__title {
 
 .product-card__bottom .price span {
     color: var(--theme-color-primary);
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 500;
     margin: 0;
 }
