@@ -265,7 +265,7 @@ if (!empty($catalog) && is_array($catalog)):
                                     href="<?= esc_url($subcategory_link); ?>"
                                     class="products-categories__list__link">
 
-                                    <?php if ($thumbnail_id): ?>
+                                    <?php if ($thumbnail_id) { ?>
 
                                         <?= wp_get_attachment_image(
                                             $thumbnail_id,
@@ -277,7 +277,9 @@ if (!empty($catalog) && is_array($catalog)):
                                             ]
                                         ); ?>
 
-                                    <?php endif; ?>
+                                    <?php } else {
+                                        echo '<img src="' . get_stylesheet_directory_uri() . '/imgs/svg/placeholder.svg">';
+                                    } ?>
 
 
                                     <h3 class="products-categories__list__item__title">

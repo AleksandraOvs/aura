@@ -201,7 +201,7 @@ if (is_shop()) {
     ];
     $products = new WP_Query($args);
 
-    if ($products->have_posts()) : ?>
+    if ($products->have_posts()) { ?>
         <?php
         // Получаем количество колонок (2,3,4,5 и т.д.)
         $columns = wc_get_loop_prop('columns');
@@ -217,7 +217,13 @@ if (is_shop()) {
                 <?php wc_get_template_part('content', 'product'); ?>
             <?php endwhile; ?>
         </ul>
-    <?php endif;
+    <?php } else {
+        echo '<div class="empty-wl">
+                    <p>Здесь пока нет товаров ...</p>
+
+
+                </div>';
+    }
     wp_reset_postdata();
     echo '</div>';
 } else {
@@ -230,6 +236,9 @@ if (is_shop()) {
                 <h1 class="page-title" data-scroll-animation="fade-down">
                     <?= esc_html(woocommerce_page_title('', false)); ?>
                 </h1>
+
+
+
             <?php endif; ?>
 
 

@@ -473,6 +473,11 @@ a.button.wc-forward:hover {
     margin: 2em 0 1em;
 }
 
+.products.products-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+}
+
 .products.products-5 {
     display: grid;
     grid-template-columns: repeat(5, 1fr);

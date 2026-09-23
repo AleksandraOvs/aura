@@ -1,0 +1,241 @@
+.supplier-importer {
+    max-width: 900px;
+}
+
+.supplier-importer__card {
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    padding: 24px;
+    margin-top: 20px;
+}
+
+.supplier-importer__field {
+    margin: 20px 0;
+}
+
+.supplier-importer__field label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.supplier-importer__info {
+    background: #f6f7f7;
+    border-left: 4px solid #2271b1;
+    padding: 12px 16px;
+    margin: 20px 0;
+}
+
+.supplier-importer__progress {
+    height: 24px;
+    background: #f0f0f1;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.supplier-importer__progress-bar {
+    width: 0;
+    height: 100%;
+    background: #2271b1;
+    transition: width 0.3s ease;
+}
+
+.supplier-importer__progress-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+.supplier-importer__progress-info strong {
+    font-size: 15px;
+}
+
+.supplier-importer__stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.supplier-importer__stat {
+    padding: 14px;
+    background: #f6f7f7;
+    border-radius: 6px;
+}
+
+.supplier-importer__stat-label {
+    display: block;
+    margin-bottom: 4px;
+    color: #646970;
+    font-size: 13px;
+}
+
+.supplier-importer__stat-value {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.supplier-importer__mapping-section {
+    margin-top: 30px;
+}
+
+.supplier-importer__mapping-categories {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.supplier-importer__mapping-item {
+    display: grid;
+    grid-template-columns: minmax(280px, 1fr) minmax(300px, 1fr);
+    gap: 20px;
+    padding: 16px;
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+}
+
+.supplier-importer__mapping-source {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.supplier-importer__mapping-source strong {
+    display: block;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #1d2327;
+}
+
+.supplier-importer__mapping-source span {
+    font-size: 13px;
+    color: #646970;
+}
+
+.supplier-importer__mapping-search {
+    position: relative;
+}
+
+.supplier-importer__mapping-input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.supplier-importer__mapping-results {
+    position: absolute;
+    z-index: 100;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+
+    max-height: 300px;
+    overflow-y: auto;
+
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+}
+
+.supplier-importer__mapping-result {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    width: 100%;
+    padding: 10px 12px;
+
+    border: 0;
+    border-bottom: 1px solid #f0f0f1;
+    background: #fff;
+
+    text-align: left;
+    cursor: pointer;
+}
+
+.supplier-importer__mapping-result:hover {
+    background: #f6f7f7;
+}
+
+.supplier-importer__mapping-result span {
+    color: #1d2327;
+}
+
+.supplier-importer__mapping-result small {
+    margin-left: 10px;
+    color: #646970;
+    white-space: nowrap;
+}
+
+.supplier-importer__mapping-selected {
+    grid-column: 2;
+    margin-top: -10px;
+    padding: 8px 10px;
+
+    background: #f0f6fc;
+    border: 1px solid #c5d9ed;
+    border-radius: 4px;
+}
+
+.supplier-importer__mapping-selected strong {
+    color: #1d2327;
+}
+
+.supplier-importer__mapping-clear {
+    margin-left: 10px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #2271b1;
+    cursor: pointer;
+}
+
+.supplier-importer__mapping-clear:hover {
+    color: #135e96;
+    text-decoration: underline;
+}
+
+.supplier-importer__mapping-loading,
+.supplier-importer__mapping-empty,
+.supplier-importer__mapping-error {
+    padding: 10px 12px;
+    color: #646970;
+}
+
+.supplier-importer__mapping-error {
+    color: #b32d2e;
+}
+
+.supplier-importer__mapping-label,
+.supplier-importer__mapping-search label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #646970;
+}
+
+.supplier-importer__mapping-search label {
+    color: #1d2327;
+}
+
+@media (max-width: 782px) {
+    .supplier-importer__mapping-item {
+        grid-template-columns: 1fr;
+    }
+
+    .supplier-importer__mapping-selected {
+        grid-column: 1;
+        margin-top: 0;
+    }
+}
+
+@media (max-width: 700px) {
+    .supplier-importer__stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
