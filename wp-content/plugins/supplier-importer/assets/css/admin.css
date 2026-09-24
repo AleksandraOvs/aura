@@ -219,6 +219,21 @@
     color: #646970;
 }
 
+.supplier-importer__attribute-header {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    font-size: 20px;
+    padding: 1em 0;
+}
+
+.supplier-importer__mapping-actions {
+    display: flex;
+    align-items: center;
+    gap: 1em;
+    margin-top: 2em;
+}
+
 .supplier-importer__mapping-search label {
     color: #1d2327;
 }

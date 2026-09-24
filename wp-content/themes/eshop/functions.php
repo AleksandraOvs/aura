@@ -230,6 +230,8 @@ require get_template_directory() . '/wishlist/wl.php';
 require get_template_directory() . '/my-account/ma-functions.php';
 require get_template_directory() . '/inc/custom-delivery.php';
 
+require_once get_stylesheet_directory() . '/inc/custom-order-number.php';
+
 
 add_action('init', function () {
     $patterns = WP_Block_Patterns_Registry::get_instance()->get_all_registered();
