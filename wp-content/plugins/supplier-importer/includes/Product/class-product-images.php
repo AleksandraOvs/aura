@@ -32,6 +32,15 @@ class Product_Images
             );
         }
 
+        Logger::info(
+            'IMAGE MEMORY START: '
+                . round(memory_get_usage(true) / 1024 / 1024, 2)
+                . ' MB / peak '
+                . round(memory_get_peak_usage(true) / 1024 / 1024, 2)
+                . ' MB / limit '
+                . ini_get('memory_limit')
+        );
+
         if (
             !is_array($image_urls)
             || empty($image_urls)
@@ -72,6 +81,17 @@ class Product_Images
                     . ' time=' . round(microtime(true) - $image_start, 2)
                     . ' sec'
                     . ' attachment_id=' . (int) $attachment_id
+            );
+
+            Logger::info(
+                'IMAGE MEMORY AFTER '
+                    . ($index + 1)
+                    . ': '
+                    . round(memory_get_usage(true) / 1024 / 1024, 2)
+                    . ' MB / peak '
+                    . round(memory_get_peak_usage(true) / 1024 / 1024, 2)
+                    . ' MB / limit '
+                    . ini_get('memory_limit')
             );
 
             if (!$attachment_id) {

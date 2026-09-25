@@ -107,7 +107,8 @@ if (is_shop()) {
         $products = new WP_Query([
             'post_type'      => 'product',
             'post_status'    => 'publish',
-            'posts_per_page' => -1,
+            'posts_per_page' => 18,
+            'paged'          => 1,
             'orderby'        => 'menu_order',
             'order'          => 'ASC',
         ]);
@@ -121,7 +122,12 @@ if (is_shop()) {
             }
 ?>
 
-            <ul class="products products-<?php echo esc_attr($columns); ?>">
+            <ul
+                class="products products-<?php echo esc_attr($columns); ?> js-products-list"
+                data-page-type="shop"
+                data-category-id="0"
+                data-page="1"
+                data-has-more="<?php echo $products->found_posts > 18 ? '1' : '0'; ?>">
 
                 <?php while ($products->have_posts()) : ?>
 
@@ -188,7 +194,9 @@ if (is_shop()) {
     // Показываем товары текущей категории
     $args = [
         'post_type'      => 'product',
-        'posts_per_page' => -1,
+        'post_status'    => 'publish',
+        'posts_per_page' => 18,
+        'paged'          => 1,
         'orderby'        => 'menu_order',
         'order'          => 'ASC',
         'tax_query'      => [
@@ -212,7 +220,12 @@ if (is_shop()) {
         }
         ?>
 
-        <ul class="products products-<?php echo esc_attr($columns); ?>">
+        <ul
+            class="products products-<?php echo esc_attr($columns); ?> js-products-list"
+            data-page-type="category"
+            data-category-id="<?php echo esc_attr($current_cat->term_id); ?>"
+            data-page="1"
+            data-has-more="<?php echo $products->found_posts > 18 ? '1' : '0'; ?>">
             <?php while ($products->have_posts()) : $products->the_post(); ?>
                 <?php wc_get_template_part('content', 'product'); ?>
             <?php endwhile; ?>

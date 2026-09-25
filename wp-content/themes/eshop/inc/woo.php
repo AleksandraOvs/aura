@@ -330,3 +330,98 @@ add_filter('woocommerce_registration_errors', function ($errors, $username, $ema
 
     return $errors;
 }, 10, 3);
+
+/*
+ * PRODUCTS AJAX 
+ */
+
+/**
+ * AJAX: загрузка товаров при скролле
+ */
+add_action('wp_ajax_load_more_products', 'aura_load_more_products');
+add_action('wp_ajax_nopriv_load_more_products', 'aura_load_more_products');
+
+function aura_load_more_products()
+{
+
+    check_ajax_referer('load_more_products', 'nonce');
+
+    $paged       = isset($_POST['paged']) ? absint($_POST['paged']) : 1;
+    $per_page    = 9;
+    $page_type   = isset($_POST['page_type']) ? sanitize_key($_POST['page_type']) : 'shop';
+    $category_id = isset($_POST['category_id']) ? absint($_POST['category_id']) : 0;
+
+    $offset = 18 + (($paged - 1) * $per_page);
+
+    $args = [
+        'post_type'      => 'product',
+        'post_status'    => 'publish',
+        'posts_per_page' => $per_page,
+        'offset'         => $offset,
+        'orderby'        => 'menu_order',
+        'order'          => 'ASC',
+    ];
+
+    /*
+     * Категория
+     */
+    if ($page_type === 'category' && $category_id) {
+
+        $args['tax_query'] = [
+            [
+                'taxonomy' => 'product_cat',
+                'field'    => 'term_id',
+                'terms'    => $category_id,
+            ],
+        ];
+    }
+
+    $products = new WP_Query($args);
+
+    ob_start();
+
+    if ($products->have_posts()) {
+
+        while ($products->have_posts()) {
+
+            $products->the_post();
+
+            wc_get_template_part('content', 'product');
+        }
+    }
+
+    $html = ob_get_clean();
+
+    $has_more = ($offset + $products->post_count) < $products->found_posts;
+
+    wp_reset_postdata();
+
+    wp_send_json_success([
+        'html'     => $html,
+        'has_more' => $has_more,
+    ]);
+}
+
+add_action('wp_enqueue_scripts', function () {
+
+    if (!is_woocommerce()) {
+        return;
+    }
+
+    wp_enqueue_script(
+        'products-load-more',
+        get_stylesheet_directory_uri() . '/assets/js/products-load-more.js',
+        [],
+        null,
+        true
+    );
+
+    wp_localize_script(
+        'products-load-more',
+        'productsLoadMore',
+        [
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce'   => wp_create_nonce('load_more_products'),
+        ]
+    );
+});
