@@ -188,29 +188,24 @@ class Product_Finder
      */
     public function find(Product_Data $product_data)
     {
-        /*
-         * 1. Поиск по SKU.
-         */
         $sku = $product_data->get_sku();
+
+        \Supplier_Importer\Core\Logger::info(
+            'FINDER DEBUG: START SKU=' . $sku
+        );
+
+        /*
+     * 1. Поиск по SKU.
+     */
+        $start = microtime(true);
 
         if ($sku !== '') {
             $product = $this->find_by_sku($sku);
 
-            if ($product) {
-                return $product;
-            }
-        }
-
-        /*
-         * 2. Поиск по поставщику и ID товара.
-         */
-        $supplier = $product_data->get_supplier();
-        $supplier_id = $product_data->get_supplier_id();
-
-        if ($supplier !== '' && $supplier_id !== '') {
-            $product = $this->find_by_supplier(
-                $supplier,
-                $supplier_id
+            \Supplier_Importer\Core\Logger::info(
+                'FINDER DEBUG: SKU search, SKU=' . $sku
+                    . ', found=' . ($product ? 'yes' : 'no')
+                    . ', time=' . round(microtime(true) - $start, 2) . ' sec'
             );
 
             if ($product) {
@@ -219,12 +214,26 @@ class Product_Finder
         }
 
         /*
-         * 3. Поиск по штрихкоду.
-         */
-        $barcode = $product_data->get('barcode');
+     * 2. Поиск по поставщику + ID товара.
+     */
+        $supplier = $product_data->get_supplier();
+        $supplier_id = $product_data->get_supplier_id();
 
-        if ($barcode !== '') {
-            $product = $this->find_by_barcode($barcode);
+        $start = microtime(true);
+
+        if ($supplier !== '' && $supplier_id !== '') {
+            $product = $this->find_by_supplier(
+                $supplier,
+                $supplier_id
+            );
+
+            \Supplier_Importer\Core\Logger::info(
+                'FINDER DEBUG: supplier search, SKU=' . $sku
+                    . ', supplier=' . $supplier
+                    . ', supplier_id=' . $supplier_id
+                    . ', found=' . ($product ? 'yes' : 'no')
+                    . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+            );
 
             if ($product) {
                 return $product;
@@ -232,8 +241,31 @@ class Product_Finder
         }
 
         /*
-         * Товар не найден.
-         */
+     * 3. Поиск по штрихкоду.
+     */
+        $barcode = $product_data->get('barcode');
+
+        $start = microtime(true);
+
+        if ($barcode !== '') {
+            $product = $this->find_by_barcode($barcode);
+
+            \Supplier_Importer\Core\Logger::info(
+                'FINDER DEBUG: barcode search, SKU=' . $sku
+                    . ', barcode=' . $barcode
+                    . ', found=' . ($product ? 'yes' : 'no')
+                    . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+            );
+
+            if ($product) {
+                return $product;
+            }
+        }
+
+        \Supplier_Importer\Core\Logger::info(
+            'FINDER DEBUG: NOT FOUND SKU=' . $sku
+        );
+
         return null;
     }
 
