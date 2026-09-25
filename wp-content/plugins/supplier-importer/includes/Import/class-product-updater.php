@@ -47,34 +47,93 @@ class Product_Updater
             );
         }
 
+        $sku = $product_data->get_sku();
+
+        \Supplier_Importer\Core\Logger::info(
+            'UPDATE DEBUG: START SKU=' . $sku
+        );
+
+        $start = microtime(true);
+
         $this->update_basic_data(
             $product,
             $product_data
         );
+
+        \Supplier_Importer\Core\Logger::info(
+            'UPDATE DEBUG: basic_data SKU=' . $sku
+                . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+        );
+
+        $start = microtime(true);
 
         $this->product_categories->assign(
             $product,
             $product_data->get('category', '')
         );
 
+        \Supplier_Importer\Core\Logger::info(
+            'UPDATE DEBUG: categories SKU=' . $sku
+                . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+        );
+
+        $start = microtime(true);
+
         $this->product_attributes->assign(
             $product,
             $product_data->get_attributes()
         );
 
+        \Supplier_Importer\Core\Logger::info(
+            'UPDATE DEBUG: attributes SKU=' . $sku
+                . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+        );
+
+        $start = microtime(true);
+
         $product->save();
+
+        \Supplier_Importer\Core\Logger::info(
+            'UPDATE DEBUG: save_1 SKU=' . $sku
+                . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+        );
+
+        $start = microtime(true);
 
         $this->update_supplier_meta(
             $product,
             $product_data
         );
 
+        \Supplier_Importer\Core\Logger::info(
+            'UPDATE DEBUG: supplier_meta SKU=' . $sku
+                . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+        );
+
+        $start = microtime(true);
+
         $this->product_images->assign(
             $product,
             $product_data->get_images()
         );
 
+        \Supplier_Importer\Core\Logger::info(
+            'UPDATE DEBUG: images SKU=' . $sku
+                . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+        );
+
+        $start = microtime(true);
+
         $product->save();
+
+        \Supplier_Importer\Core\Logger::info(
+            'UPDATE DEBUG: save_2 SKU=' . $sku
+                . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+        );
+
+        \Supplier_Importer\Core\Logger::info(
+            'UPDATE DEBUG: END SKU=' . $sku
+        );
 
         return $product;
     }
