@@ -473,6 +473,16 @@ a.button.wc-forward:hover {
     margin: 2em 0 1em;
 }
 
+.woocommerce ul.products.products-3 li.product {
+    width: calc(100% / 3 - .6666666em);
+    margin: 0;
+}
+
+.woocommerce ul.products.products-4 li.product {
+    width: calc(100% / 4 - 2.5em);
+    margin: 0;
+}
+
 .products.products-3 {
     display: flex;
     gap: 1em;
