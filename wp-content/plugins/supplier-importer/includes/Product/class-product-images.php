@@ -52,6 +52,8 @@ class Product_Images
             $image_urls
         );
 
+        $image_urls = array_slice($image_urls, 0, 6);
+
         if (empty($image_urls)) {
             return [];
         }

@@ -138,6 +138,14 @@ if (is_shop()) {
                 <?php endwhile; ?>
 
             </ul>
+            <div class="products-loader" hidden>
+                <span class="loading-dots" aria-label="Загрузка">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </span>
+            </div>
+            <div class="products-load-more-trigger" aria-hidden="true"></div>
 
     <?php
         }
@@ -145,9 +153,10 @@ if (is_shop()) {
         wp_reset_postdata();
     }
 
-    get_template_part('sections/offer');
+
 
     echo '</div>';
+    get_template_part('sections/offer');
 } elseif (is_product_taxonomy()) {
     ?>
     <section class="page-title-block">
@@ -230,6 +239,14 @@ if (is_shop()) {
                 <?php wc_get_template_part('content', 'product'); ?>
             <?php endwhile; ?>
         </ul>
+        <div class="products-loader" hidden>
+            <span class="loading-dots" aria-label="Загрузка">
+                <span></span>
+                <span></span>
+                <span></span>
+            </span>
+        </div>
+        <div class="products-load-more-trigger" aria-hidden="true"></div>
     <?php } else {
         echo '<div class="empty-wl">
                     <p>Здесь пока нет товаров ...</p>
