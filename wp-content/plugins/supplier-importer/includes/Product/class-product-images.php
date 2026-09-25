@@ -195,10 +195,14 @@ class Product_Images
         $start = microtime(true);
 
         Logger::info(
-            'IMAGE DEBUG: START url=' . $image_url
+            'IMAGE DEBUG: START'
+                . ' url=' . $image_url
                 . ' product_id=' . $product_id
         );
 
+        /*
+     * 1. Скачиваем оригинальное изображение.
+     */
         $download_start = microtime(true);
 
         $tmp_file = download_url(
@@ -208,7 +212,11 @@ class Product_Images
 
         Logger::info(
             'IMAGE DEBUG: download_url END'
-                . ' time=' . round(microtime(true) - $download_start, 2)
+                . ' time='
+                . round(
+                    microtime(true) - $download_start,
+                    2
+                )
                 . ' sec'
         );
 
@@ -223,21 +231,196 @@ class Product_Images
             return 0;
         }
 
+        /*
+     * 2. Определяем тип файла.
+     */
+        $mime_type = mime_content_type(
+            $tmp_file
+        );
+
+        $original_size = filesize(
+            $tmp_file
+        );
+
         $file_name = $this->get_file_name(
             $image_url
         );
 
-        $mime_start = microtime(true);
-
-        $mime_type = mime_content_type($tmp_file);
-
         Logger::info(
-            'IMAGE DEBUG: mime_content_type END'
-                . ' time=' . round(microtime(true) - $mime_start, 2)
-                . ' sec'
+            'IMAGE DEBUG: ORIGINAL'
+                . ' url=' . $image_url
                 . ' type=' . $mime_type
+                . ' size='
+                . round(
+                    $original_size / 1024 / 1024,
+                    2
+                )
+                . ' MB'
         );
 
+        /*
+ * Оптимизируем JPEG и PNG.
+ *
+ * JPEG:
+ * - сохраняем JPEG;
+ * - quality 82.
+ *
+ * PNG:
+ * - переводим в JPEG;
+ * - прозрачность заменяем белым фоном;
+ * - quality 82.
+ */
+        if (
+            in_array(
+                $mime_type,
+                [
+                    'image/jpeg',
+                    'image/jpg',
+                    'image/png',
+                ],
+                true
+            )
+        ) {
+
+            $optimize_start = microtime(true);
+
+            $image_editor = wp_get_image_editor(
+                $tmp_file
+            );
+
+            if (is_wp_error($image_editor)) {
+
+                Logger::info(
+                    'IMAGE DEBUG: OPTIMIZE SKIP'
+                        . ' reason=image_editor_error'
+                        . ' type=' . $mime_type
+                        . ' error='
+                        . $image_editor->get_error_message()
+                );
+            } else {
+
+                /*
+         * PNG превращаем в JPEG.
+         */
+                if ($mime_type === 'image/png') {
+
+                    /*
+             * Задаём белый фон.
+             *
+             * Это убирает прозрачность.
+             */
+                    $image_editor->set_background_color(
+                        '#ffffff'
+                    );
+
+                    $image_editor->set_quality(82);
+
+                    $optimized = $image_editor->save(
+                        $tmp_file,
+                        'image/jpeg'
+                    );
+                } else {
+
+                    /*
+             * JPEG просто сжимаем.
+             */
+                    $image_editor->set_quality(82);
+
+                    $optimized = $image_editor->save(
+                        $tmp_file,
+                        'image/jpeg'
+                    );
+                }
+
+                if (is_wp_error($optimized)) {
+
+                    Logger::info(
+                        'IMAGE DEBUG: OPTIMIZE ERROR'
+                            . ' type=' . $mime_type
+                            . ' error='
+                            . $optimized->get_error_message()
+                    );
+                } else {
+
+                    $optimized_size = filesize(
+                        $tmp_file
+                    );
+
+                    $saved_bytes = $original_size
+                        - $optimized_size;
+
+                    $saved_percent = 0;
+
+                    if ($original_size > 0) {
+                        $saved_percent = round(
+                            (
+                                $saved_bytes
+                                / $original_size
+                            ) * 100,
+                            1
+                        );
+                    }
+
+                    Logger::info(
+                        'IMAGE DEBUG: IMAGE OPTIMIZED'
+                            . ' original_type=' . $mime_type
+                            . ' final_type=image/jpeg'
+                            . ' before='
+                            . round(
+                                $original_size / 1024 / 1024,
+                                2
+                            )
+                            . ' MB'
+                            . ' after='
+                            . round(
+                                $optimized_size / 1024 / 1024,
+                                2
+                            )
+                            . ' MB'
+                            . ' saved='
+                            . $saved_percent
+                            . '%'
+                            . ' time='
+                            . round(
+                                microtime(true)
+                                    - $optimize_start,
+                                2
+                            )
+                            . ' sec'
+                    );
+
+                    /*
+             * После конвертации PNG → JPEG
+             * MIME должен соответствовать новому файлу.
+             */
+                    $mime_type = 'image/jpeg';
+
+                    $file_name = pathinfo(
+                        $file_name,
+                        PATHINFO_FILENAME
+                    ) . '.jpg';
+                }
+            }
+        } else {
+
+            Logger::info(
+                'IMAGE DEBUG: OPTIMIZE SKIP'
+                    . ' url=' . $image_url
+                    . ' type=' . $mime_type
+                    . ' reason=unsupported_type'
+            );
+        }
+
+        /*
+     * 4. Получаем имя файла.
+     */
+        $file_name = $this->get_file_name(
+            $image_url
+        );
+
+        /*
+     * 5. Формируем файл для WordPress.
+     */
         $file = [
             'name'     => $file_name,
             'type'     => $mime_type,
@@ -246,6 +429,9 @@ class Product_Images
             'size'     => filesize($tmp_file),
         ];
 
+        /*
+     * 6. Создаём attachment.
+     */
         $media_start = microtime(true);
 
         $attachment_id = @media_handle_sideload(
@@ -255,7 +441,11 @@ class Product_Images
 
         Logger::info(
             'IMAGE DEBUG: media_handle_sideload END'
-                . ' time=' . round(microtime(true) - $media_start, 2)
+                . ' time='
+                . round(
+                    microtime(true) - $media_start,
+                    2
+                )
                 . ' sec'
         );
 
@@ -263,7 +453,8 @@ class Product_Images
 
             Logger::info(
                 'IMAGE DEBUG: media ERROR'
-                    . ' error=' . $attachment_id->get_error_message()
+                    . ' error='
+                    . $attachment_id->get_error_message()
             );
 
             @unlink($tmp_file);
@@ -271,16 +462,27 @@ class Product_Images
             return 0;
         }
 
+        /*
+     * 7. Сохраняем исходный URL поставщика.
+     */
         update_post_meta(
             $attachment_id,
             self::SOURCE_URL_META,
             $image_url
         );
 
+        /*
+     * 8. Финальный лог.
+     */
         Logger::info(
             'IMAGE DEBUG: END'
-                . ' attachment_id=' . $attachment_id
-                . ' total=' . round(microtime(true) - $start, 2)
+                . ' attachment_id='
+                . $attachment_id
+                . ' total='
+                . round(
+                    microtime(true) - $start,
+                    2
+                )
                 . ' sec'
         );
 
