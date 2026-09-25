@@ -10,7 +10,7 @@ use Supplier_Importer\CSV\Csv_Reader;
 
 class Import_Chunk
 {
-    private const CHUNK_SIZE = 5;
+    private const CHUNK_SIZE = 2;
 
     private $reader;
 
