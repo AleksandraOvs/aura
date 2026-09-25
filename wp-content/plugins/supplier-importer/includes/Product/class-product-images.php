@@ -8,6 +8,7 @@ if (!defined('ABSPATH')) {
 
 use InvalidArgumentException;
 use WC_Product;
+use Supplier_Importer\Core\Logger;
 
 class Product_Images
 {
@@ -173,12 +174,34 @@ class Product_Images
         require_once ABSPATH
             . 'wp-admin/includes/image.php';
 
+        $start = microtime(true);
+
+        Logger::info(
+            'IMAGE DEBUG: START url=' . $image_url
+                . ' product_id=' . $product_id
+        );
+
+        $download_start = microtime(true);
+
         $tmp_file = download_url(
             $image_url,
             30
         );
 
+        Logger::info(
+            'IMAGE DEBUG: download_url END'
+                . ' time=' . round(microtime(true) - $download_start, 2)
+                . ' sec'
+        );
+
         if (is_wp_error($tmp_file)) {
+
+            Logger::info(
+                'IMAGE DEBUG: download ERROR'
+                    . ' url=' . $image_url
+                    . ' error=' . $tmp_file->get_error_message()
+            );
+
             return 0;
         }
 
@@ -186,25 +209,45 @@ class Product_Images
             $image_url
         );
 
+        $mime_start = microtime(true);
+
+        $mime_type = mime_content_type($tmp_file);
+
+        Logger::info(
+            'IMAGE DEBUG: mime_content_type END'
+                . ' time=' . round(microtime(true) - $mime_start, 2)
+                . ' sec'
+                . ' type=' . $mime_type
+        );
+
         $file = [
             'name'     => $file_name,
-            'type'     => mime_content_type($tmp_file),
+            'type'     => $mime_type,
             'tmp_name' => $tmp_file,
             'error'    => 0,
             'size'     => filesize($tmp_file),
         ];
+
+        $media_start = microtime(true);
 
         $attachment_id = @media_handle_sideload(
             $file,
             $product_id
         );
 
-        // $attachment_id = media_handle_sideload(
-        //     $file,
-        //     $product_id
-        // );
+        Logger::info(
+            'IMAGE DEBUG: media_handle_sideload END'
+                . ' time=' . round(microtime(true) - $media_start, 2)
+                . ' sec'
+        );
 
         if (is_wp_error($attachment_id)) {
+
+            Logger::info(
+                'IMAGE DEBUG: media ERROR'
+                    . ' error=' . $attachment_id->get_error_message()
+            );
+
             @unlink($tmp_file);
 
             return 0;
@@ -214,6 +257,13 @@ class Product_Images
             $attachment_id,
             self::SOURCE_URL_META,
             $image_url
+        );
+
+        Logger::info(
+            'IMAGE DEBUG: END'
+                . ' attachment_id=' . $attachment_id
+                . ' total=' . round(microtime(true) - $start, 2)
+                . ' sec'
         );
 
         return (int) $attachment_id;
