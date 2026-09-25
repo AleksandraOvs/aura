@@ -42,6 +42,12 @@ class Import_Processor
 
     public function process()
     {
+        $start_time = microtime(true);
+
+        \Supplier_Importer\Core\Logger::info(
+            'IMPORT DEBUG: process START, offset='
+                . $this->session->get_offset()
+        );
         if ($this->session->is_finished()) {
             throw new InvalidArgumentException(
                 'Импорт уже завершён.'
@@ -87,13 +93,67 @@ class Import_Processor
         }
 
         if (!empty($products)) {
-            $import_result = $this->import_manager->import(
-                $products
+
+            \Supplier_Importer\Core\Logger::info(
+                'IMPORT DEBUG: starting import of '
+                    . count($products)
+                    . ' products'
             );
 
-            $this->update_progress(
-                $import_result
-            );
+            foreach ($products as $index => $product) {
+
+                $product_start = microtime(true);
+
+                \Supplier_Importer\Core\Logger::info(
+                    'IMPORT DEBUG: START product '
+                        . ($index + 1)
+                        . '/'
+                        . count($products)
+                        . ', SKU='
+                        . $product->get_sku()
+                );
+
+                try {
+
+                    $single_result =
+                        $this->import_manager->import([
+                            $product
+                        ]);
+
+                    \Supplier_Importer\Core\Logger::info(
+                        'IMPORT DEBUG: END product '
+                            . ($index + 1)
+                            . '/'
+                            . count($products)
+                            . ', SKU='
+                            . $product->get_sku()
+                            . ', time='
+                            . round(
+                                microtime(true) - $product_start,
+                                2
+                            )
+                            . ' sec'
+                    );
+
+                    $this->update_progress(
+                        $single_result
+                    );
+                } catch (\Throwable $e) {
+
+                    \Supplier_Importer\Core\Logger::info(
+                        'IMPORT DEBUG: ERROR product '
+                            . ($index + 1)
+                            . '/'
+                            . count($products)
+                            . ', SKU='
+                            . $product->get_sku()
+                            . ', error='
+                            . $e->getMessage()
+                    );
+
+                    throw $e;
+                }
+            }
         }
 
         $this->session->set_offset(
@@ -113,7 +173,14 @@ class Import_Processor
                 $this->session
             );
         }
-
+        \Supplier_Importer\Core\Logger::info(
+            'IMPORT DEBUG: process END, time='
+                . round(
+                    microtime(true) - $start_time,
+                    2
+                )
+                . ' sec'
+        );
         return $this->get_result();
     }
 
