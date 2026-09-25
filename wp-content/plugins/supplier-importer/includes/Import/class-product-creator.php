@@ -52,6 +52,14 @@ class Product_Creator
             );
         }
 
+        $sku = $product_data->get_sku();
+
+        \Supplier_Importer\Core\Logger::info(
+            'CREATE DEBUG: START SKU=' . $sku
+        );
+
+        $start = microtime(true);
+
         $product = new WC_Product_Simple();
 
         $this->set_basic_data(
@@ -59,31 +67,80 @@ class Product_Creator
             $product_data
         );
 
-        // Сначала создаём товар и получаем ID.
+        \Supplier_Importer\Core\Logger::info(
+            'CREATE DEBUG: basic_data SKU=' . $sku
+                . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+        );
+
+        $start = microtime(true);
+
         $product->save();
 
-        // Теперь можно записать мета.
+        \Supplier_Importer\Core\Logger::info(
+            'CREATE DEBUG: save_1 SKU=' . $sku
+                . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+        );
+
+        $start = microtime(true);
+
         $this->set_supplier_meta(
             $product,
             $product_data
         );
 
+        \Supplier_Importer\Core\Logger::info(
+            'CREATE DEBUG: supplier_meta SKU=' . $sku
+                . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+        );
+
+        $start = microtime(true);
+
         $this->product_categories->assign(
             $product,
             $product_data->get('category', '')
         );
+
+        \Supplier_Importer\Core\Logger::info(
+            'CREATE DEBUG: categories SKU=' . $sku
+                . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+        );
+
+        $start = microtime(true);
+
         $this->product_attributes->assign(
             $product,
             $product_data->get_attributes()
         );
+
+        \Supplier_Importer\Core\Logger::info(
+            'CREATE DEBUG: attributes SKU=' . $sku
+                . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+        );
+
+        $start = microtime(true);
 
         $this->product_images->assign(
             $product,
             $product_data->get_images()
         );
 
-        // Сохраняем изменения.
+        \Supplier_Importer\Core\Logger::info(
+            'CREATE DEBUG: images SKU=' . $sku
+                . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+        );
+
+        $start = microtime(true);
+
         $product->save();
+
+        \Supplier_Importer\Core\Logger::info(
+            'CREATE DEBUG: save_2 SKU=' . $sku
+                . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+        );
+
+        \Supplier_Importer\Core\Logger::info(
+            'CREATE DEBUG: END SKU=' . $sku
+        );
 
         return $product;
     }
