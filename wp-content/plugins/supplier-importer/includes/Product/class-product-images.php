@@ -194,10 +194,15 @@ class Product_Images
             'size'     => filesize($tmp_file),
         ];
 
-        $attachment_id = media_handle_sideload(
+        $attachment_id = @media_handle_sideload(
             $file,
             $product_id
         );
+
+        // $attachment_id = media_handle_sideload(
+        //     $file,
+        //     $product_id
+        // );
 
         if (is_wp_error($attachment_id)) {
             @unlink($tmp_file);
