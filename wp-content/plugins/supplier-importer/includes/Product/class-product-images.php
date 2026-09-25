@@ -49,10 +49,29 @@ class Product_Images
 
         $image_ids = [];
 
-        foreach ($image_urls as $image_url) {
+        foreach ($image_urls as $index => $image_url) {
+
+            Logger::info(
+                'IMAGE DEBUG: PROCESS '
+                    . ($index + 1)
+                    . '/' . count($image_urls)
+                    . ' url=' . $image_url
+            );
+
+            $image_start = microtime(true);
+
             $attachment_id = $this->get_or_download_image(
                 $image_url,
                 $product->get_id()
+            );
+
+            Logger::info(
+                'IMAGE DEBUG: PROCESS END '
+                    . ($index + 1)
+                    . '/' . count($image_urls)
+                    . ' time=' . round(microtime(true) - $image_start, 2)
+                    . ' sec'
+                    . ' attachment_id=' . (int) $attachment_id
             );
 
             if (!$attachment_id) {
@@ -61,7 +80,6 @@ class Product_Images
 
             $image_ids[] = $attachment_id;
         }
-
         $image_ids = array_values(
             array_unique($image_ids)
         );
