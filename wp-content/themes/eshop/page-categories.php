@@ -110,6 +110,132 @@ get_header();
 
 </main>
 
+<style>
+    /* =========================================================
+   Categories page
+   ========================================================= */
+
+    .categories-page {
+        padding: 60px 0 80px;
+    }
+
+    .categories-page__title {
+        margin: 0 0 40px;
+    }
+
+
+    /* Tree */
+
+    .categories-tree {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .categories-tree .categories-tree {
+        margin-top: 10px;
+        margin-left: 20px;
+        padding-left: 24px;
+        border-left: 1px solid #d9d9d9;
+    }
+
+
+    /* Item */
+
+    .categories-tree__item {
+        position: relative;
+        margin: 0;
+        padding: 7px 0;
+    }
+
+
+    /* Horizontal line to child */
+
+    .categories-tree .categories-tree .categories-tree__item::before {
+        content: '';
+        position: absolute;
+        top: 22px;
+        left: -24px;
+        width: 18px;
+        height: 1px;
+        background: #d9d9d9;
+    }
+
+
+    /* Links */
+
+    .categories-tree__link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+
+        color: #222;
+        font-size: 18px;
+        line-height: 1.4;
+        text-decoration: none;
+
+        transition:
+            color 0.2s ease,
+            transform 0.2s ease;
+    }
+
+    .categories-tree__link:hover {
+        color: #614881;
+        transform: translateX(3px);
+    }
+
+
+    /* Top-level categories */
+
+    .categories-page__tree>.categories-tree>.categories-tree__item {
+        padding: 14px 0;
+    }
+
+    .categories-page__tree>.categories-tree>.categories-tree__item>.categories-tree__link {
+        font-size: 22px;
+        font-weight: 600;
+    }
+
+
+    /* Nested categories */
+
+    .categories-tree .categories-tree .categories-tree__link {
+        font-size: 17px;
+    }
+
+
+    /* Mobile */
+
+    @media (max-width: 767px) {
+
+        .categories-page {
+            padding: 40px 0 60px;
+        }
+
+        .categories-page__title {
+            margin-bottom: 30px;
+        }
+
+        .categories-tree .categories-tree {
+            margin-left: 10px;
+            padding-left: 18px;
+        }
+
+        .categories-tree .categories-tree .categories-tree__item::before {
+            left: -18px;
+            width: 12px;
+        }
+
+        .categories-page__tree>.categories-tree>.categories-tree__item>.categories-tree__link {
+            font-size: 19px;
+        }
+
+        .categories-tree .categories-tree .categories-tree__link {
+            font-size: 16px;
+        }
+
+    }
+</style>
 <?php
 
 get_footer();
