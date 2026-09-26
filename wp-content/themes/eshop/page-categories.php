@@ -12,85 +12,101 @@ get_header();
 
 <main class="categories-page">
 
-    <div class="container">
+    <section class="page-title-block">
 
-        <h1 class="categories-page__title">
-            <?php the_title(); ?>
-        </h1>
+        <div class="fixed-container">
 
-        <?php
+            <?php site_breadcrumbs(); ?>
 
-        $categories = get_terms([
-            'taxonomy'   => 'product_cat',
-            'hide_empty' => false,
-            'parent'     => 0,
-            'orderby'    => 'menu_order',
-            'order'      => 'ASC',
-        ]);
+            <h1 class="page-title" data-scroll-animation="fade-down">
+                <?= esc_html(get_the_title()); ?>
+            </h1>
 
-        if (! empty($categories) && ! is_wp_error($categories)) :
+        </div>
 
-        ?>
+    </section>
 
-            <ul class="categories-tree">
+    <section class="page-content">
+        <div class="container">
 
-                <?php foreach ($categories as $category) : ?>
+            <h1 class="categories-page__title">
+                <?php the_title(); ?>
+            </h1>
 
-                    <li class="categories-tree__item">
+            <?php
 
-                        <a
-                            class="categories-tree__link"
-                            href="<?php echo esc_url(get_term_link($category)); ?>">
-                            <?php echo esc_html($category->name); ?>
-                        </a>
+            $categories = get_terms([
+                'taxonomy'   => 'product_cat',
+                'hide_empty' => false,
+                'parent'     => 0,
+                'orderby'    => 'menu_order',
+                'order'      => 'ASC',
+            ]);
 
-                        <?php
+            if (! empty($categories) && ! is_wp_error($categories)) :
 
-                        $children = get_terms([
-                            'taxonomy'   => 'product_cat',
-                            'hide_empty' => true,
-                            'parent'     => $category->term_id,
-                            'orderby'    => 'menu_order',
-                            'order'      => 'ASC',
-                        ]);
+            ?>
 
-                        if (! empty($children) && ! is_wp_error($children)) :
+                <ul class="categories-tree">
 
-                        ?>
+                    <?php foreach ($categories as $category) : ?>
 
-                            <ul class="categories-tree__children">
+                        <li class="categories-tree__item">
 
-                                <?php foreach ($children as $child) : ?>
+                            <a
+                                class="categories-tree__link"
+                                href="<?php echo esc_url(get_term_link($category)); ?>">
+                                <?php echo esc_html($category->name); ?>
+                            </a>
 
-                                    <li class="categories-tree__item">
+                            <?php
 
-                                        <a
-                                            class="categories-tree__link"
-                                            href="<?php echo esc_url(get_term_link($child)); ?>">
-                                            <?php echo esc_html($child->name); ?>
-                                        </a>
+                            $children = get_terms([
+                                'taxonomy'   => 'product_cat',
+                                'hide_empty' => true,
+                                'parent'     => $category->term_id,
+                                'orderby'    => 'menu_order',
+                                'order'      => 'ASC',
+                            ]);
 
-                                    </li>
+                            if (! empty($children) && ! is_wp_error($children)) :
 
-                                <?php endforeach; ?>
+                            ?>
 
-                            </ul>
+                                <ul class="categories-tree__children">
 
-                        <?php endif; ?>
+                                    <?php foreach ($children as $child) : ?>
 
-                    </li>
+                                        <li class="categories-tree__item">
 
-                <?php endforeach; ?>
+                                            <a
+                                                class="categories-tree__link"
+                                                href="<?php echo esc_url(get_term_link($child)); ?>">
+                                                <?php echo esc_html($child->name); ?>
+                                            </a>
 
-            </ul>
+                                        </li>
 
-        <?php else : ?>
+                                    <?php endforeach; ?>
 
-            <p>Категории товаров не найдены.</p>
+                                </ul>
 
-        <?php endif; ?>
+                            <?php endif; ?>
 
-    </div>
+                        </li>
+
+                    <?php endforeach; ?>
+
+                </ul>
+
+            <?php else : ?>
+
+                <p>Категории товаров не найдены.</p>
+
+            <?php endif; ?>
+
+        </div>
+    </section>
 
 </main>
 
