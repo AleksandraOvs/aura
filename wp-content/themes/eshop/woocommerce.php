@@ -41,7 +41,7 @@ if (is_shop()) {
      */
     $shop_page_display = get_option('woocommerce_shop_page_display', '');
 
-    echo '<div class="container">';
+
 
 
     /*
@@ -75,7 +75,7 @@ if (is_shop()) {
      * both   — да
      * subcategories — нет
      */
-
+    echo '<div class="container">';
     if (
         $shop_page_display === '' ||
         $shop_page_display === 'both'
