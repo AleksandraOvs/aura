@@ -63,7 +63,7 @@ get_header();
 
                             $children = get_terms([
                                 'taxonomy'   => 'product_cat',
-                                'hide_empty' => true,
+                                'hide_empty' => false,
                                 'parent'     => $category->term_id,
                                 'orderby'    => 'menu_order',
                                 'order'      => 'ASC',
