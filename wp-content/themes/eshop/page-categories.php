@@ -76,20 +76,19 @@ get_header();
 
                                             <a
                                                 class="categories-tree__link"
-                                                href="<?php echo esc_url(get_term_link($category)); ?>">
+                                                href="<?php echo esc_url(get_term_link($child)); ?>">
                                                 <span class="categories-tree__name">
-                                                    <?php echo esc_html($category->name); ?>
+                                                    <?php echo esc_html($child->name); ?>
                                                 </span>
 
                                                 <span class="categories-tree__count">
-                                                    <?php echo esc_html($category->count); ?>
+                                                    <?php echo esc_html($child->count); ?>
                                                 </span>
                                             </a>
 
                                         </li>
 
                                     <?php endforeach; ?>
-
                                 </ul>
 
                             <?php endif; ?>
