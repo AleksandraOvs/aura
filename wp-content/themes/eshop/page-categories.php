@@ -215,6 +215,11 @@ get_header();
 
     @media (max-width: 767px) {
 
+        .categories-tree {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+
         .categories-page {
             padding: 40px 0 60px;
         }
