@@ -1614,15 +1614,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 supplierImporter.nonce
             );
 
-            const response = await fetch(
-                supplierImporter.ajaxUrl,
-                {
-                    method: 'POST',
-                    body: formData,
-                }
-            );
+            const response = await fetch(supplierImporter.ajaxUrl, {
+                method: 'POST',
+                body: formData
+            });
 
-            const data = await response.json();
+            const responseText = await response.text();
+
+            console.log('=== IMPORT AJAX RAW RESPONSE ===');
+            console.log(responseText);
+
+            let data;
+
+            try {
+                data = JSON.parse(responseText);
+            } catch (error) {
+                console.error('=== JSON PARSE ERROR ===');
+                console.error(error);
+                console.error('RAW RESPONSE:', responseText);
+
+                throw error;
+            }
 
             if (!data.success) {
                 throw new Error(
