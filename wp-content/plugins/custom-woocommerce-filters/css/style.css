@@ -2,11 +2,29 @@
   position: relative;
   padding: 0;
   background: transparent;
+  width: 0;
+  overflow: hidden;
+}
+
+.sidebar-area-wrapper._filters.opened {
   width: 100%;
+  padding-right: 2em;
 }
 
 .single-sidebar-wrap {
   margin-bottom: 15px;
+}
+
+.filters-wrapper {
+  background: #f5f5f5;
+  padding: 2em 1em;
+  border-radius: 5px;
+}
+
+.filter-price {
+  margin-bottom: 1em;
+  padding-bottom: 1em;
+  border-bottom: 1px solid #d1d1f1;
 }
 
 .sidebar-list {
@@ -145,20 +163,21 @@
 }
 
 .filters-head {
-  font-size: 20px;
+  font-size: 14px;
   font-weight: 400;
   display: flex;
-  width: 100%;
   align-items: center;
   justify-content: space-between;
-  padding: 10px;
+  padding: .5em 1em;
   cursor: pointer;
   background: var(--theme-color-accent);
   line-height: 1;
-  width: 40px;
-  height: 40px;
-  border-radius: 100%;
+  width: max-content;
+  border-radius: 7px;
   transition: all .5s linear;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 .filters-head:hover {
@@ -169,12 +188,6 @@
   fill: #fff;
 }
 
-.sidebar-area-wrapper {
-  position: relative;
-  padding: 0;
-  background: transparent;
-  width: 100%;
-}
 
 .single-sidebar-wrap {
   margin-bottom: 15px;
@@ -371,7 +384,7 @@
   margin-top: 15px;
 }
 
-.filters-wrapper {
+.filters-area-wrapper {
   display: flex;
   column-gap: 20px;
   flex-wrap: wrap;
@@ -437,9 +450,9 @@
 }
 
 .filter {
-  margin-bottom: 10px;
+  margin-bottom: 1em;
   flex-grow: 1;
-  width: calc(100% / 3 - .6666666em);
+  width: 100%;
   border-bottom: 1px solid var(--theme-color-accent-light);
 
 }
@@ -675,7 +688,7 @@
   margin-top: 15px;
 }
 
-.filters-wrapper {
+.filters-area-wrapper {
   display: flex;
   gap: 1em;
   flex-wrap: wrap;
@@ -736,10 +749,6 @@
   background: #fff;
 }
 
-.filter {
-  flex-grow: 1;
-  max-width: calc(100% / 3 - .6666666em);
-}
 
 .filter-item__content ul.sidebar-list li {
   width: max-content !important;
@@ -801,27 +810,24 @@
   margin-bottom: 20px;
 }
 
-.filter-item__title {
+.filter-item__title,
+.filter-price-title {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 400;
   display: flex;
   width: 100%;
   align-items: center;
   justify-content: space-between;
-  cursor: pointer;
-  background: var(--light-grey);
-  line-height: 1;
-  font-size: 16px;
-  font-weight: 600;
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: .5em;
+  padding-bottom: 1em;
   cursor: pointer;
   background: var(--light-grey);
   line-height: 1;
   border-bottom: 1px solid #d1d1f1;
+}
+
+.filter-price-title {
+  border-bottom: 0;
+  padding-bottom: .5em;
 }
 
 .filter-item-title__toggle {
@@ -835,7 +841,7 @@
   width: 1px;
   height: 100%;
   border-radius: 1px;
-  background: #332233;
+  background: #d1d1f1;
   position: absolute;
   top: 0;
   left: calc(50% - 1px);
