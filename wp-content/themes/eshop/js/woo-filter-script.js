@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     const filtersHead = document.querySelector('.filters-head');
-    const filtersWrapper = document.querySelector('.filters-wrapper');
+    const filtersWrapper = document.querySelector('.sidebar-area-wrapper');
 
     if (!filtersHead || !filtersWrapper) return;
 
