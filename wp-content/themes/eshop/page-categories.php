@@ -28,11 +28,6 @@ get_header();
 
     <section class="page-content">
         <div class="container">
-
-            <h1 class="categories-page__title">
-                <?php the_title(); ?>
-            </h1>
-
             <?php
 
             $categories = get_terms([
@@ -132,6 +127,12 @@ get_header();
         list-style: none;
     }
 
+    .categories-tree {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2em;
+    }
+
     .categories-tree .categories-tree {
         margin-top: 10px;
         margin-left: 20px;
@@ -170,7 +171,7 @@ get_header();
         gap: 8px;
 
         color: #222;
-        font-size: 18px;
+        font-size: 14px;
         line-height: 1.4;
         text-decoration: none;
 
