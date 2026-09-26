@@ -2,12 +2,8 @@
 
 namespace Supplier_Importer\Import;
 
-if (!defined('ABSPATH')) {
-    exit;
-}
-
-use InvalidArgumentException;
 use Supplier_Importer\CSV\Csv_Reader;
+use Supplier_Importer\Core\Logger;
 use Supplier_Importer\Suppliers\Supplier;
 
 class Import_Processor
@@ -25,38 +21,16 @@ class Import_Processor
         Supplier $supplier
     ) {
         $this->session = $session;
-
-        $this->chunk = new Import_Chunk(
-            $reader
-        );
-
+        $this->chunk = new Import_Chunk($reader);
         $this->import_manager = new Import_Manager();
-
         $this->mapper = $supplier->get_mapper();
-
         $this->repository = new Import_Repository();
-
-        $this->error_repository =
-            new Import_Error_Repository();
+        $this->error_repository = new Import_Error_Repository();
     }
 
     public function process()
     {
-        $start_time = microtime(true);
 
-        \Supplier_Importer\Core\Logger::info(
-            'IMPORT DEBUG: process START, offset='
-                . $this->session->get_offset()
-        );
-        if ($this->session->is_finished()) {
-            throw new InvalidArgumentException(
-                'Импорт уже завершён.'
-            );
-        }
-
-        if ($this->session->get_status() === 'pending') {
-            $this->session->start();
-        }
 
         $rows = $this->chunk->read(
             $this->session->get_offset()
@@ -65,16 +39,33 @@ class Import_Processor
         if (empty($rows)) {
             $this->session->complete();
 
+            if ($this->session->get_import_id()) {
+                $this->repository->update($this->session);
+            }
+
             return $this->get_result();
         }
 
+        /*
+         * Храним товар вместе с исходной строкой CSV.
+         *
+         * Это позволяет при ошибке импорта точно определить,
+         * из какой строки CSV был создан этот товар.
+         */
         $products = [];
 
         foreach ($rows as $row) {
+
             try {
-                $products[] = $this->mapper->map(
+
+                $mapped_product = $this->mapper->map(
                     $row['data']
                 );
+
+                $products[] = [
+                    'product' => $mapped_product,
+                    'row'     => $row,
+                ];
             } catch (\Throwable $e) {
 
                 $this->session
@@ -83,7 +74,8 @@ class Import_Processor
 
                 $this->save_error(
                     $row,
-                    $e
+                    $e,
+                    'mapping'
                 );
             }
 
@@ -92,47 +84,20 @@ class Import_Processor
                 ->increment_processed();
         }
 
+        /*
+         * Импортируем товары по одному.
+         */
         if (!empty($products)) {
 
-            \Supplier_Importer\Core\Logger::info(
-                'IMPORT DEBUG: starting import of '
-                    . count($products)
-                    . ' products'
-            );
+            foreach ($products as $item) {
 
-            foreach ($products as $index => $product) {
-
-                $product_start = microtime(true);
-
-                \Supplier_Importer\Core\Logger::info(
-                    'IMPORT DEBUG: START product '
-                        . ($index + 1)
-                        . '/'
-                        . count($products)
-                        . ', SKU='
-                        . $product->get_sku()
-                );
+                $product = $item['product'];
+                $row = $item['row'];
 
                 try {
 
-                    $single_result =
-                        $this->import_manager->import([
-                            $product
-                        ]);
-
-                    \Supplier_Importer\Core\Logger::info(
-                        'IMPORT DEBUG: END product '
-                            . ($index + 1)
-                            . '/'
-                            . count($products)
-                            . ', SKU='
-                            . $product->get_sku()
-                            . ', time='
-                            . round(
-                                microtime(true) - $product_start,
-                                2
-                            )
-                            . ' sec'
+                    $single_result = $this->import_manager->import(
+                        [$product]
                     );
 
                     $this->update_progress(
@@ -140,27 +105,36 @@ class Import_Processor
                     );
                 } catch (\Throwable $e) {
 
-                    \Supplier_Importer\Core\Logger::info(
-                        'IMPORT DEBUG: ERROR product '
-                            . ($index + 1)
-                            . '/'
-                            . count($products)
-                            . ', SKU='
-                            . $product->get_sku()
-                            . ', error='
-                            . $e->getMessage()
+                    Logger::info(
+                        'Ошибка импорта товара: ' . $e->getMessage()
                     );
 
-                    throw $e;
+                    /*
+                     * Сохраняем ошибку с ТОЧНОЙ строкой CSV.
+                     */
+                    $this->save_product_error(
+                        $row,
+                        $product,
+                        $e
+                    );
+
+                    $this->session
+                        ->get_progress()
+                        ->increment_errors();
                 }
             }
         }
 
+        /*
+         * Смещаем offset на количество реально прочитанных строк.
+         */
         $this->session->set_offset(
-            $this->session->get_offset()
-                + count($rows)
+            $this->session->get_offset() + count($rows)
         );
 
+        /*
+         * Проверяем завершение импорта.
+         */
         if (
             $this->session->get_offset()
             >= $this->session->get_total()
@@ -168,77 +142,176 @@ class Import_Processor
             $this->session->complete();
         }
 
+        /*
+         * Сохраняем прогресс.
+         */
         if ($this->session->get_import_id()) {
             $this->repository->update(
                 $this->session
             );
         }
-        \Supplier_Importer\Core\Logger::info(
-            'IMPORT DEBUG: process END, time='
-                . round(
-                    microtime(true) - $start_time,
-                    2
-                )
-                . ' sec'
-        );
+
         return $this->get_result();
     }
 
     /**
-     * Сохранить ошибку обработки строки CSV.
+     * Сохраняет ошибку маппинга.
      */
-    private function save_error($row, \Throwable $e)
-    {
+    private function save_error(
+        $row,
+        \Throwable $e,
+        $error_type = 'mapping'
+    ) {
         $import_id = $this->session->get_import_id();
 
         if (!$import_id) {
             return;
         }
 
-        $data = isset($row['data'])
-            && is_array($row['data'])
+        $data = isset($row['data']) && is_array($row['data'])
             ? $row['data']
             : [];
 
-        $sku = '';
-
-        if (isset($data['Артикул'])) {
-            $sku = trim(
-                (string) $data['Артикул']
-            );
-        }
+        $sku = $this->get_sku_from_row($data);
 
         $this->error_repository->add(
             $import_id,
-            $row['row_number'],
+            isset($row['row_number'])
+                ? (int) $row['row_number']
+                : 0,
             $sku,
-            'mapping',
+            $error_type,
             $e->getMessage(),
             $data
         );
     }
 
+    /**
+     * Сохраняет ошибку непосредственно при импорте товара.
+     */
+    private function save_product_error(
+        $row,
+        $product,
+        \Throwable $e
+    ) {
+        $import_id = $this->session->get_import_id();
+
+        if (!$import_id) {
+            return;
+        }
+
+        $data = isset($row['data']) && is_array($row['data'])
+            ? $row['data']
+            : [];
+
+        $sku = $this->get_sku_from_row($data);
+
+        /*
+         * Если SKU удалось получить из объекта товара,
+         * используем его как дополнительный источник.
+         */
+        if (
+            !$sku
+            && is_object($product)
+            && method_exists($product, 'get_sku')
+        ) {
+            $sku = (string) $product->get_sku();
+        }
+
+        $this->error_repository->add(
+            $import_id,
+            isset($row['row_number'])
+                ? (int) $row['row_number']
+                : 0,
+            $sku,
+            'product',
+            $e->getMessage(),
+            $data
+        );
+    }
+
+    /**
+     * Пытается найти SKU в исходной строке CSV.
+     */
+    private function get_sku_from_row($data)
+    {
+        if (!is_array($data)) {
+            return '';
+        }
+
+        $possible_keys = [
+            'Артикул',
+            'Артикул поставщика',
+            'Код',
+            'Код товара',
+            'КодНоменклатуры',
+            'vendorCode',
+            'VendorCode',
+            'sku',
+            'SKU',
+        ];
+
+        foreach ($possible_keys as $key) {
+
+            if (!array_key_exists($key, $data)) {
+                continue;
+            }
+
+            $value = trim(
+                (string) $data[$key]
+            );
+
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Обновляет статистику по результату импорта товара.
+     */
     private function update_progress($result)
     {
         $progress = $this->session->get_progress();
 
-        for ($i = 0; $i < $result['created']; $i++) {
+        for (
+            $i = 0;
+            $i < (int) $result['created'];
+            $i++
+        ) {
             $progress->increment_created();
         }
 
-        for ($i = 0; $i < $result['updated']; $i++) {
+        for (
+            $i = 0;
+            $i < (int) $result['updated'];
+            $i++
+        ) {
             $progress->increment_updated();
         }
 
-        for ($i = 0; $i < $result['skipped']; $i++) {
+        for (
+            $i = 0;
+            $i < (int) $result['skipped'];
+            $i++
+        ) {
             $progress->increment_skipped();
         }
 
-        for ($i = 0; $i < $result['errors']; $i++) {
+        for (
+            $i = 0;
+            $i < (int) $result['errors'];
+            $i++
+        ) {
             $progress->increment_errors();
         }
     }
 
+    /**
+     * Формирует результат AJAX-запроса.
+     */
     private function get_result()
     {
         return [

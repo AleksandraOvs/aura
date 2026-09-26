@@ -166,4 +166,46 @@ class Import_Repository
 
         return Import_Session::from_array($data);
     }
+
+    public function get_history()
+    {
+        global $wpdb;
+
+        return $wpdb->get_results(
+            "SELECT
+            id,
+            supplier,
+            file,
+            status,
+            total,
+            processed,
+            created,
+            updated,
+            skipped,
+            errors,
+            started_at,
+            finished_at
+        FROM {$this->table_name}
+        ORDER BY id DESC",
+            ARRAY_A
+        );
+    }
+
+    public function reset_history()
+    {
+        global $wpdb;
+
+        $result = $wpdb->query(
+            "TRUNCATE TABLE {$this->table_name}"
+        );
+
+        if ($result === false) {
+            throw new InvalidArgumentException(
+                'Не удалось сбросить статистику: '
+                    . $wpdb->last_error
+            );
+        }
+
+        return true;
+    }
 }

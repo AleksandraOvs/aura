@@ -272,6 +272,10 @@ document.addEventListener('DOMContentLoaded', function () {
             </span>
         </div>
     `;
+
+        if (Number(progress.errors || 0) > 0 && currentImportId) {
+            loadImportErrors(currentImportId);
+        }
     }
 
     function finishImport(data) {
@@ -404,54 +408,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
-    function loadImportErrors(importId) {
-        const formData = new FormData();
 
-        formData.append(
-            'action',
-            'supplier_import_get_errors'
-        );
-
-        formData.append(
-            'nonce',
-            supplierImporter.nonce
-        );
-
-        formData.append(
-            'import_id',
-            importId
-        );
-
-        fetch(
-            supplierImporter.ajaxUrl,
-            {
-                method: 'POST',
-                body: formData
-            }
-        )
-            .then(function (response) {
-                return response.json();
-            })
-            .then(function (result) {
-
-                if (!result.success) {
-                    throw new Error(
-                        result.data?.message
-                        || 'Не удалось получить ошибки.'
-                    );
-                }
-
-                renderImportErrors(
-                    result.data.errors
-                );
-            })
-            .catch(function (error) {
-                console.error(
-                    'Ошибка получения ошибок импорта:',
-                    error
-                );
-            });
-    }
 
     function renderImportErrors(errors) {
         if (!errorsBlock || !errorsList) {
@@ -1614,7 +1571,84 @@ document.addEventListener('DOMContentLoaded', function () {
                 button.disabled = false;
             });
     }
+});
 
+document.addEventListener('DOMContentLoaded', () => {
 
+    const resetButton = document.querySelector(
+        '#supplier-importer-reset-statistics'
+    );
+
+    if (!resetButton) {
+        return;
+    }
+
+    const message = document.querySelector(
+        '#supplier-importer-statistics-message'
+    );
+
+    resetButton.addEventListener('click', async () => {
+
+        const confirmed = window.confirm(
+            'Вы действительно хотите сбросить всю статистику импорта?'
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        resetButton.disabled = true;
+        resetButton.textContent = 'Сбрасываем...';
+
+        try {
+
+            const formData = new FormData();
+
+            formData.append(
+                'action',
+                'supplier_importer_reset_statistics'
+            );
+
+            formData.append(
+                'nonce',
+                supplierImporter.nonce
+            );
+
+            const response = await fetch(
+                supplierImporter.ajaxUrl,
+                {
+                    method: 'POST',
+                    body: formData,
+                }
+            );
+
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(
+                    data.data?.message ||
+                    'Не удалось сбросить статистику.'
+                );
+            }
+
+            window.location.reload();
+
+        } catch (error) {
+
+            console.error(
+                'Ошибка сброса статистики:',
+                error
+            );
+
+            if (message) {
+                message.textContent = error.message;
+                message.hidden = false;
+            }
+
+            resetButton.disabled = false;
+            resetButton.textContent = 'Сбросить статистику';
+        }
+
+    });
 
 });
