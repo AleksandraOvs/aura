@@ -165,6 +165,12 @@ get_header();
 
     /* Links */
 
+    .categories-tree__link.parent-cat {
+        font-size: 18px;
+        font-weight: 700;
+        color: #a69469;
+    }
+
     .categories-tree__link {
         display: inline-flex;
         align-items: center;
