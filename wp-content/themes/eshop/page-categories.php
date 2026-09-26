@@ -76,8 +76,14 @@ get_header();
 
                                             <a
                                                 class="categories-tree__link"
-                                                href="<?php echo esc_url(get_term_link($child)); ?>">
-                                                <?php echo esc_html($child->name); ?>
+                                                href="<?php echo esc_url(get_term_link($category)); ?>">
+                                                <span class="categories-tree__name">
+                                                    <?php echo esc_html($category->name); ?>
+                                                </span>
+
+                                                <span class="categories-tree__count">
+                                                    <?php echo esc_html($category->count); ?>
+                                                </span>
                                             </a>
 
                                         </li>
