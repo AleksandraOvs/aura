@@ -22,7 +22,7 @@ get_header();
 
         $categories = get_terms([
             'taxonomy'   => 'product_cat',
-            'hide_empty' => true,
+            'hide_empty' => false,
             'parent'     => 0,
             'orderby'    => 'menu_order',
             'order'      => 'ASC',
