@@ -81,11 +81,12 @@ if (is_shop()) {
         $shop_page_display === 'both'
     ) {
 
+        echo '<div class="shop-inner">';
         /*
          * SHOP HEADER
          */
 
-        echo '<div class="shop-header">';
+        echo '<div class="shop-inner__left">';
 
         // Родительские категории
         $categories = get_terms([
@@ -100,6 +101,7 @@ if (is_shop()) {
         echo '</div>';
 
 
+        echo '<div class="shop-inner__products">';
         /*
          * ТОВАРЫ
          */
@@ -152,6 +154,8 @@ if (is_shop()) {
 
         wp_reset_postdata();
     }
+    echo '</div>';
+    echo '</div>';
 
 
 
@@ -228,6 +232,22 @@ if (is_shop()) {
             $columns = 4;
         }
         ?>
+        <?php
+        echo '<div class="shop-inner">';
+        /*
+         * SHOP HEADER
+         */
+
+        echo '<div class="shop-inner__left">';
+
+        // Фильтры
+        echo do_shortcode('[shop_filters]');
+
+        echo '</div>';
+
+
+        echo '<div class="shop-inner__products">';
+        ?>
 
         <ul
             class="products products-<?php echo esc_attr($columns); ?> js-products-list"
@@ -247,6 +267,15 @@ if (is_shop()) {
             </span>
         </div>
         <div class="products-load-more-trigger" aria-hidden="true"></div>
+
+        <?php
+        echo '</div>';
+        echo '</div>';
+
+
+
+        echo '</div>';
+        ?>
     <?php } else {
         echo '<div class="empty-wl">
                     <p>Здесь пока нет товаров ...</p>
