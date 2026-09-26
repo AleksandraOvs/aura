@@ -31,6 +31,11 @@ class Ajax_Mapping
             'wp_ajax_supplier_mapping_save',
             [$this, 'save_mappings']
         );
+
+        add_action(
+            'wp_ajax_supplier_mapping_get',
+            [$this, 'get_mappings']
+        );
     }
 
     public function search_categories()
@@ -397,6 +402,76 @@ class Ajax_Mapping
                 ),
             ]);
         } catch (\Throwable $e) {
+            wp_send_json_error(
+                [
+                    'message' => $e->getMessage(),
+                ],
+                400
+            );
+        }
+    }
+
+    public function get_mappings()
+    {
+        try {
+            $this->check_permissions();
+            $this->check_nonce();
+
+            $supplier = isset($_POST['supplier'])
+                ? sanitize_key(
+                    wp_unslash($_POST['supplier'])
+                )
+                : '';
+
+            if ($supplier === '') {
+                throw new RuntimeException(
+                    'Не указан поставщик.'
+                );
+            }
+
+            $repository =
+                new \Supplier_Importer\Import\Mapping_Repository();
+
+            $rows = $repository->get_by_supplier(
+                $supplier,
+                'category'
+            );
+
+            $mappings = [];
+
+            foreach ($rows as $row) {
+
+                $target_id = absint(
+                    $row['target_id']
+                );
+
+                if (!$target_id) {
+                    continue;
+                }
+
+                $term = get_term(
+                    $target_id,
+                    'product_cat'
+                );
+
+                if (
+                    !$term
+                    || is_wp_error($term)
+                ) {
+                    continue;
+                }
+
+                $mappings[$row['source_value']] = [
+                    'target_id' => $target_id,
+                    'target_name' => $term->name,
+                ];
+            }
+
+            wp_send_json_success([
+                'mappings' => $mappings,
+            ]);
+        } catch (\Throwable $e) {
+
             wp_send_json_error(
                 [
                     'message' => $e->getMessage(),

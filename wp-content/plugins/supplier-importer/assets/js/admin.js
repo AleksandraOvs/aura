@@ -480,7 +480,49 @@ document.addEventListener('DOMContentLoaded', function () {
             .replace(/'/g, '&#039;');
     }
 
-    function renderAnalysis(analysis, supplier) {
+    function loadCategoryMappings(supplier) {
+
+        const formData = new FormData();
+
+        formData.append(
+            'action',
+            'supplier_mapping_get'
+        );
+
+        formData.append(
+            'nonce',
+            supplierImporter.nonce
+        );
+
+        formData.append(
+            'supplier',
+            supplier
+        );
+
+        return fetch(
+            supplierImporter.ajaxUrl,
+            {
+                method: 'POST',
+                body: formData
+            }
+        )
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function (result) {
+
+                if (!result.success) {
+                    throw new Error(
+                        result.data?.message
+                        || 'Не удалось загрузить сохранённые сопоставления.'
+                    );
+                }
+
+                return result.data.mappings || {};
+            });
+    }
+
+    async function renderAnalysis(analysis, supplier) {
         const mappingBlock = document.querySelector(
             '#supplier-import-mapping'
         );
@@ -497,6 +539,24 @@ document.addEventListener('DOMContentLoaded', function () {
         )
             ? analysis.categories
             : [];
+
+        let savedMappings = {};
+
+        try {
+            savedMappings =
+                await loadCategoryMappings(supplier);
+
+            console.log(
+                'Сохранённые сопоставления категорий:',
+                savedMappings
+            );
+
+        } catch (error) {
+            console.error(
+                'Ошибка загрузки сохранённых категорий:',
+                error
+            );
+        }
 
         console.log(
             'CSV analysis:',
@@ -516,78 +576,109 @@ document.addEventListener('DOMContentLoaded', function () {
 
             <div class="supplier-importer__mapping-categories">
                 ${categories.map(function (category, index) {
+
+            const saved =
+                savedMappings[category.source] || null;
+
+            const savedTargetId =
+                saved
+                    ? Number(saved.target_id)
+                    : 0;
+
+            const savedTargetName =
+                saved
+                    ? saved.target_name
+                    : '';
+
             return `
                         <div
-    class="supplier-importer__mapping-item"
-    data-category-index="${index}"
->
-    <div class="supplier-importer__mapping-source">
-        <span class="supplier-importer__mapping-label">
-            Категория поставщика
-        </span>
+                            class="supplier-importer__mapping-item"
+                            data-category-index="${index}"
+                        >
+                            <div class="supplier-importer__mapping-source">
 
-        <strong>
-            ${escapeHtml(category.source)}
-        </strong>
+                                <span class="supplier-importer__mapping-label">
+                                    Категория поставщика
+                                </span>
 
-        <span>
-            Товаров: ${category.count}
-        </span>
-    </div>
+                                <strong>
+                                    ${escapeHtml(category.source)}
+                                </strong>
 
-    <div class="supplier-importer__mapping-search">
-        <label>
-            Категория на сайте
-        </label>
+                                <span>
+                                    Товаров: ${category.count}
+                                </span>
 
-        <input
-            type="text"
-            class="supplier-importer__mapping-input"
-            placeholder="Начните вводить название..."
-            autocomplete="off"
-        >
+                            </div>
 
-        <div
-            class="supplier-importer__mapping-results"
-            hidden
-        ></div>
-    </div>
+                            <div class="supplier-importer__mapping-search">
 
-    <div
-        class="supplier-importer__mapping-selected"
-        hidden
-    ></div>
-</div>
+                                <label>
+                                    Категория на сайте
+                                </label>
+
+                                <input
+                                    type="text"
+                                    class="supplier-importer__mapping-input"
+                                    placeholder="Начните вводить название..."
+                                    autocomplete="off"
+                                >
+
+                                <div
+                                    class="supplier-importer__mapping-results"
+                                    hidden
+                                ></div>
+
+                            </div>
+
+                            <div
+                                class="supplier-importer__mapping-selected"
+                                data-target-id="${savedTargetId}"
+                                ${savedTargetId ? '' : 'hidden'}
+                            >
+                                ${savedTargetId
+                    ? `
+                                        <span>
+                                            ${escapeHtml(savedTargetName)}
+                                        </span>
+                                    `
+                    : ''
+                }
+                            </div>
+
+                        </div>
                     `;
+
         }).join('')}
             </div>
         </div>
 
         <div class="supplier-importer__mapping-section">
-    <h4>Атрибуты</h4>
+            <h4>Атрибуты</h4>
 
-    <div class="supplier-importer__mapping-attributes">
-        ${renderAttributes(
+            <div class="supplier-importer__mapping-attributes">
+                ${renderAttributes(
             Array.isArray(analysis.attributes)
                 ? analysis.attributes
                 : []
         )}
-    </div>
-</div>
-        <div class="supplier-importer__mapping-actions">
-    <button
-    type="button"
-    class="button button-primary"
-    id="supplier-import-mapping-save"
->
-    Сохранить и начать импорт
-</button>
+            </div>
+        </div>
 
-    <span
-        class="supplier-importer__mapping-status"
-        hidden
-    ></span>
-</div>
+        <div class="supplier-importer__mapping-actions">
+            <button
+                type="button"
+                class="button button-primary"
+                id="supplier-import-mapping-save"
+            >
+                Сохранить и начать импорт
+            </button>
+
+            <span
+                class="supplier-importer__mapping-status"
+                hidden
+            ></span>
+        </div>
     `;
 
         initCategorySearch(
@@ -602,7 +693,6 @@ document.addEventListener('DOMContentLoaded', function () {
             mappingBlock,
             currentImportId
         );
-
     }
 
     function renderAttributes(attributes) {
