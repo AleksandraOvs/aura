@@ -49,7 +49,7 @@ get_header();
                         <li class="categories-tree__item">
 
                             <a
-                                class="categories-tree__link"
+                                class="categories-tree__link parent-cat"
                                 href="<?php echo esc_url(get_term_link($category)); ?>">
                                 <?php echo esc_html($category->name); ?>
                             </a>
