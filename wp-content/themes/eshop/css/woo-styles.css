@@ -485,7 +485,12 @@ a.button.wc-forward:hover {
     justify-content: center;
     background: #f8f8f8;
     border-radius: 50px;
-    transition: all .5s linear;
+    transition: all .5s var(--transition);
+}
+
+.categories-grid a:hover {
+    background: var(--theme-color-accent);
+    color: var(--theme-color-primary);
 }
 
 .woocommerce .products ul,
