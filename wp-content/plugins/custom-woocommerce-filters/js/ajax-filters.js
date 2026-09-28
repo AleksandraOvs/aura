@@ -242,6 +242,14 @@
                     return;
                 }
 
+                const countElement =
+                    document.querySelector('#cwc-products-count');
+
+                if (countElement) {
+                    countElement.textContent =
+                        response.data.found;
+                }
+
 
                 /*
                  * Заменяем первые 18 товаров

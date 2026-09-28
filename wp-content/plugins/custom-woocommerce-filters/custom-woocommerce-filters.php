@@ -300,6 +300,31 @@ function cwc_shop_filters_shortcode()
         );
     }
 
+    $current_cat_id = is_product_category()
+        ? get_queried_object_id()
+        : 0;
+
+    $initial_count_args = [
+        'post_type'      => 'product',
+        'post_status'    => 'publish',
+        'posts_per_page' => 1,
+        'fields'         => 'ids',
+    ];
+
+    if ($current_cat_id) {
+        $initial_count_args['tax_query'] = [
+            [
+                'taxonomy' => 'product_cat',
+                'field'    => 'term_id',
+                'terms'    => $current_cat_id,
+            ]
+        ];
+    }
+
+    $initial_count_query = new WP_Query($initial_count_args);
+
+    $initial_count = $initial_count_query->found_posts;
+
     ob_start(); ?>
 
     <div class="filters-head">
@@ -338,7 +363,12 @@ function cwc_shop_filters_shortcode()
             ?>
 
             <div class="cwc-filter-actions">
-                <button id="cwc-apply-filters" class="cwc-apply-button">Показать результаты</button>
+                <div class="cwc-products-count">
+                    Найдено товаров:
+                    <span id="cwc-products-count">
+                        <?php echo esc_html($initial_count); ?>
+                    </span>
+                </div>
                 <button id="cwc-reset-filters" class="cwc-reset-button">Сброс</button>
             </div>
         </div>
