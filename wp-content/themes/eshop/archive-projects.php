@@ -22,46 +22,52 @@
 
 <section class="projects">
     <div class="container">
-        <div class="projects-tags">
-            <a href="/" class="project-tag active">HoReCa</a>
-            <a href="/" class="project-tag">Жилой комплекс</a>
-            <a href="/" class="project-tag">Загородный дом</a>
-            <a href="/" class="project-tag">Загородный дом</a>
-            <a href="/" class="project-tag">Квартира</a>
-            <a href="/" class="project-tag">Коммерческое помещение</a>
-            <a href="/" class="project-tag">Культурное наследие</a>
-            <a href="/" class="project-tag">Ландшафт</a>
-            <a href="/" class="project-tag">Офис</a>
-            <a href="/" class="project-tag">Частный дом</a>
+        <div class="projects-tags" data-projects-filter>
+
+            <button
+                type="button"
+                class="project-tag active"
+                data-project-tag="all">
+                Все проекты
+            </button>
+
+            <?php
+            $project_tags = get_terms([
+                'taxonomy'   => 'project_tag',
+                'hide_empty' => true,
+                'orderby'    => 'name',
+                'order'      => 'ASC',
+            ]);
+
+            if (!is_wp_error($project_tags) && $project_tags):
+                foreach ($project_tags as $tag):
+            ?>
+
+                    <button
+                        type="button"
+                        class="project-tag"
+                        data-project-tag="<?= esc_attr($tag->term_id); ?>">
+                        <?= esc_html($tag->name); ?>
+                    </button>
+
+            <?php
+                endforeach;
+            endif;
+            ?>
+
         </div>
 
-        <?php
-        $animation_delay = 0.1;
-        ?>
-        <div class="projects-list">
+        <div class="projects-list" data-projects-list>
 
             <?php if (have_posts()): ?>
-
 
                 <?php while (have_posts()): the_post(); ?>
 
                     <?php
                     get_template_part(
-                        'sections/projects/project-item',
-                        null,
-                        [
-                            'animation_delay' => $animation_delay,
-                        ]
+                        'sections/projects/project-item'
                     );
-
-                    $animation_delay += 0.1;
-
-                    if ($animation_delay > 1) {
-                        $animation_delay = 0.1;
-                    }
                     ?>
-
-
 
                 <?php endwhile; ?>
 

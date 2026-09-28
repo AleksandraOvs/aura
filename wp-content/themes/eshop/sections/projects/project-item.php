@@ -1,11 +1,5 @@
-<?php
-$animation_delay = $args['animation_delay'] ?? 0.1;
-?>
-
 <div
-    class="project-item"
-    data-scroll-animation="fade"
-    style="--animation-delay: <?= esc_attr($animation_delay); ?>s">
+    class="project-item">
     <a
         class="project-item__link"
         href="<?= esc_url(get_permalink()); ?>">

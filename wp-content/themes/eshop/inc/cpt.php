@@ -1,13 +1,6 @@
 <?php
-
-/**
- * -----------------------------------------------------
- * CPT: Проекты
- * -----------------------------------------------------
- */
 function register_projects_cpt()
 {
-
     register_post_type('projects', [
         'labels' => [
             'name'               => 'Проекты',
@@ -23,11 +16,11 @@ function register_projects_cpt()
             'not_found_in_trash' => 'В корзине проектов нет',
         ],
 
-        'public'              => true,
-        'show_ui'             => true,
-        'show_in_menu'        => true,
-        'menu_position'       => 5,
-        'menu_icon'           => 'dashicons-portfolio',
+        'public'       => true,
+        'show_ui'      => true,
+        'show_in_menu' => true,
+        'menu_position' => 5,
+        'menu_icon'    => 'dashicons-portfolio',
 
         'supports' => [
             'title',
@@ -36,20 +29,54 @@ function register_projects_cpt()
             'excerpt',
         ],
 
-        'has_archive'         => true,
+        'has_archive' => true,
+
         'rewrite' => [
             'slug'       => 'projects',
             'with_front' => false,
         ],
 
-        // Поддержка стандартных категорий и тегов
-        'taxonomies' => [
-            'category',
-            'post_tag',
-        ],
-
-        'show_in_rest'        => true,
+        'show_in_rest' => true,
     ]);
 }
 
 add_action('init', 'register_projects_cpt');
+
+
+/**
+ * Теги проектов
+ */
+function register_project_tags()
+{
+    register_taxonomy(
+        'project_tag',
+        ['projects'],
+        [
+            'labels' => [
+                'name'                       => 'Теги проектов',
+                'singular_name'              => 'Тег проекта',
+                'search_items'               => 'Искать теги',
+                'all_items'                  => 'Все теги',
+                'edit_item'                  => 'Редактировать тег',
+                'update_item'                => 'Обновить тег',
+                'add_new_item'               => 'Добавить новый тег',
+                'new_item_name'              => 'Название нового тега',
+                'menu_name'                  => 'Теги проектов',
+            ],
+
+            'public'            => true,
+            'show_ui'           => true,
+            'show_admin_column' => true,
+            'show_in_rest'      => true,
+
+            // Обычные теги, не иерархические
+            'hierarchical' => false,
+
+            'rewrite' => [
+                'slug' => 'project-tag',
+            ],
+        ]
+    );
+}
+
+add_action('init', 'register_project_tags');

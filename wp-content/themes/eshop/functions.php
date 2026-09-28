@@ -79,6 +79,24 @@ function e_shop_enqueue_styles()
     //CHECKOUT
     wp_enqueue_script('chtckout-script', get_stylesheet_directory_uri() . '/js/checkout.js', array(), _S_VERSION, true);
     wp_enqueue_style('checkout-styles', get_template_directory_uri() . '/css/checkout.css');
+
+    //PROJECTS
+    if (!is_post_type_archive('projects')) {
+        return;
+    }
+
+    wp_enqueue_script(
+        'projects-filter',
+        get_template_directory_uri() . '/js/projects-filter.js',
+        [],
+        null,
+        true
+    );
+
+    wp_localize_script('projects-filter', 'projectsFilter', [
+        'ajaxUrl' => admin_url('admin-ajax.php'),
+        'nonce'   => wp_create_nonce('filter_projects'),
+    ]);
 }
 
 if (!function_exists('e_shop_theme_setup')) {
@@ -231,6 +249,7 @@ require get_template_directory() . '/my-account/ma-functions.php';
 require get_template_directory() . '/inc/custom-delivery.php';
 
 require_once get_stylesheet_directory() . '/inc/custom-order-number.php';
+require_once get_stylesheet_directory() . '/inc/projects-ajax.php';
 
 
 add_action('init', function () {

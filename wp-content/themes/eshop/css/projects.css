@@ -4,7 +4,7 @@
     flex-wrap: wrap;
 }
 
-a.project-tag {
+button.project-tag {
     padding: 7px 15px;
     max-width: max-content;
     display: flex;
@@ -15,12 +15,12 @@ a.project-tag {
     transition: all .5s linear;
 }
 
-a.project-tag:hover {
+button.project-tag:hover {
     background: var(--theme-color-accent);
     color: var(--theme-color-primary);
 }
 
-a.project-tag.active {
+button.project-tag.active {
     background: var(--theme-color-accent);
     color: var(--theme-color-primary);
 }
@@ -35,6 +35,16 @@ a.project-tag.active {
 .project-item {
     width: calc(100% / 3);
     padding-bottom: 2em;
+    opacity: 0;
+    transform: translateY(20px);
+    transition:
+        opacity .5s ease,
+        transform .5s ease;
+}
+
+.project-item.is-visible {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .project-item__desc {
