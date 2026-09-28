@@ -1,4 +1,5 @@
 (function ($) {
+
     function initShowMoreFilters(context) {
 
         const root = context || document;
@@ -16,10 +17,6 @@
             });
     }
 
-    $(function () {
-        cwcIsInit = false;
-        initShowMoreFilters(document);
-    });
     function isMobile() {
         return window.innerWidth < 768;
     }
@@ -28,27 +25,12 @@
     let cwcIsUpdating = false;
     let cwcTimer;
 
-    function debounceUpdate(wrapper) {
 
-        window.cwcCurrentPage = 1; // 🔥 сброс страницы
+    /* ---------------------------------------------------
+     * СБОР ТЕКУЩИХ ФИЛЬТРОВ
+     * --------------------------------------------------- */
 
-        clearTimeout(cwcTimer);
-
-        cwcTimer = setTimeout(() => {
-            updateProducts(wrapper);
-        }, 300);
-
-        console.log('DEBOUNCE');
-    }
-
-    function getProductsContainer() {
-        return $('.products');
-    }
-
-    function updateProducts(wrapper) {
-
-        if (cwcIsUpdating) return;
-        cwcIsUpdating = true;
+    function getCurrentFilters(wrapper) {
 
         let filters = {
             action: 'cwc_filter_products',
@@ -56,16 +38,10 @@
         };
 
 
-        // страховка от вечного lock
-        setTimeout(() => {
-            cwcIsUpdating = false;
-        }, 3000);
-
-        console.log('UPDATE PRODUCTS');
-
-        /* -------------------
+        /* -------------------------
          * ATTRIBUTES
-         * ------------------- */
+         * ------------------------- */
+
         $(wrapper).find('.sidebar-list').each(function () {
 
             let taxonomy = $(this).data('taxonomy');
@@ -75,261 +51,579 @@
                 values.push($(this).data('slug'));
             });
 
-            if (!values.length) return;
+            if (!values.length) {
+                return;
+            }
 
             if (taxonomy === 'instock_filter') {
+
                 filters.instock = true;
+
             } else {
+
                 filters['filter_' + taxonomy] = values;
             }
         });
 
-        /* -------------------
+
+        /* -------------------------
          * PRICE
-         * ------------------- */
+         * ------------------------- */
+
         let minPriceInput = $(wrapper).find('#min_price');
         let maxPriceInput = $(wrapper).find('#max_price');
         let priceSlider = $(wrapper).find('#price-slider');
 
         if (priceSlider.length) {
-            filters.min_price = parseInt(minPriceInput.val(), 10);
-            filters.max_price = parseInt(maxPriceInput.val(), 10);
+
+            filters.min_price =
+                parseInt(minPriceInput.val(), 10);
+
+            filters.max_price =
+                parseInt(maxPriceInput.val(), 10);
         }
 
-        /* -------------------
+
+        /* -------------------------
          * NUMERIC
-         * ------------------- */
+         * ------------------------- */
+
         $(wrapper).find('.range-inputs').each(function () {
 
-            let $minInput = $(this).find('input[name$="_min"]');
-            let $maxInput = $(this).find('input[name$="_max"]');
+            let $minInput =
+                $(this).find('input[name$="_min"]');
 
-            if (!$minInput.length || !$maxInput.length) return;
+            let $maxInput =
+                $(this).find('input[name$="_max"]');
 
-            let minVal = parseFloat($minInput.val());
-            let maxVal = parseFloat($maxInput.val());
+            if (!$minInput.length || !$maxInput.length) {
+                return;
+            }
 
-            let minDef = parseFloat($minInput.attr('min'));
-            let maxDef = parseFloat($maxInput.attr('max'));
+            let minVal =
+                parseFloat($minInput.val());
 
-            if (minVal === minDef && maxVal === maxDef) return;
+            let maxVal =
+                parseFloat($maxInput.val());
+
+            let minDef =
+                parseFloat($minInput.attr('min'));
+
+            let maxDef =
+                parseFloat($maxInput.attr('max'));
+
+            if (
+                minVal === minDef &&
+                maxVal === maxDef
+            ) {
+                return;
+            }
 
             filters[$minInput.attr('name')] = minVal;
             filters[$maxInput.attr('name')] = maxVal;
         });
 
-        /* -------------------
+
+        /* -------------------------
          * SORT
-         * ------------------- */
+         * ------------------------- */
+
         let orderby = $('select.orderby').val();
+
         if (orderby) {
             filters.orderby = orderby;
         }
 
-        /* -------------------
+
+        /* -------------------------
          * CATEGORY
-         * ------------------- */
-        let currentCat = $(wrapper).data('current-cat');
+         * ------------------------- */
+
+        let currentCat =
+            $(wrapper).data('current-cat');
+
         if (currentCat) {
             filters.current_cat_id = currentCat;
         }
 
+
+        return filters;
+    }
+
+
+    /*
+     * Делаем функцию доступной
+     * для products-load-more.js
+     */
+
+    window.cwcGetCurrentFilters = getCurrentFilters;
+
+
+    /* ---------------------------------------------------
+     * PRODUCTS CONTAINER
+     * --------------------------------------------------- */
+
+    function getProductsContainer() {
+        return $('.js-products-list');
+    }
+
+
+    /* ---------------------------------------------------
+     * DEBOUNCE
+     * --------------------------------------------------- */
+
+    function debounceUpdate(wrapper) {
+
+        window.cwcCurrentPage = 1;
+
+        clearTimeout(cwcTimer);
+
+        cwcTimer = setTimeout(function () {
+            updateProducts(wrapper);
+        }, 300);
+
+        console.log('DEBOUNCE');
+    }
+
+
+    /* ---------------------------------------------------
+     * UPDATE PRODUCTS
+     * --------------------------------------------------- */
+
+    function updateProducts(wrapper) {
+
+        if (cwcIsUpdating) {
+            return;
+        }
+
+        cwcIsUpdating = true;
+
+        /*
+         * Любое новое применение фильтра,
+         * сортировки или сброса начинается
+         * снова с первой страницы.
+         */
+
+        window.cwcCurrentPage = 1;
+
+        const filters =
+            getCurrentFilters(wrapper);
+
         console.log('FILTERS →', filters);
 
-        let $products = getProductsContainer();
+        const $products =
+            getProductsContainer();
+
 
         $.ajax({
+
             url: cwc_ajax_object.ajax_url,
+
             type: 'POST',
+
             data: filters,
 
+
             beforeSend: function () {
+
                 $products.fadeTo(200, 0.5);
             },
 
+
             success: function (response) {
 
-                if (response.success) {
+                console.log(
+                    'FILTER RESULT →',
+                    response
+                );
 
-                    $products
-                        .html(response.data.html)
-                        .fadeTo(200, 1);
 
-                    // 🔥 ПАГИНАЦИЯ
-                    // if ($('#pagination').length) {
-                    //     $('#pagination').html(response.data.pagination);
-                    // } else {
-                    //     $products.after('<div id="pagination">' + response.data.pagination + '</div>');
-                    // }
-
-                    initShowMoreFilters(document);
+                if (!response.success) {
+                    return;
                 }
+
+
+                /*
+                 * Заменяем первые 18 товаров
+                 */
+
+                $products
+                    .html(response.data.html)
+                    .fadeTo(200, 1);
+
+
+                initShowMoreFilters(document);
+
+
+                /*
+                 * Сбрасываем состояние infinite scroll
+                 */
+
+                const productsList =
+                    document.querySelector(
+                        '.js-products-list'
+                    );
+
+
+                if (productsList) {
+
+                    productsList.dataset.page = '1';
+
+                    productsList.dataset.hasMore =
+                        response.data.has_more
+                            ? '1'
+                            : '0';
+                }
+
+
+                /*
+                 * Сообщаем другим скриптам,
+                 * что товары обновились.
+                 */
+
+                $(document).trigger(
+                    'cwc:products-updated',
+                    [response.data]
+                );
             },
+
+
+            error: function (xhr, status, error) {
+
+                console.error(
+                    'CWC FILTER ERROR:',
+                    status,
+                    error
+                );
+            },
+
 
             complete: function () {
 
                 cwcIsUpdating = false;
 
+
                 if (isMobile()) {
-                    $('.woocommerce-layout__sidebar').removeClass('show');
-                    $('.toggle-filter').removeClass('active');
+
+                    $('.woocommerce-layout__sidebar')
+                        .removeClass('show');
+
+                    $('.toggle-filter')
+                        .removeClass('active');
                 }
             }
+
         });
     }
 
-    /* -------------------
-     * CLICK FILTERS (СТАБИЛЬНО)
-     * ------------------- */
-    $(document).on('click', '.sidebar-list a', function (e) {
 
-        e.preventDefault();
+    /* ---------------------------------------------------
+     * CLICK FILTERS
+     * --------------------------------------------------- */
 
-        const $item = $(this);
+    $(document).on(
+        'click',
+        '.sidebar-list a',
+        function (e) {
 
-        $item.toggleClass('active');
+            e.preventDefault();
 
-        debounceUpdate($item.closest('.sidebar-area-wrapper'));
-    });
-    /* -------------------
+            const $item = $(this);
+
+            $item.toggleClass('active');
+
+            debounceUpdate(
+                $item.closest(
+                    '.sidebar-area-wrapper'
+                )
+            );
+        }
+    );
+
+
+    /* ---------------------------------------------------
      * PRICE
-     * ------------------- */
-    $(document).on('change', '#min_price, #max_price', function () {
-        debounceUpdate($(this).closest('.sidebar-area-wrapper'));
-    });
+     * --------------------------------------------------- */
 
-    $(document).on('change', '.range-inputs input', function () {
-        debounceUpdate($(this).closest('.sidebar-area-wrapper'));
-    });
+    $(document).on(
+        'change',
+        '#min_price, #max_price',
+        function () {
 
-    /* -------------------
-     * SLIDER
-     * ------------------- */
+            debounceUpdate(
+                $(this).closest(
+                    '.sidebar-area-wrapper'
+                )
+            );
+        }
+    );
+
+
+    /* ---------------------------------------------------
+     * NUMERIC RANGE
+     * --------------------------------------------------- */
+
+    $(document).on(
+        'change',
+        '.range-inputs input',
+        function () {
+
+            debounceUpdate(
+                $(this).closest(
+                    '.sidebar-area-wrapper'
+                )
+            );
+        }
+    );
+
+
+    /* ---------------------------------------------------
+     * PRICE SLIDER
+     * --------------------------------------------------- */
+
     $('.sidebar-area-wrapper').each(function () {
 
-        let wrapper = $(this);
-        let slider = wrapper.find('#price-slider');
-        if (!slider.length) return;
+        const wrapper = $(this);
 
-        let minInput = wrapper.find('#min_price');
-        let maxInput = wrapper.find('#max_price');
+        const slider =
+            wrapper.find('#price-slider');
 
-        let min = parseInt(slider.data('min'), 10);
-        let max = parseInt(slider.data('max'), 10);
+        if (!slider.length) {
+            return;
+        }
+
+        const minInput =
+            wrapper.find('#min_price');
+
+        const maxInput =
+            wrapper.find('#max_price');
+
+
+        const min =
+            parseInt(
+                slider.data('min'),
+                10
+            );
+
+        const max =
+            parseInt(
+                slider.data('max'),
+                10
+            );
+
 
         slider.slider({
+
             range: true,
+
             min: min,
+
             max: max,
+
             values: [
-                parseInt(minInput.val(), 10),
-                parseInt(maxInput.val(), 10)
+
+                parseInt(
+                    minInput.val(),
+                    10
+                ),
+
+                parseInt(
+                    maxInput.val(),
+                    10
+                )
+
             ],
+
+
             slide: function (event, ui) {
-                minInput.val(ui.values[0]);
-                maxInput.val(ui.values[1]);
+
+                minInput.val(
+                    ui.values[0]
+                );
+
+                maxInput.val(
+                    ui.values[1]
+                );
             },
+
+
             change: function () {
-                updateProducts(wrapper);
+
+                debounceUpdate(wrapper);
             }
+
         });
     });
 
-    /* -------------------
+
+    /* ---------------------------------------------------
      * RESET
-     * ------------------- */
-    $(document).on('click', '#cwc-reset-filters', function (e) {
+     * --------------------------------------------------- */
 
-        e.preventDefault();
+    $(document).on(
+        'click',
+        '#cwc-reset-filters',
+        function (e) {
 
-        let wrapper = $(this).closest('.sidebar-area-wrapper');
+            e.preventDefault();
 
-        wrapper.find('.filter-item').removeClass('active');
+            const wrapper =
+                $(this).closest(
+                    '.sidebar-area-wrapper'
+                );
 
-        let slider = wrapper.find('#price-slider');
 
-        if (slider.length) {
-            slider.slider('values', [
-                slider.data('min'),
-                slider.data('max')
-            ]);
+            /*
+             * Сбрасываем активные пункты
+             */
 
-            wrapper.find('#min_price').val(slider.data('min'));
-            wrapper.find('#max_price').val(slider.data('max'));
+            wrapper
+                .find('.sidebar-list a.active')
+                .removeClass('active');
+
+
+            /*
+             * PRICE
+             */
+
+            const slider =
+                wrapper.find('#price-slider');
+
+
+            if (slider.length) {
+
+                slider.slider(
+                    'values',
+                    [
+                        slider.data('min'),
+                        slider.data('max')
+                    ]
+                );
+
+
+                wrapper
+                    .find('#min_price')
+                    .val(
+                        slider.data('min')
+                    );
+
+
+                wrapper
+                    .find('#max_price')
+                    .val(
+                        slider.data('max')
+                    );
+            }
+
+
+            /*
+             * NUMERIC
+             */
+
+            wrapper
+                .find('.range-inputs')
+                .each(function () {
+
+                    const $min =
+                        $(this)
+                            .find(
+                                'input[name$="_min"]'
+                            );
+
+                    const $max =
+                        $(this)
+                            .find(
+                                'input[name$="_max"]'
+                            );
+
+
+                    $min.val(
+                        $min.attr('min')
+                    );
+
+                    $max.val(
+                        $max.attr('max')
+                    );
+                });
+
+
+            /*
+             * Загружаем первые 18
+             */
+
+            updateProducts(wrapper);
+
+
+            if (isMobile()) {
+
+                $('.woocommerce-layout__sidebar')
+                    .removeClass('show');
+
+                $('.toggle-filter')
+                    .removeClass('active');
+            }
+
         }
+    );
 
-        wrapper.find('.range-inputs').each(function () {
-            let $min = $(this).find('input[name$="_min"]');
-            let $max = $(this).find('input[name$="_max"]');
 
-            $min.val($min.attr('min'));
-            $max.val($max.attr('max'));
-        });
-
-        updateProducts(wrapper);
-
-        if (isMobile()) {
-            $('.woocommerce-layout__sidebar').removeClass('show');
-            $('.toggle-filter').removeClass('active');
-        }
-    });
-
-    /* -------------------
+    /* ---------------------------------------------------
      * APPLY
-     * ------------------- */
-    $(document).on('click', '#cwc-apply-filters', function (e) {
+     * --------------------------------------------------- */
 
-        e.preventDefault();
+    $(document).on(
+        'click',
+        '#cwc-apply-filters',
+        function (e) {
 
-        let wrapper = $(this).closest('.sidebar-area-wrapper');
+            e.preventDefault();
 
-        updateProducts(wrapper);
+            const wrapper =
+                $(this).closest(
+                    '.sidebar-area-wrapper'
+                );
 
-        $('.woocommerce-layout__sidebar').removeClass('show');
-        $('.toggle-filter').removeClass('active');
-    });
 
-    /* -------------------
+            updateProducts(wrapper);
+
+
+            $('.woocommerce-layout__sidebar')
+                .removeClass('show');
+
+            $('.toggle-filter')
+                .removeClass('active');
+        }
+    );
+
+
+    /* ---------------------------------------------------
      * SORT
-     * ------------------- */
-    $(document).on('change', 'select.orderby', function (e) {
+     * --------------------------------------------------- */
 
-        // if (cwcIsInit) return;
+    $(document).on(
+        'change',
+        'select.orderby',
+        function (e) {
 
-        e.preventDefault();
+            e.preventDefault();
 
-        updateProducts($('.sidebar-area-wrapper').first());
-    });
+            updateProducts(
+                $('.sidebar-area-wrapper').first()
+            );
+        }
+    );
 
-    /* -------------------
+
+    /* ---------------------------------------------------
      * INIT
-     * ------------------- */
+     * --------------------------------------------------- */
+
     $(function () {
+
         cwcIsInit = false;
+
         initShowMoreFilters(document);
     });
 
-    /* -------------------
- * PAGINATION (NEW)
- * ------------------- */
-    $(document).on('click', '.page-numbers', function (e) {
-
-        e.preventDefault();
-
-        let page = 1;
-
-        if ($(this).hasClass('next')) {
-            page = (window.cwcCurrentPage || 1) + 1;
-        } else if ($(this).hasClass('prev')) {
-            page = (window.cwcCurrentPage || 1) - 1;
-        } else {
-            page = parseInt($(this).text());
-        }
-
-        window.cwcCurrentPage = page;
-
-        updateProducts($('.sidebar-area-wrapper').first());
-    });
 
 })(jQuery);
-

@@ -1,17 +1,23 @@
-console.log('=== REAL PRODUCTS LOAD MORE FILE ===');
-
 document.addEventListener('DOMContentLoaded', () => {
 
-    console.log('=== DOM READY IN PRODUCTS LOAD MORE ===');
+    const productsList =
+        document.querySelector('.js-products-list');
 
-    const productsList = document.querySelector('.js-products-list');
-    const loader = document.querySelector('.products-loader');
+    const loader =
+        document.querySelector('.products-loader');
+
 
     if (!productsList) {
         return;
     }
 
+
     let loading = false;
+
+
+    /* ---------------------------------------------------
+     * LOAD MORE
+     * --------------------------------------------------- */
 
     const loadMoreProducts = async () => {
 
@@ -19,63 +25,174 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+
+        /*
+         * Больше товаров нет
+         */
+
         if (productsList.dataset.hasMore !== '1') {
             return;
         }
 
+
+        /*
+         * Фильтры ещё не готовы
+         */
+
+        if (
+            typeof window.cwcGetCurrentFilters !==
+            'function'
+        ) {
+            console.error(
+                'cwcGetCurrentFilters не найден'
+            );
+
+            return;
+        }
+
+
         loading = true;
+
 
         if (loader) {
             loader.hidden = false;
         }
 
+
+        /*
+         * Текущая страница
+         */
+
         const currentPage =
-            parseInt(productsList.dataset.page, 10) || 1;
+            parseInt(
+                productsList.dataset.page,
+                10
+            ) || 1;
 
-        const formData = new FormData();
 
-        formData.append(
-            'action',
-            'load_more_products'
+        const nextPage =
+            currentPage + 1;
+
+
+        /*
+         * Берём ТОЧНО такие же фильтры,
+         * которые использует ajax-filters.js
+         */
+
+        const wrapper =
+            document.querySelector(
+                '.sidebar-area-wrapper'
+            );
+
+
+        if (!wrapper) {
+
+            loading = false;
+
+            if (loader) {
+                loader.hidden = true;
+            }
+
+            return;
+        }
+
+
+        const filters =
+            window.cwcGetCurrentFilters(wrapper);
+
+
+        /*
+         * Для infinite scroll отправляем
+         * следующую страницу
+         */
+
+        filters.page = nextPage;
+
+
+        console.log(
+            'LOAD MORE →',
+            filters
         );
 
-        formData.append(
-            'nonce',
-            productsLoadMore.nonce
+
+        /*
+         * FormData
+         */
+
+        const formData =
+            new FormData();
+
+
+        Object.entries(filters).forEach(
+            ([key, value]) => {
+
+                if (Array.isArray(value)) {
+
+                    value.forEach(item => {
+
+                        formData.append(
+                            `${key}[]`,
+                            item
+                        );
+
+                    });
+
+                } else {
+
+                    formData.append(
+                        key,
+                        value
+                    );
+                }
+
+            }
         );
 
-        formData.append(
-            'paged',
-            currentPage
-        );
-
-        formData.append(
-            'page_type',
-            productsList.dataset.pageType
-        );
-
-        formData.append(
-            'category_id',
-            productsList.dataset.categoryId
-        );
 
         try {
 
-            const response = await fetch(
-                productsLoadMore.ajaxUrl,
-                {
-                    method: 'POST',
-                    body: formData,
-                }
+            const response =
+                await fetch(
+                    cwc_ajax_object.ajax_url,
+                    {
+                        method: 'POST',
+                        body: formData,
+                    }
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    `HTTP ${response.status}`
+                );
+            }
+
+
+            const result =
+                await response.json();
+
+
+            console.log(
+                'LOAD MORE RESULT:',
+                result
             );
 
-            const result = await response.json();
-
-            console.log('AJAX RESULT:', result);
 
             if (!result.success) {
+
+                console.error(
+                    'LOAD MORE ERROR:',
+                    result.data
+                );
+
                 return;
             }
+
+
+            /*
+             * Добавляем товары
+             */
 
             if (result.data.html) {
 
@@ -84,12 +201,42 @@ document.addEventListener('DOMContentLoaded', () => {
                     result.data.html
                 );
 
-                productsList.dataset.page =
-                    currentPage + 1;
             }
 
+
+            /*
+             * Страница считается загруженной
+             * только после успешного ответа.
+             */
+
+            productsList.dataset.page =
+                String(nextPage);
+
+
+            /*
+             * Есть ли ещё товары
+             */
+
             productsList.dataset.hasMore =
-                result.data.has_more ? '1' : '0';
+                result.data.has_more
+                    ? '1'
+                    : '0';
+
+
+            /*
+             * Если товаров больше нет,
+             * observer больше ничего делать не будет,
+             * потому что hasMore = 0.
+             */
+
+            if (
+                productsList.dataset.hasMore !== '1'
+            ) {
+
+                console.log(
+                    'Все товары загружены'
+                );
+            }
 
         } catch (error) {
 
@@ -102,6 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             loading = false;
 
+
             if (loader) {
                 loader.hidden = true;
             }
@@ -109,41 +257,55 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
 
-    /*
-     * Триггер загрузки
-     */
+    /* ---------------------------------------------------
+     * TRIGGER
+     * --------------------------------------------------- */
 
-    const observerTarget = document.createElement('div');
+    const observerTarget =
+        document.createElement('div');
+
 
     observerTarget.className =
         'products-load-more-trigger';
 
-    productsList.after(observerTarget);
 
-
-    /*
-     * IntersectionObserver
-     */
-
-    const observer = new IntersectionObserver(
-        (entries) => {
-
-            if (entries[0].isIntersecting) {
-
-                console.log(
-                    'LOAD MORE TRIGGERED'
-                );
-
-                loadMoreProducts();
-            }
-
-        },
-        {
-            rootMargin: '500px 0px',
-            threshold: 0,
-        }
+    productsList.after(
+        observerTarget
     );
 
-    observer.observe(observerTarget);
+
+    /* ---------------------------------------------------
+     * INTERSECTION OBSERVER
+     * --------------------------------------------------- */
+
+    const observer =
+        new IntersectionObserver(
+
+            (entries) => {
+
+                if (
+                    entries[0].isIntersecting
+                ) {
+
+                    console.log(
+                        'LOAD MORE TRIGGERED'
+                    );
+
+                    loadMoreProducts();
+                }
+
+            },
+
+            {
+                rootMargin: '500px 0px',
+                threshold: 0,
+            }
+
+        );
+
+
+    observer.observe(
+        observerTarget
+    );
 
 });

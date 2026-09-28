@@ -352,32 +352,72 @@ function cwc_shop_filters_shortcode()
 add_shortcode('shop_filters', 'cwc_shop_filters_shortcode');
 
 /* ---------------------------------------------------
- * AJAX: фильтрация товаров
+ * AJAX: фильтрация + загрузка товаров
  * --------------------------------------------------- */
 function cwc_filter_products_callback()
 {
-
     error_log('CWC POST: ' . print_r($_POST, true));
-    if (!isset($_POST['action']) || $_POST['action'] !== 'cwc_filter_products') {
+
+    if (
+        !isset($_POST['action']) ||
+        $_POST['action'] !== 'cwc_filter_products'
+    ) {
         wp_send_json_error('Неверный запрос');
     }
 
-    $tax_query  = [];
-    $meta_query = ['relation' => 'AND'];
+    /*
+     * -----------------------------------------------
+     * PAGE
+     * -----------------------------------------------
+     */
 
-    /* -------------------------
-     * Атрибуты
-     * ------------------------- */
+    $page = isset($_POST['page'])
+        ? max(1, absint($_POST['page']))
+        : 1;
+
+    /*
+     * Первая загрузка / после фильтра:
+     * 18 товаров
+     *
+     * Infinite scroll:
+     * по 9 товаров
+     */
+
+    if ($page === 1) {
+        $posts_per_page = 18;
+        $offset = 0;
+    } else {
+        $posts_per_page = 9;
+        $offset = 18 + (($page - 2) * 9);
+    }
+
+    /*
+     * -----------------------------------------------
+     * TAX QUERY
+     * -----------------------------------------------
+     */
+
+    $tax_query = [];
+
     foreach ($_POST as $key => $value) {
 
-        if (strpos($key, 'filter_') !== 0) continue;
-        if ($key === 'filter_current_cat_id') continue;
+        if (strpos($key, 'filter_') !== 0) {
+            continue;
+        }
+
+        if ($key === 'filter_current_cat_id') {
+            continue;
+        }
 
         $taxonomy = str_replace('filter_', '', $key);
 
         $terms = is_array($value)
             ? array_map('sanitize_text_field', $value)
             : [sanitize_text_field($value)];
+
+        if (!$terms) {
+            continue;
+        }
 
         $tax_query[] = [
             'taxonomy' => $taxonomy,
@@ -387,9 +427,16 @@ function cwc_filter_products_callback()
         ];
     }
 
-    /* -------------------------
-     * Цена (ПРАВИЛЬНО ДЛЯ ВАРИАЦИЙ)
-     * ------------------------- */
+    /*
+     * -----------------------------------------------
+     * PRICE / META QUERY
+     * -----------------------------------------------
+     */
+
+    $meta_query = [
+        'relation' => 'AND',
+    ];
+
     if (isset($_POST['min_price'], $_POST['max_price'])) {
 
         $min_price = floatval($_POST['min_price']);
@@ -398,7 +445,7 @@ function cwc_filter_products_callback()
         $meta_query[] = [
             'relation' => 'OR',
 
-            // простые товары
+            // Простые товары
             [
                 'key'     => '_price',
                 'value'   => [$min_price, $max_price],
@@ -406,7 +453,7 @@ function cwc_filter_products_callback()
                 'type'    => 'NUMERIC',
             ],
 
-            // вариативные: диапазоны пересекаются
+            // Вариативные товары
             [
                 'key'     => '_min_variation_price',
                 'value'   => $max_price,
@@ -422,44 +469,157 @@ function cwc_filter_products_callback()
         ];
     }
 
-    /* -------------------------
-     * Категория
-     * ------------------------- */
+    /*
+     * -----------------------------------------------
+     * CATEGORY
+     * -----------------------------------------------
+     */
+
     if (!empty($_POST['current_cat_id'])) {
+
         $tax_query[] = [
             'taxonomy' => 'product_cat',
             'field'    => 'term_id',
-            'terms'    => intval($_POST['current_cat_id']),
+            'terms'    => absint($_POST['current_cat_id']),
         ];
     }
 
-    /* -------------------------
-     * WP_Query (ВМЕСТО wc_get_products)
-     * ------------------------- */
-    $query = new WP_Query([
-        'post_type'      => 'product',
-        'posts_per_page' => -1,
-        'tax_query'      => $tax_query ?: [],
-        'meta_query'     => count($meta_query) > 1 ? $meta_query : [],
-    ]);
+    /*
+     * -----------------------------------------------
+     * SORT
+     * -----------------------------------------------
+     */
+
+    $orderby = isset($_POST['orderby'])
+        ? sanitize_text_field($_POST['orderby'])
+        : 'menu_order';
+
+    $order = 'ASC';
+
+    switch ($orderby) {
+
+        case 'date':
+            $orderby = 'date';
+            $order = 'DESC';
+            break;
+
+        case 'price':
+            $orderby = 'meta_value_num';
+            $order = 'ASC';
+
+            $meta_query[] = [
+                'key'  => '_price',
+                'type' => 'NUMERIC',
+            ];
+            break;
+
+        case 'price-desc':
+            $orderby = 'meta_value_num';
+            $order = 'DESC';
+
+            $meta_query[] = [
+                'key'  => '_price',
+                'type' => 'NUMERIC',
+            ];
+            break;
+
+        case 'title':
+            $orderby = 'title';
+            $order = 'ASC';
+            break;
+
+        case 'menu_order':
+        default:
+            $orderby = 'menu_order';
+            $order = 'ASC';
+            break;
+    }
+
+    /*
+     * -----------------------------------------------
+     * STOCK
+     * -----------------------------------------------
+     */
+
+    if (!empty($_POST['instock'])) {
+
+        $meta_query[] = [
+            'key'     => '_stock_status',
+            'value'   => 'instock',
+            'compare' => '=',
+        ];
+    }
+
+    /*
+     * -----------------------------------------------
+     * QUERY
+     * -----------------------------------------------
+     */
+
+    $query_args = [
+        'post_type'           => 'product',
+        'post_status'         => 'publish',
+        'posts_per_page'      => $posts_per_page,
+        'offset'              => $offset,
+        'tax_query'           => $tax_query,
+        'meta_query'          => count($meta_query) > 1
+            ? $meta_query
+            : [],
+        'orderby'             => $orderby,
+        'order'               => $order,
+        'ignore_sticky_posts' => true,
+        'no_found_rows'       => false,
+    ];
+
+    $query = new WP_Query($query_args);
+
+    /*
+     * -----------------------------------------------
+     * HTML
+     * -----------------------------------------------
+     */
 
     ob_start();
 
     if ($query->have_posts()) {
+
         while ($query->have_posts()) {
             $query->the_post();
+
             wc_get_template_part('content', 'product');
         }
-    } else {
-        echo '<p class="no-products">Товары не найдены</p>';
     }
+
+    $html = ob_get_clean();
+
+    /*
+     * -----------------------------------------------
+     * HAS MORE
+     * -----------------------------------------------
+     */
+
+    $loaded_until = $offset + $query->post_count;
+
+    $has_more = $loaded_until < $query->found_posts;
 
     wp_reset_postdata();
 
     wp_send_json_success([
-        'html' => ob_get_clean()
+        'html'      => $html,
+        'has_more'  => $has_more,
+        'count'     => $query->post_count,
+        'found'     => $query->found_posts,
+        'page'      => $page,
+        'offset'    => $offset,
     ]);
 }
 
-add_action('wp_ajax_cwc_filter_products', 'cwc_filter_products_callback');
-add_action('wp_ajax_nopriv_cwc_filter_products', 'cwc_filter_products_callback');
+add_action(
+    'wp_ajax_cwc_filter_products',
+    'cwc_filter_products_callback'
+);
+
+add_action(
+    'wp_ajax_nopriv_cwc_filter_products',
+    'cwc_filter_products_callback'
+);
