@@ -467,6 +467,7 @@ a.button.wc-forward:hover {
     display: flex;
     position: relative;
     padding-top: 3em;
+    padding-bottom: 4em;
 }
 
 .categories-grid {
