@@ -471,15 +471,20 @@ a.button.wc-forward:hover {
 }
 
 .categories-grid {
-    width: calc(100% - 1em - 40px);
     display: flex;
-    gap: 1em;
-    align-items: center;
+    gap: .5em;
+    flex-wrap: wrap;
 }
 
 .categories-grid a {
-    padding: .5em;
-    border-bottom: 2px solid #ededed;
+    padding: 7px 15px;
+    max-width: max-content;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f8f8;
+    border-radius: 50px;
+    transition: all .5s linear;
 }
 
 .woocommerce .products ul,
