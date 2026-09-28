@@ -304,10 +304,10 @@
     color: var(--white);
 }
 
-.wishlist-cart-actions .button.add_to_cart_button {
+/* .wishlist-cart-actions .button.add_to_cart_button {
     background: var(--theme-color-primary);
     color: var(--theme-color-accent);
-}
+} */
 
 .wishlist-cart-actions .button.add_to_cart_button :hover {
     background: var(--theme-color-accent);

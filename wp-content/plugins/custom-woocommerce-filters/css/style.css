@@ -370,6 +370,10 @@
   padding: 8px 12px;
 }
 
+.cwc-products-count {
+  font-size: 14px;
+}
+
 .cwc-reset-button:hover {
   color: #332233;
 }
