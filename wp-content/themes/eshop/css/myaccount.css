@@ -369,6 +369,8 @@ button.woocommerce-button.button.woocommerce-form-register__submit {
     transform: rotate(0deg);
 }
 
+
+
 .my-order .my-order__items {
     overflow: hidden;
     height: 0;
@@ -399,9 +401,53 @@ button.woocommerce-button.button.woocommerce-form-register__submit {
     font-weight: 500;
 }
 
+.woocommerce-info .button.wc-forward {
+    width: max-content;
+    padding: .5em 1em;
+}
+
 @media (max-width: 768px) {
-    .woocommerce-MyAccount-content {
-        margin-top: 2em;
-        text-align: center;
+    .my-order__item-right {
+        flex-wrap: wrap;
+    }
+
+    .my-order__item-right>div {
+        flex: unset;
+    }
+
+    .my-order__item-info,
+    .my-order__item-right__item._qty {
+        width: calc(50% - .5em);
+    }
+
+    .my-order__item-right__item._total {
+        width: 100%;
+    }
+
+    .my-order__item:not(:last-child) {
+        padding-bottom: 1em;
+        border-bottom: 1px solid #bcbcbc;
+    }
+}
+
+@media (max-width: 480px) {
+
+    .my-order__item-info,
+    .my-order__item-right__item._qty {
+        width: 100%;
+    }
+
+    .my-order__item-right__item._qty,
+    .my-order__item-right__item._total {
+        width: calc(50% - .5em);
+    }
+
+    .my-order__item-right__item._qty>div {
+        text-align: left;
+    }
+
+    .my-order__item-right__item._qty,
+    .my-order__item-right__item._total {
+        width: 100%;
     }
 }

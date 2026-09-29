@@ -554,7 +554,7 @@ header.scroll .header__top {
 }
 
 .header__bottom__messengers a:hover {
-    transform: scale(1.02);
+    transform: scale(1.05);
 }
 
 .header__bottom__actions {
