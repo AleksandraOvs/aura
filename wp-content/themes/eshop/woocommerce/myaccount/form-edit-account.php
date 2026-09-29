@@ -91,39 +91,44 @@ do_action('woocommerce_before_edit_account_form');
     do_action('woocommerce_edit_account_form_fields');
     ?>
 
-    <fieldset>
-        <legend><?php esc_html_e('Password change', 'woocommerce'); ?></legend>
+    <div class="password-change">
+        <button class="change-toggle">Сменить пароль</button>
+        <fieldset>
+            <h3><?php esc_html_e('Password change', 'woocommerce'); ?></h3>
 
-        <p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
-            <label for="password_current"><?php esc_html_e('Current password (leave blank to leave unchanged)', 'woocommerce'); ?></label>
-            <input type="password"
-                class="woocommerce-Input woocommerce-Input--password input-text"
-                name="password_current"
-                id="password_current"
-                placeholder="Текущий пароль"
-                autocomplete="off" />
-        </p>
+            <p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
+                <label for="password_current"><?php esc_html_e('Current password (leave blank to leave unchanged)', 'woocommerce'); ?></label>
+                <input type="password"
+                    class="woocommerce-Input woocommerce-Input--password input-text"
+                    name="password_current"
+                    id="password_current"
+                    placeholder="Текущий пароль"
+                    autocomplete="off" />
+            </p>
 
-        <p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
-            <label for="password_1"><?php esc_html_e('New password (leave blank to leave unchanged)', 'woocommerce'); ?></label>
-            <input type="password"
-                class="woocommerce-Input woocommerce-Input--password input-text"
-                name="password_1"
-                id="password_1"
-                placeholder="Новый пароль"
-                autocomplete="off" />
-        </p>
+            <p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
+                <label for="password_1"><?php esc_html_e('New password (leave blank to leave unchanged)', 'woocommerce'); ?></label>
+                <input type="password"
+                    class="woocommerce-Input woocommerce-Input--password input-text"
+                    name="password_1"
+                    id="password_1"
+                    placeholder="Новый пароль"
+                    autocomplete="off" />
+            </p>
 
-        <p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
-            <label for="password_2"><?php esc_html_e('Confirm new password', 'woocommerce'); ?></label>
-            <input type="password"
-                class="woocommerce-Input woocommerce-Input--password input-text"
-                name="password_2"
-                id="password_2"
-                placeholder="Повторите пароль"
-                autocomplete="off" />
-        </p>
-    </fieldset>
+            <p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
+                <label for="password_2"><?php esc_html_e('Confirm new password', 'woocommerce'); ?></label>
+                <input type="password"
+                    class="woocommerce-Input woocommerce-Input--password input-text"
+                    name="password_2"
+                    id="password_2"
+                    placeholder="Повторите пароль"
+                    autocomplete="off" />
+            </p>
+        </fieldset>
+    </div>
+
+
     <div class="clear"></div>
 
     <?php

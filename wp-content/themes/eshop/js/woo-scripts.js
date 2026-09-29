@@ -75,3 +75,18 @@ document.body.addEventListener('added_to_cart', function (e) {
     button.classList.add('in-cart');
     button.disabled = true;
 });
+
+/* ===============================
+    TOGGLE PASSWORD CHANGE
+ =============================== */
+
+document.addEventListener('DOMContentLoaded', () => {
+    const passwordChange = document.querySelector('.password-change');
+    const toggle = passwordChange?.querySelector('.change-toggle');
+
+    if (!passwordChange || !toggle) return;
+
+    toggle.addEventListener('click', () => {
+        passwordChange.classList.toggle('is-open');
+    });
+});

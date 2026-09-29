@@ -297,7 +297,9 @@ div#minicart-popup .close svg {
     justify-content: space-between;
 }
 
-.minicart-btn-group a.button {
+
+
+.woocommerce-mini-cart__footer .minicart-btn-group a.button {
     width: max-content;
     border-radius: 5px;
     text-align: center;
@@ -314,6 +316,11 @@ div#minicart-popup .close svg {
 
     #open-minicart svg {
         opacity: .5;
+    }
+
+    .minicart-btn-group {
+        flex-direction: column;
+        gap: 1em;
     }
 
 }

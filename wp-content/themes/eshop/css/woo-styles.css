@@ -382,8 +382,13 @@ a.button.wc-forward {
     background: var(--theme-color-accent);
     color: var(--theme-color-primary);
     border-radius: 25px;
-    padding: 1em 2em;
+    padding: .5em;
     transition: all .5s var(--transition);
+    width: max-content;
+    text-align: center;
+    height: unset;
+    font-weight: 400;
+    width: 230px;
 }
 
 a.button.wc-forward:hover {
@@ -896,6 +901,14 @@ h2.woocommerce-loop-product__title {
     font-size: 24px;
 }
 
+.return-to-shop a.button.wc-backward {
+    width: max-content;
+    border-radius: 5px;
+    padding: .5em 1em;
+    font-weight: 400;
+    color: var(--theme-color-primary);
+}
+
 @media (max-width: 1024px) {
     .single-product__inner__content {
         flex-wrap: wrap;
@@ -1164,6 +1177,31 @@ h2.woocommerce-loop-product__title {
         width: 100%;
     }
 
+    .woocommerce-message {
+        width: 100%;
+        max-width: 100%;
+        bottom: 0;
+        display: flex;
+        flex-direction: row;
+        right: 0;
+        border: 0;
+        border-radius: 0;
+        line-height: 1.2;
+        padding: .5em .5em .5em 2em;
+    }
+
+    .woocommerce-error::before,
+    .woocommerce-info::before,
+    .woocommerce-message::before {
+        font-family: WooCommerce;
+        content: "\e028";
+        content: "\e028" /"";
+        display: inline-block;
+        position: absolute;
+        top: .5em;
+        left: .5em;
+    }
+
 }
 
 @media (max-width: 576px) {
@@ -1296,6 +1334,10 @@ h2.woocommerce-loop-product__title {
     .products.products-5 {
         grid-template-columns: repeat(1, 1fr);
         gap: 2em;
+    }
+
+    .woocommerce-message {
+        flex-direction: column;
     }
 }
 
