@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', function () {
 
+    console.log('SUPPLIER IMPORTER JS LOADED');
+
     const form = document.querySelector('#supplier-import-form');
     const fileInput = document.querySelector('#supplier-import-file');
     const info = document.querySelector('#supplier-import-info');
@@ -46,6 +48,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
     let currentImportId = null;
+    console.log('SUPPLIER IMPORTER FORM HANDLER INIT');
     form.addEventListener('submit', function (event) {
         event.preventDefault();
 
