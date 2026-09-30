@@ -32,6 +32,7 @@ class Import_Processor
     {
 
 
+        $this->session->start();
         $rows = $this->chunk->read(
             $this->session->get_offset()
         );
