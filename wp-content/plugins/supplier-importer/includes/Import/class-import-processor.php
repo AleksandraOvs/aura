@@ -32,7 +32,18 @@ class Import_Processor
     {
 
 
+        $chunk_start = microtime(true);
+
         $this->session->start();
+
+        Logger::info(
+            'CHUNK DEBUG: START',
+            [
+                'import_id' => $this->session->get_import_id(),
+                'offset'    => $this->session->get_offset(),
+                'total'     => $this->session->get_total(),
+            ]
+        );
         $rows = $this->chunk->read(
             $this->session->get_offset()
         );
@@ -97,8 +108,31 @@ class Import_Processor
 
                 try {
 
+                    $product_start = microtime(true);
+
+                    Logger::info(
+                        'CHUNK DEBUG: PRODUCT START',
+                        [
+                            'import_id' => $this->session->get_import_id(),
+                            'offset'    => $this->session->get_offset(),
+                            'sku'       => $product->get_sku(),
+                        ]
+                    );
+
                     $single_result = $this->import_manager->import(
                         [$product]
+                    );
+
+                    Logger::info(
+                        'CHUNK DEBUG: PRODUCT END',
+                        [
+                            'import_id' => $this->session->get_import_id(),
+                            'sku'       => $product->get_sku(),
+                            'time'      => round(
+                                microtime(true) - $product_start,
+                                2
+                            ),
+                        ]
                     );
 
                     $this->update_progress(
@@ -152,6 +186,18 @@ class Import_Processor
             );
         }
 
+        $chunk_time = microtime(true) - $chunk_start;
+
+        Logger::info(
+            'CHUNK DEBUG: END',
+            [
+                'import_id' => $this->session->get_import_id(),
+                'offset'    => $this->session->get_offset(),
+                'rows'      => count($rows),
+                'time'      => round($chunk_time, 2),
+                'status'    => $this->session->get_status(),
+            ]
+        );
         return $this->get_result();
     }
 
