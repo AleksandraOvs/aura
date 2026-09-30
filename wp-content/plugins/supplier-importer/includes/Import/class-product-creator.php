@@ -201,7 +201,7 @@ class Product_Creator
          * Публикацию будем контролировать отдельно
          * на уровне импорта.
          */
-        $product->set_status('draft');
+        $product->set_status('publish');
     }
 
     /**
