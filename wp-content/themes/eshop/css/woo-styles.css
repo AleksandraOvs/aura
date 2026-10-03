@@ -222,7 +222,7 @@ li.product h2.woocommerce-loop-product__title {
     object-fit: contain;
 }
 
-.button.button-black.product-buy-one-click {
+.button.button-black.buy-one-click {
     width: 90%;
     margin: 0 auto;
 }
@@ -679,7 +679,7 @@ a.button.wc-forward:hover {
 }
 
 .product-inner__content__col__buy form button,
-.product-inner__content__col__buy .product-buy-one-click {
+.product-inner__content__col__buy .buy-one-click {
     width: 200px;
 }
 
@@ -691,12 +691,12 @@ a.button.wc-forward:hover {
     border-radius: 25px;
 }
 
-.button.button-black.product-buy-one-click {
+.button.button-black.buy-one-click {
     border-radius: 25px;
     transition: all .5s var(--transition);
 }
 
-.button.button-black.product-buy-one-click:hover {
+.button.button-black.buy-one-click:hover {
     background: var(--theme-color-accent);
     color: var(--theme-color-primary);
 }
@@ -1030,7 +1030,7 @@ h2.woocommerce-loop-product__title {
         width: 100%;
     }
 
-    .button.button-black.product-buy-one-click {
+    .button.button-black.buy-one-click {
         width: 100%;
     }
 
@@ -1105,12 +1105,12 @@ h2.woocommerce-loop-product__title {
         width: 100%;
     }
 
-    .product-inner__content__col._buy-col .product-buy-one-click {
+    .product-inner__content__col._buy-col .buy-one-click {
         width: 48%;
     }
 
     .product-inner__content__col._buy-col form button,
-    .product-inner__content__col._buy-col .product-buy-one-click {
+    .product-inner__content__col._buy-col .buy-one-click {
         width: 100%;
     }
 }
@@ -1290,7 +1290,7 @@ h2.woocommerce-loop-product__title {
     }
 
     .product-inner__content__col._buy-col form button,
-    .product-inner__content__col._buy-col .product-buy-one-click {
+    .product-inner__content__col._buy-col .buy-one-click {
         max-width: 200px;
     }
 

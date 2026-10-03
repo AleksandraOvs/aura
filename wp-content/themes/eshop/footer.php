@@ -125,6 +125,17 @@ $site_description = get_bloginfo('description');
 
 <?php endif; ?>
 
+<!-- One click popup -->
+
+<div id="buy-one-click-popup" class="popup" style="display:none;">
+    <?php
+    echo do_shortcode(
+        '[contact-form-7 id="6e82427" title="Форма «Купить в один клик»"]'
+    );
+
+    ?>
+</div>
+
 
 <?php wp_footer(); ?>
 </body>

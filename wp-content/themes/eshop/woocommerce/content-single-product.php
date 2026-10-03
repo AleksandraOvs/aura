@@ -155,12 +155,16 @@ if (post_password_required()) {
 
                     <?php endif; ?>
 
-
                     <button
                         type="button"
-                        class="button button-black product-buy-one-click"
-                        data-product-id="<?php echo esc_attr($product->get_id()); ?>">
-                        Купить в 1 клик
+                        class="button button-black buy-one-click"
+                        data-popup="buy-one-click-popup"
+                        data-product-id="<?php echo esc_attr($product->get_id()); ?>"
+                        data-product-name="<?php echo esc_attr($product->get_name()); ?>"
+                        data-product-sku="<?php echo esc_attr($product->get_sku() ?: '—'); ?>"
+                        data-product-price="<?php echo esc_attr(wp_strip_all_tags($product->get_price_html())); ?>"
+                        data-product-url="<?php echo esc_url($product->get_permalink()); ?>">
+                        Купить в один клик
                     </button>
                 </div>
 
