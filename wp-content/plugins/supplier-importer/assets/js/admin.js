@@ -204,16 +204,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         progressBlock.hidden = false;
 
-        console.log('IMPORT PROGRESS:', progress);
-        console.log(
-            'ERRORS COUNT:',
-            Number(progress.errors || 0)
-        );
-        console.log(
-            'CURRENT IMPORT ID:',
-            currentImportId
-        );
-
         const progress = data.progress;
 
         const processed = Number(
@@ -227,6 +217,14 @@ document.addEventListener('DOMContentLoaded', function () {
         const percent = Number(
             progress.percent || 0
         );
+
+        const errorsCount = Number(
+            progress.errors || 0
+        );
+
+        console.log('IMPORT PROGRESS:', progress);
+        console.log('ERRORS COUNT:', errorsCount);
+        console.log('CURRENT IMPORT ID:', currentImportId);
 
         const progressCount = document.querySelector(
             '#supplier-import-progress-count'
@@ -278,12 +276,10 @@ document.addEventListener('DOMContentLoaded', function () {
             </span>
 
             <span class="supplier-importer__stat-value">
-                ${progress.errors}
+                ${errorsCount}
             </span>
         </div>
     `;
-
-        const errorsCount = Number(progress.errors || 0);
 
         if (
             errorsCount > 0
@@ -294,7 +290,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
             loadImportErrors(currentImportId);
         }
-
     }
 
     function finishImport(data) {
