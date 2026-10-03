@@ -81,41 +81,68 @@ function cwc_get_brand_filter($current_cat_id = 0)
  * --------------------------------------------------- */
 function cwc_get_category_price_range($category_id = 0)
 {
-    $args = [
-        'status' => 'publish',
-        'limit' => -1,
-    ];
+    global $wpdb;
+
+    $where = "
+        pm.meta_key = '_price'
+        AND pm.meta_value <> ''
+        AND pm.meta_value >= 0
+    ";
+
+    $join = "
+        INNER JOIN {$wpdb->postmeta} pm
+            ON pm.post_id = p.ID
+    ";
+
+    $params = [];
 
     if ($category_id) {
-        $args['tax_query'] = [[
-            'taxonomy' => 'product_cat',
-            'field'    => 'term_id',
-            'terms'    => $category_id,
-        ]];
+        $join .= "
+            INNER JOIN {$wpdb->term_relationships} tr
+                ON tr.object_id = p.ID
+            INNER JOIN {$wpdb->term_taxonomy} tt
+                ON tt.term_taxonomy_id = tr.term_taxonomy_id
+        ";
+
+        $where .= "
+            AND tt.taxonomy = 'product_cat'
+            AND tt.term_id = %d
+        ";
+
+        $params[] = (int) $category_id;
     }
 
-    $products = wc_get_products($args);
-    $prices = [];
+    $sql = "
+        SELECT
+            MIN(CAST(pm.meta_value AS DECIMAL(20,4))) AS min_price,
+            MAX(CAST(pm.meta_value AS DECIMAL(20,4))) AS max_price
+        FROM {$wpdb->posts} p
+        {$join}
+        WHERE
+            p.post_type = 'product'
+            AND p.post_status = 'publish'
+            AND {$where}
+    ";
 
-    foreach ($products as $product) {
-        if ($product->is_type('variable')) {
-            $prices[] = (float)$product->get_variation_price('min', true);
-            $prices[] = (float)$product->get_variation_price('max', true);
-        } else {
-            $prices[] = (float)$product->get_price();
-        }
+    if ($params) {
+        $sql = $wpdb->prepare($sql, $params);
     }
 
-    if (!$prices) {
+    $result = $wpdb->get_row($sql);
+
+    if (
+        !$result ||
+        $result->min_price === null ||
+        $result->max_price === null
+    ) {
         return [0, 100000];
     }
 
     return [
-        floor(min($prices)),
-        ceil(max($prices)),
+        floor((float) $result->min_price),
+        ceil((float) $result->max_price),
     ];
 }
-
 // Диапазон цен всего магазина
 function cwc_get_store_price_range()
 {
@@ -150,74 +177,39 @@ function cwc_clean_title($title)
 /* ---------------------------------------------------
  * ТЕКСТОВЫЙ АТРИБУТ
  * --------------------------------------------------- */
+/* ---------------------------------------------------
+ * ТЕКСТОВЫЙ АТРИБУТ
+ * --------------------------------------------------- */
 function cwc_render_attribute_filter($taxonomy, $title, $current_cat_id = 0)
 {
-    $terms = get_terms(['taxonomy' => $taxonomy, 'hide_empty' => false]);
-    if (!$terms || is_wp_error($terms)) return '';
+    $terms = get_terms([
+        'taxonomy'   => $taxonomy,
+        'hide_empty' => true,
+    ]);
 
-    list($store_min, $store_max) = cwc_get_store_price_range();
-
-    // Отфильтруем термы, у которых нет товаров
-    $filtered_terms = [];
-    foreach ($terms as $term) {
-        $args = [
-            'status' => 'publish',
-            'limit'  => -1,
-            'tax_query' => [
-                [
-                    'taxonomy' => $taxonomy,
-                    'field'    => 'slug',
-                    'terms'    => $term->slug,
-                ],
-            ],
-            'meta_query' => [
-                [
-                    'key'     => '_price',
-                    'value'   => [$store_min, $store_max],
-                    'compare' => 'BETWEEN',
-                    'type'    => 'NUMERIC',
-                ]
-            ]
-        ];
-
-        if ($current_cat_id) {
-            $args['tax_query'][] = [
-                'taxonomy' => 'product_cat',
-                'field'    => 'term_id',
-                'terms'    => $current_cat_id,
-            ];
-        }
-
-        $count = count(wc_get_products($args));
-
-        if ($count > 0) {
-            $term->count = $count; // добавим количество для вывода
-            $filtered_terms[] = $term;
-        }
-    }
-
-    if (!$filtered_terms) {
+    if (!$terms || is_wp_error($terms)) {
         return '';
     }
 
-    usort($filtered_terms, function ($a, $b) {
+    usort($terms, function ($a, $b) {
 
         $a_num = is_numeric($a->name);
         $b_num = is_numeric($b->name);
 
-        // оба числовые
         if ($a_num && $b_num) {
-            return (float)$a->name <=> (float)$b->name;
+            return (float) $a->name <=> (float) $b->name;
         }
 
-        // иначе по алфавиту
         return strnatcasecmp($a->name, $b->name);
     });
 
-    ob_start(); ?>
+    ob_start();
+?>
     <div class="filter">
+
         <div class="filter-item__title">
             <?php echo esc_html(cwc_clean_title($title)); ?>
+
             <div class="filter-item-title__toggle">
                 <span></span>
                 <span></span>
@@ -225,20 +217,31 @@ function cwc_render_attribute_filter($taxonomy, $title, $current_cat_id = 0)
         </div>
 
         <div class="filter-item__content">
-            <ul class="sidebar-list" data-taxonomy="<?php echo esc_attr($taxonomy); ?>">
-                <?php foreach ($filtered_terms as $term): ?>
-                    <li>
-                        <a href="#" class="filter-item" data-slug="<?php echo esc_attr($term->slug); ?>">
-                            <?php echo esc_html($term->name); ?> <?php //echo $term->count; 
-                                                                    ?>
-                        </a>
 
+            <ul
+                class="sidebar-list"
+                data-taxonomy="<?php echo esc_attr($taxonomy); ?>">
+
+                <?php foreach ($terms as $term): ?>
+
+                    <li>
+                        <a
+                            href="#"
+                            class="filter-item"
+                            data-slug="<?php echo esc_attr($term->slug); ?>">
+                            <?php echo esc_html($term->name); ?>
+                        </a>
                     </li>
+
                 <?php endforeach; ?>
+
             </ul>
+
         </div>
+
     </div>
 <?php
+
     return ob_get_clean();
 }
 
@@ -278,10 +281,13 @@ function cwc_render_price_filter()
  * --------------------------------------------------- */
 function cwc_shop_filters_shortcode()
 {
+
+    error_log('CWC START ' . microtime(true));
     $current_cat_id = is_product_category() ? get_queried_object_id() : 0;
 
     $text_filters = [];
     $brand_filter = cwc_get_brand_filter($current_cat_id);
+    error_log('CWC BRAND ' . microtime(true));
 
     $filters = [];
 
@@ -298,6 +304,7 @@ function cwc_shop_filters_shortcode()
             $tax->label ?? $taxonomy,
             $current_cat_id
         );
+        error_log('CWC FILTER ' . $taxonomy . ' ' . microtime(true));
     }
 
     $current_cat_id = is_product_category()
@@ -324,7 +331,7 @@ function cwc_shop_filters_shortcode()
     $initial_count_query = new WP_Query($initial_count_args);
 
     $initial_count = $initial_count_query->found_posts;
-
+    error_log('CWC COUNT ' . microtime(true));
     ob_start(); ?>
 
     <div class="filters-head">
