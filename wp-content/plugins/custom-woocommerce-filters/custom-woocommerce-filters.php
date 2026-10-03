@@ -180,19 +180,29 @@ function cwc_clean_title($title)
 /* ---------------------------------------------------
  * ТЕКСТОВЫЙ АТРИБУТ
  * --------------------------------------------------- */
-function cwc_render_attribute_filter($taxonomy, $title, $current_cat_id = 0)
+function cwc_render_attribute_filter($taxonomy, $title, $product_ids = [])
 {
-    $terms = get_terms([
+    $args = [
         'taxonomy'   => $taxonomy,
         'hide_empty' => true,
-    ]);
+    ];
+
+    // Если находимся на странице категории —
+    // показываем только значения атрибута,
+    // которые используются товарами этой категории.
+    if ($product_ids) {
+        $args['object_ids'] = $product_ids;
+    } elseif (is_product_category()) {
+        return '';
+    }
+
+    $terms = get_terms($args);
 
     if (!$terms || is_wp_error($terms)) {
         return '';
     }
 
     usort($terms, function ($a, $b) {
-
         $a_num = is_numeric($a->name);
         $b_num = is_numeric($b->name);
 
@@ -206,7 +216,6 @@ function cwc_render_attribute_filter($taxonomy, $title, $current_cat_id = 0)
     ob_start();
 ?>
     <div class="filter">
-
         <div class="filter-item__title">
             <?php echo esc_html(cwc_clean_title($title)); ?>
 
@@ -217,13 +226,8 @@ function cwc_render_attribute_filter($taxonomy, $title, $current_cat_id = 0)
         </div>
 
         <div class="filter-item__content">
-
-            <ul
-                class="sidebar-list"
-                data-taxonomy="<?php echo esc_attr($taxonomy); ?>">
-
+            <ul class="sidebar-list" data-taxonomy="<?php echo esc_attr($taxonomy); ?>">
                 <?php foreach ($terms as $term): ?>
-
                     <li>
                         <a
                             href="#"
@@ -232,13 +236,9 @@ function cwc_render_attribute_filter($taxonomy, $title, $current_cat_id = 0)
                             <?php echo esc_html($term->name); ?>
                         </a>
                     </li>
-
                 <?php endforeach; ?>
-
             </ul>
-
         </div>
-
     </div>
 <?php
 
@@ -285,6 +285,25 @@ function cwc_shop_filters_shortcode()
     error_log('CWC START ' . microtime(true));
     $current_cat_id = is_product_category() ? get_queried_object_id() : 0;
 
+    $current_product_ids = [];
+
+    if ($current_cat_id) {
+        $current_product_ids = get_posts([
+            'post_type'      => 'product',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+            'tax_query'      => [
+                [
+                    'taxonomy'         => 'product_cat',
+                    'field'            => 'term_id',
+                    'terms'            => $current_cat_id,
+                    'include_children' => true,
+                ],
+            ],
+        ]);
+    }
+
     $text_filters = [];
     $brand_filter = cwc_get_brand_filter($current_cat_id);
     error_log('CWC BRAND ' . microtime(true));
@@ -302,14 +321,10 @@ function cwc_shop_filters_shortcode()
         $filters[] = cwc_render_attribute_filter(
             $taxonomy,
             $tax->label ?? $taxonomy,
-            $current_cat_id
+            $current_product_ids
         );
         error_log('CWC FILTER ' . $taxonomy . ' ' . microtime(true));
     }
-
-    $current_cat_id = is_product_category()
-        ? get_queried_object_id()
-        : 0;
 
     $initial_count_args = [
         'post_type'      => 'product',
