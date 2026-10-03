@@ -25,10 +25,6 @@ document.addEventListener('DOMContentLoaded', function () {
         '#supplier-import-errors'
     );
 
-    const errorsToggle = document.querySelector(
-        '#supplier-import-errors-toggle'
-    );
-
     const errorsList = document.querySelector(
         '#supplier-import-errors-list'
     );
@@ -48,6 +44,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
     let currentImportId = null;
+    let lastErrorsCount = 0;
     console.log('SUPPLIER IMPORTER FORM HANDLER INIT');
     form.addEventListener('submit', function (event) {
         event.preventDefault();
@@ -207,6 +204,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
         progressBlock.hidden = false;
 
+        console.log('IMPORT PROGRESS:', progress);
+        console.log(
+            'ERRORS COUNT:',
+            Number(progress.errors || 0)
+        );
+        console.log(
+            'CURRENT IMPORT ID:',
+            currentImportId
+        );
+
         const progress = data.progress;
 
         const processed = Number(
@@ -276,9 +283,18 @@ document.addEventListener('DOMContentLoaded', function () {
         </div>
     `;
 
-        if (Number(progress.errors || 0) > 0 && currentImportId) {
+        const errorsCount = Number(progress.errors || 0);
+
+        if (
+            errorsCount > 0
+            && currentImportId
+            && errorsCount !== lastErrorsCount
+        ) {
+            lastErrorsCount = errorsCount;
+
             loadImportErrors(currentImportId);
         }
+
     }
 
     function finishImport(data) {
@@ -399,15 +415,31 @@ document.addEventListener('DOMContentLoaded', function () {
                     );
                 }
 
-                renderImportErrors(
+                console.log(
+                    'Ошибки импорта:',
                     result.data.errors
+                );
+
+                renderImportErrors(
+                    result.data.errors || []
                 );
             })
             .catch(function (error) {
+
                 console.error(
                     'Ошибка получения ошибок импорта:',
                     error
                 );
+
+                if (errorsBlock && errorsList) {
+                    errorsBlock.hidden = false;
+
+                    errorsList.innerHTML = `
+                    <p class="supplier-importer__mapping-error">
+                        ${escapeHtml(error.message)}
+                    </p>
+                `;
+                }
             });
     }
 
@@ -420,7 +452,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         errorsBlock.hidden = false;
 
-        if (!errors.length) {
+        if (!Array.isArray(errors) || !errors.length) {
             errorsList.innerHTML = `
             <p>Ошибок не найдено.</p>
         `;
@@ -429,49 +461,183 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         errorsList.innerHTML = `
-        <table class="widefat striped">
-            <thead>
-                <tr>
-                    <th>Строка</th>
-                    <th>Артикул</th>
-                    <th>Тип</th>
-                    <th>Ошибка</th>
-                </tr>
-            </thead>
+        <div class="supplier-importer__errors-summary">
+            Найдено ошибок: <strong>${errors.length}</strong>
+        </div>
 
-            <tbody>
-                ${errors.map(function (error) {
+        <div class="supplier-importer__errors-list">
+            ${errors.map(function (error, index) {
+
+            let rawData = {};
+
+            if (error.raw_data) {
+                try {
+                    rawData =
+                        typeof error.raw_data === 'string'
+                            ? JSON.parse(error.raw_data)
+                            : error.raw_data;
+                } catch (parseError) {
+                    console.error(
+                        'Не удалось разобрать raw_data:',
+                        parseError,
+                        error.raw_data
+                    );
+                }
+            }
+
+            const rawDataHtml =
+                rawData && typeof rawData === 'object'
+                    ? Object.entries(rawData)
+                        .map(function ([key, value]) {
+                            return `
+                                    <tr>
+                                        <th>
+                                            ${escapeHtml(key)}
+                                        </th>
+
+                                        <td>
+                                            ${escapeHtml(
+                                value === null
+                                    ? ''
+                                    : String(value)
+                            )}
+                                        </td>
+                                    </tr>
+                                `;
+                        })
+                        .join('')
+                    : '';
+
             return `
-                        <tr>
-                            <td>
-                                ${escapeHtml(
-                error.csv_row
-            )}
-                            </td>
+                    <div class="supplier-importer__error-item">
 
-                            <td>
+                        <div class="supplier-importer__error-header">
+
+                            <div>
+                                <strong>
+                                    Ошибка #${index + 1}
+                                </strong>
+
+                                <span>
+                                    Строка CSV:
+                                    ${escapeHtml(error.csv_row)}
+                                </span>
+                            </div>
+
+                            <span
+                                class="supplier-importer__error-type"
+                            >
                                 ${escapeHtml(
+                error.error_type || 'unknown'
+            )}
+                            </span>
+
+                        </div>
+
+                        <div class="supplier-importer__error-info">
+
+                            <div>
+                                <span class="supplier-importer__error-label">
+                                    Артикул
+                                </span>
+
+                                <strong>
+                                    ${escapeHtml(
                 error.sku || '—'
             )}
-                            </td>
+                                </strong>
+                            </div>
 
-                            <td>
-                                ${escapeHtml(
-                error.error_type
-            )}
-                            </td>
+                            <div>
+                                <span class="supplier-importer__error-label">
+                                    Строка CSV
+                                </span>
 
-                            <td>
+                                <strong>
+                                    ${escapeHtml(error.csv_row)}
+                                </strong>
+                            </div>
+
+                        </div>
+
+                        <div class="supplier-importer__error-message">
+
+                            <span class="supplier-importer__error-label">
+                                Причина ошибки
+                            </span>
+
+                            <div>
                                 ${escapeHtml(
-                error.message
+                error.message || 'Неизвестная ошибка'
             )}
-                            </td>
-                        </tr>
-                    `;
+                            </div>
+
+                        </div>
+
+                        ${rawDataHtml
+                    ? `
+                                    <button
+                                        type="button"
+                                        class="button supplier-importer__error-toggle"
+                                    >
+                                        Показать данные строки
+                                    </button>
+
+                                    <div
+                                        class="supplier-importer__error-raw"
+                                        hidden
+                                    >
+                                        <table class="widefat striped">
+                                            <tbody>
+                                                ${rawDataHtml}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                `
+                    : ''
+                }
+
+                    </div>
+                `;
         }).join('')}
-            </tbody>
-        </table>
+        </div>
     `;
+
+        initErrorToggles();
+    }
+
+    function initErrorToggles() {
+        if (!errorsList) {
+            return;
+        }
+
+        errorsList
+            .querySelectorAll('.supplier-importer__error-toggle')
+            .forEach(function (button) {
+
+                button.addEventListener(
+                    'click',
+                    function () {
+
+                        const rawBlock =
+                            button.nextElementSibling;
+
+                        if (!rawBlock) {
+                            return;
+                        }
+
+                        const isHidden =
+                            rawBlock.hidden;
+
+                        rawBlock.hidden = !isHidden;
+
+                        button.textContent =
+                            isHidden
+                                ? 'Скрыть данные строки'
+                                : 'Показать данные строки';
+                    }
+                );
+            });
     }
 
     function escapeHtml(value) {
