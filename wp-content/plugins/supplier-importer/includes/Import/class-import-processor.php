@@ -135,6 +135,36 @@ class Import_Processor
                         ]
                     );
 
+                    /*
+ * Import_Manager перехватывает исключение
+ * и возвращает его как errors => 1.
+ *
+ * Поэтому здесь отдельно сохраняем
+ * подробную информацию об ошибке.
+ */
+                    if (
+                        !empty($single_result['items'])
+                        && is_array($single_result['items'])
+                    ) {
+                        foreach ($single_result['items'] as $item) {
+
+                            if (
+                                isset($item['action'])
+                                && $item['action'] === 'error'
+                            ) {
+                                $this->save_product_error(
+                                    $row,
+                                    $product,
+                                    new \RuntimeException(
+                                        isset($item['message'])
+                                            ? $item['message']
+                                            : 'Неизвестная ошибка импорта.'
+                                    )
+                                );
+                            }
+                        }
+                    }
+
                     $this->update_progress(
                         $single_result
                     );

@@ -43,12 +43,14 @@ class Import_Manager
         ];
 
         foreach ($products as $index => $product_data) {
+
             if (!$product_data instanceof Product_Data) {
                 $result['errors']++;
 
                 $result['items'][] = [
                     'index'   => $index,
                     'action'  => 'error',
+                    'sku'     => '',
                     'message' => 'Некорректный объект Product_Data.',
                 ];
 
@@ -56,6 +58,7 @@ class Import_Manager
             }
 
             try {
+
                 $import_result = $this->product_importer->import(
                     $product_data
                 );
@@ -77,6 +80,7 @@ class Import_Manager
                     'sku'        => $product_data->get_sku(),
                 ];
             } catch (\Throwable $e) {
+
                 $result['errors']++;
 
                 $result['items'][] = [
