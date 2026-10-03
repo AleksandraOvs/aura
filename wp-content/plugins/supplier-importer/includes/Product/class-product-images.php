@@ -281,7 +281,7 @@ class Product_Images
         );
 
         /*
- * Оптимизируем JPEG и PNG.
+ * 3. Оптимизируем JPEG и PNG.
  *
  * JPEG:
  * - сохраняем JPEG;
@@ -306,121 +306,236 @@ class Product_Images
 
             $optimize_start = microtime(true);
 
-            $image_editor = wp_get_image_editor(
-                $tmp_file
-            );
+            /*
+     * PNG обрабатываем через GD напрямую.
+     *
+     * Это позволяет гарантированно получить
+     * белый фон вместо прозрачности.
+     */
+            if ($mime_type === 'image/png') {
 
-            if (is_wp_error($image_editor)) {
+                $source = @imagecreatefrompng($tmp_file);
 
-                Logger::info(
-                    'IMAGE DEBUG: OPTIMIZE SKIP'
-                        . ' reason=image_editor_error'
-                        . ' type=' . $mime_type
-                        . ' error='
-                        . $image_editor->get_error_message()
-                );
+                if (!$source) {
+
+                    Logger::info(
+                        'IMAGE DEBUG: PNG LOAD ERROR'
+                            . ' file=' . $tmp_file
+                    );
+                } else {
+
+                    $width = imagesx($source);
+                    $height = imagesy($source);
+
+                    /*
+             * Создаём белый JPEG-холст.
+             */
+                    $canvas = imagecreatetruecolor(
+                        $width,
+                        $height
+                    );
+
+                    $white = imagecolorallocate(
+                        $canvas,
+                        255,
+                        255,
+                        255
+                    );
+
+                    imagefill(
+                        $canvas,
+                        0,
+                        0,
+                        $white
+                    );
+
+                    /*
+             * Копируем PNG поверх белого фона.
+             */
+                    imagecopy(
+                        $canvas,
+                        $source,
+                        0,
+                        0,
+                        0,
+                        0,
+                        $width,
+                        $height
+                    );
+
+                    /*
+             * Сохраняем обратно в тот же временный файл
+             * уже как JPEG.
+             */
+                    $saved = imagejpeg(
+                        $canvas,
+                        $tmp_file,
+                        82
+                    );
+
+                    /*
+             * Освобождаем память.
+             */
+                    imagedestroy($source);
+                    imagedestroy($canvas);
+
+                    if (!$saved) {
+
+                        Logger::info(
+                            'IMAGE DEBUG: PNG TO JPEG ERROR'
+                        );
+                    } else {
+
+                        $optimized_size = filesize(
+                            $tmp_file
+                        );
+
+                        $saved_bytes = $original_size
+                            - $optimized_size;
+
+                        $saved_percent = 0;
+
+                        if ($original_size > 0) {
+                            $saved_percent = round(
+                                (
+                                    $saved_bytes
+                                    / $original_size
+                                ) * 100,
+                                1
+                            );
+                        }
+
+                        Logger::info(
+                            'IMAGE DEBUG: IMAGE OPTIMIZED'
+                                . ' original_type=' . $mime_type
+                                . ' final_type=image/jpeg'
+                                . ' before='
+                                . round(
+                                    $original_size / 1024 / 1024,
+                                    2
+                                )
+                                . ' MB'
+                                . ' after='
+                                . round(
+                                    $optimized_size / 1024 / 1024,
+                                    2
+                                )
+                                . ' MB'
+                                . ' saved='
+                                . $saved_percent
+                                . '%'
+                                . ' time='
+                                . round(
+                                    microtime(true)
+                                        - $optimize_start,
+                                    2
+                                )
+                                . ' sec'
+                        );
+
+                        /*
+                 * После конвертации PNG → JPEG
+                 * меняем MIME и имя файла.
+                 */
+                        $mime_type = 'image/jpeg';
+
+                        $file_name = pathinfo(
+                            $file_name,
+                            PATHINFO_FILENAME
+                        ) . '.jpg';
+                    }
+                }
             } else {
 
                 /*
-         * PNG превращаем в JPEG.
+         * JPEG оптимизируем через WordPress Image Editor.
          */
-                if ($mime_type === 'image/png') {
+                $image_editor = wp_get_image_editor(
+                    $tmp_file
+                );
 
-                    /*
-             * Задаём белый фон.
-             *
-             * Это убирает прозрачность.
-             */
-                    $image_editor->set_background_color(
-                        '#ffffff'
-                    );
-
-                    $image_editor->set_quality(82);
-
-                    $optimized = $image_editor->save(
-                        $tmp_file,
-                        'image/jpeg'
-                    );
-                } else {
-
-                    /*
-             * JPEG просто сжимаем.
-             */
-                    $image_editor->set_quality(82);
-
-                    $optimized = $image_editor->save(
-                        $tmp_file,
-                        'image/jpeg'
-                    );
-                }
-
-                if (is_wp_error($optimized)) {
+                if (is_wp_error($image_editor)) {
 
                     Logger::info(
-                        'IMAGE DEBUG: OPTIMIZE ERROR'
+                        'IMAGE DEBUG: OPTIMIZE SKIP'
+                            . ' reason=image_editor_error'
                             . ' type=' . $mime_type
                             . ' error='
-                            . $optimized->get_error_message()
+                            . $image_editor->get_error_message()
                     );
                 } else {
 
-                    $optimized_size = filesize(
-                        $tmp_file
+                    $image_editor->set_quality(82);
+
+                    $optimized = $image_editor->save(
+                        $tmp_file,
+                        'image/jpeg'
                     );
 
-                    $saved_bytes = $original_size
-                        - $optimized_size;
+                    if (is_wp_error($optimized)) {
 
-                    $saved_percent = 0;
-
-                    if ($original_size > 0) {
-                        $saved_percent = round(
-                            (
-                                $saved_bytes
-                                / $original_size
-                            ) * 100,
-                            1
+                        Logger::info(
+                            'IMAGE DEBUG: OPTIMIZE ERROR'
+                                . ' type=' . $mime_type
+                                . ' error='
+                                . $optimized->get_error_message()
                         );
+                    } else {
+
+                        $optimized_size = filesize(
+                            $tmp_file
+                        );
+
+                        $saved_bytes = $original_size
+                            - $optimized_size;
+
+                        $saved_percent = 0;
+
+                        if ($original_size > 0) {
+                            $saved_percent = round(
+                                (
+                                    $saved_bytes
+                                    / $original_size
+                                ) * 100,
+                                1
+                            );
+                        }
+
+                        Logger::info(
+                            'IMAGE DEBUG: IMAGE OPTIMIZED'
+                                . ' original_type=' . $mime_type
+                                . ' final_type=image/jpeg'
+                                . ' before='
+                                . round(
+                                    $original_size / 1024 / 1024,
+                                    2
+                                )
+                                . ' MB'
+                                . ' after='
+                                . round(
+                                    $optimized_size / 1024 / 1024,
+                                    2
+                                )
+                                . ' MB'
+                                . ' saved='
+                                . $saved_percent
+                                . '%'
+                                . ' time='
+                                . round(
+                                    microtime(true)
+                                        - $optimize_start,
+                                    2
+                                )
+                                . ' sec'
+                        );
+
+                        $mime_type = 'image/jpeg';
+
+                        $file_name = pathinfo(
+                            $file_name,
+                            PATHINFO_FILENAME
+                        ) . '.jpg';
                     }
-
-                    Logger::info(
-                        'IMAGE DEBUG: IMAGE OPTIMIZED'
-                            . ' original_type=' . $mime_type
-                            . ' final_type=image/jpeg'
-                            . ' before='
-                            . round(
-                                $original_size / 1024 / 1024,
-                                2
-                            )
-                            . ' MB'
-                            . ' after='
-                            . round(
-                                $optimized_size / 1024 / 1024,
-                                2
-                            )
-                            . ' MB'
-                            . ' saved='
-                            . $saved_percent
-                            . '%'
-                            . ' time='
-                            . round(
-                                microtime(true)
-                                    - $optimize_start,
-                                2
-                            )
-                            . ' sec'
-                    );
-
-                    /*
-             * После конвертации PNG → JPEG
-             * MIME должен соответствовать новому файлу.
-             */
-                    $mime_type = 'image/jpeg';
-
-                    $file_name = pathinfo(
-                        $file_name,
-                        PATHINFO_FILENAME
-                    ) . '.jpg';
                 }
             }
         } else {
@@ -432,7 +547,6 @@ class Product_Images
                     . ' reason=unsupported_type'
             );
         }
-
         /*
      * 4. Получаем имя файла.
      */
