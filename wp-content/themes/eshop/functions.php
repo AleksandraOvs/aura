@@ -174,9 +174,7 @@ add_action('enqueue_block_editor_assets', function () {
 
 register_nav_menus(
     array(
-        'catalog_menu' => 'Меню Каталог',
-        'customers_menu' => 'Покупателям',
-        'docs_menu' => 'Документы'
+        'main_menu' => 'Основное меню',
     )
 );
 

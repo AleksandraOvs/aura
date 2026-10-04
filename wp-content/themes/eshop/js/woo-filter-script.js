@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!filtersHead || !filtersWrapper) return;
 
     filtersHead.addEventListener('click', function () {
+        alert('click');
         filtersWrapper.classList.toggle('opened');
     });
 

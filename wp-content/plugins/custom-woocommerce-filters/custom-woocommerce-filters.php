@@ -350,15 +350,29 @@ function cwc_shop_filters_shortcode()
     ob_start(); ?>
 
     <div class="filters-head">
-        <div class="filter-toggle">
-            Скрыть фильтры
-        </div>
+        <div class="filter-toggle"></div>
     </div>
 
 
     <div class="sidebar-area-wrapper _filters opened" data-current-cat="<?php echo esc_attr($current_cat_id); ?>">
 
         <div class="filters-wrapper">
+
+            <div class="filters-wrapper__header">
+                <div class="filter-wrapper__back">
+                    <svg width="30" height="27" viewBox="0 0 30 27" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14.1947 26.6173C13.6926 27.1275 12.8787 27.1275 12.3766 26.6173L0.376576 14.4237C-0.125527 13.9135 -0.125527 13.0865 0.376576 12.5763L12.3766 0.382653C12.8787 -0.127552 13.6926 -0.127552 14.1947 0.382653C14.6968 0.892856 14.6968 1.71987 14.1947 2.23007L4.38942 12.1935L28.7143 12.1935C29.4244 12.1935 30 12.7785 30 13.5C30 14.2215 29.4244 14.8065 28.7143 14.8065L4.38942 14.8065L14.1947 24.7699C14.6968 25.2801 14.6968 26.1071 14.1947 26.6173Z" fill="#979797" />
+                    </svg>
+
+                </div>
+                <h3>Фильтры</h3>
+                <div class="filter-wrapper__close">
+                    <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M27.1551 0.488159C27.8059 -0.16272 28.861 -0.16272 29.5118 0.488159C30.1627 1.13904 30.1627 2.19407 29.5118 2.84495L17.3568 15L29.5118 27.1551C30.1627 27.8059 30.1627 28.861 29.5118 29.5118C28.861 30.1627 27.8059 30.1627 27.1551 29.5118L15 17.3568L2.84495 29.5118C2.19407 30.1627 1.13904 30.1627 0.488159 29.5118C-0.16272 28.861 -0.16272 27.8059 0.488159 27.1551L12.6432 15L0.488159 2.84495C-0.16272 2.19407 -0.16272 1.13904 0.488159 0.488159C1.13904 -0.16272 2.19407 -0.16272 2.84495 0.488159L15 12.6432L27.1551 0.488159Z" fill="#979797" />
+                    </svg>
+
+                </div>
+            </div>
             <?php
             // 🔥 БРЕНДЫ (сразу после цены)
             if (!empty($brand_filter)) {
@@ -391,6 +405,7 @@ function cwc_shop_filters_shortcode()
                         <?php echo esc_html($initial_count); ?>
                     </span>
                 </div>
+                <button id="cwc-apply-filters">Показать товары ( <?php echo esc_html($initial_count); ?>) </button>
                 <button id="cwc-reset-filters" class="cwc-reset-button">Сброс</button>
             </div>
         </div>

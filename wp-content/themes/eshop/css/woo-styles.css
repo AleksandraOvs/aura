@@ -986,6 +986,15 @@ h2.woocommerce-loop-product__title {
 }
 
 @media (max-width: 992px) {
+
+    .container {
+        width: 100%;
+        max-width: 100%;
+        margin: 0 auto;
+        padding-left: var(--container-padding);
+        padding-right: var(--container-padding);
+    }
+
     .products.products-5 {
         grid-template-columns: repeat(4, 1fr);
     }
@@ -1113,6 +1122,11 @@ h2.woocommerce-loop-product__title {
     .product-inner__content__col._buy-col .buy-one-click {
         width: 100%;
     }
+
+    .woocommerce ul.products.products-3 li.product {
+        width: calc(100% / 2 - 0.5em);
+        margin: 0;
+    }
 }
 
 @media (max-width: 768px) {
@@ -1200,6 +1214,24 @@ h2.woocommerce-loop-product__title {
         position: absolute;
         top: .5em;
         left: .5em;
+    }
+
+    .shop-inner {
+        flex-direction: column;
+    }
+
+    .shop-inner__products {
+        width: 100%;
+        flex: 1;
+    }
+
+    .shop-inner__left {
+        max-width: 100%;
+    }
+
+    .sidebar-area-wrapper._filters.opened {
+        width: 100%;
+        padding-right: 0;
     }
 
 }

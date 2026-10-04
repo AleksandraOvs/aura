@@ -6,6 +6,10 @@
   overflow: hidden;
 }
 
+.filters-wrapper__header {
+  display: none;
+}
+
 .sidebar-area-wrapper._filters.opened {
   width: 100%;
   padding-right: 2em;
@@ -162,7 +166,7 @@
   transition: all .5s linear;
 }
 
-.filters-head {
+.filter-toggle {
   font-size: 14px;
   font-weight: 400;
   display: flex;
@@ -360,6 +364,10 @@
   justify-content: space-between;
   gap: 40px;
   padding-top: .5em;
+}
+
+#cwc-apply-filters {
+  display: none;
 }
 
 .cwc-reset-button {
@@ -962,15 +970,106 @@
     display: none;
 } */
 
+@media (max-width: 1200px) {
+  .cwc-filter-actions {
+    flex-direction: column;
+    gap: .5em;
+    align-items: center;
+  }
+}
+
 
 @media (max-width: 768px) {
-  /* .filters-head {
-    background: transparent;
-  } */
+  .sidebar-area-wrapper {
+    position: fixed;
+    width: 100%;
+    height: 100vh;
+    top: 0;
+    left: 0;
+    z-index: 500;
+    padding-top: 3em;
+    transform: translatey(-100%);
+    transition: all .5s var(--transition);
+  }
+
+  .sidebar-area-wrapper.opened {
+    transform: none;
+  }
+
+  .cwc-products-count {
+    display: none;
+  }
+
+  .cwc-filter-actions {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    flex-direction: row;
+    left: 0;
+    padding: 1em 1em 2em 1em;
+    background: #fff;
+    filter: drop-shadow(-2px 2px 3px rgba(0, 0, 0, .3));
+  }
+
+  .cwc-filter-actions {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    flex-direction: row;
+    left: 0;
+    padding: 1em 1em 2em 1em;
+    background: #fff;
+    filter: drop-shadow(-2px 2px 3px rgba(0, 0, 0, .3));
+    justify-content: flex-start;
+    gap: 2em;
+  }
+
+  #cwc-apply-filters {
+    display: flex;
+    background: var(--theme-color-accent);
+    padding: .5em 1em;
+    border-radius: 5px;
+  }
+
+  .filters-wrapper__header {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .filter-wrapper__close,
+  .filter-wrapper__back {
+    width: 30px;
+    height: 30px;
+  }
+
+  .filter-wrapper__close svg,
+  .filter-wrapper__back svg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+  }
+
+  .filters-wrapper__header h3 {
+    margin: 0;
+    font-size: 24px;
+  }
 
   .filters-wrapper {
-    padding: 10px;
+    height: 100%;
+    overflow-y: scroll;
   }
+
+  .filters-wrapper__header {
+    margin-bottom: 1em;
+  }
+
+  .filter-price-title,
+  .filter-item__title {
+    font-weight: 600;
+  }
+
 }
 
 @media (max-width: 480px) {

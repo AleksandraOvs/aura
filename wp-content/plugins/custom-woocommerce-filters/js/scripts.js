@@ -1,79 +1,160 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    const filtersHead = document.querySelector('.filters-head');
+    const filterToggle = document.querySelector('.filter-toggle');
     const filtersWrapper = document.querySelector('.sidebar-area-wrapper');
+    const sidebar = document.querySelector('.sidebar-area-wrapper._filters');
 
-    if (!filtersHead || !filtersWrapper) return;
+    const backBtn = document.querySelector('.filter-wrapper__back');
+    const closeBtn = document.querySelector('.filter-wrapper__close');
+    const applyBtn = document.querySelector('#cwc-apply-filters');
 
-    filtersHead.addEventListener('click', function () {
-        filtersWrapper.classList.toggle('opened');
-    });
-
-    // document.addEventListener('click', function (e) {
-
-    //     const title = e.target.closest('.filter-item__title');
-    //     if (!title) return;
-
-    //     const filter = title.closest('.filter');
-    //     if (!filter) return;
-
-    //     const content = filter.querySelector('.filter-item__content');
-
-    //     title.classList.toggle('active');
-    //     content.classList.toggle('opened');
-    // });
+    if (!filterToggle || !filtersWrapper || !sidebar) return;
 
 
     /* ===============================
-       КНОПКА ОТКРЫТИЯ ФИЛЬТРА НА <992PX
+       ТЕКСТ КНОПКИ
     =============================== */
 
-    const button = document.querySelector('button.toggle-filter');
-    const sidebar = document.querySelector('.sidebar-area-wrapper._filters');
-    const closeBtn = document.querySelector('.close-filters');
-    const applyBtn = document.querySelector('#cwc-apply-filters');
+    function updateFilterToggleText() {
 
-    if (!button || !sidebar) return;
-
-    // Открытие / переключение
-    button.addEventListener('click', () => {
-        if (window.innerWidth <= 992) {
-            sidebar.classList.toggle('show');
+        // Мобильная версия
+        if (window.innerWidth <= 768) {
+            filterToggle.textContent = 'Показать фильтры';
+            return;
         }
+
+        // Десктоп
+        filterToggle.textContent = filtersWrapper.classList.contains('opened')
+            ? 'Скрыть фильтры'
+            : 'Показать фильтры';
+    }
+
+
+    /* ===============================
+       BODY FIXED
+    =============================== */
+
+    function updateBodyFixed() {
+
+        if (
+            window.innerWidth <= 768 &&
+            sidebar.classList.contains('opened')
+        ) {
+            document.body.classList.add('fixed');
+        } else {
+            document.body.classList.remove('fixed');
+        }
+    }
+
+
+    /* ===============================
+       ОТКРЫТИЕ / ЗАКРЫТИЕ ФИЛЬТРОВ
+    =============================== */
+
+    filterToggle.addEventListener('click', () => {
+
+        if (window.innerWidth <= 768) {
+
+            sidebar.classList.toggle('opened');
+
+        } else {
+
+            filtersWrapper.classList.toggle('opened');
+
+        }
+
+        updateFilterToggleText();
+        updateBodyFixed();
     });
 
-    // Закрытие по кнопке
+
+    /* ===============================
+       BACK
+    =============================== */
+
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+
+            if (window.innerWidth <= 768) {
+                sidebar.classList.remove('opened');
+                updateFilterToggleText();
+                updateBodyFixed();
+            }
+
+        });
+    }
+
+
+    /* ===============================
+       CLOSE
+    =============================== */
+
     if (closeBtn) {
         closeBtn.addEventListener('click', () => {
-            sidebar.classList.remove('show');
+
+            if (window.innerWidth <= 768) {
+                sidebar.classList.remove('opened');
+                updateFilterToggleText();
+                updateBodyFixed();
+            }
+
         });
     }
 
-    // Закрытие по клику вне сайдбара
-    document.addEventListener('click', (e) => {
-        if (
-            window.innerWidth <= 992 &&
-            sidebar.classList.contains('show') &&
-            !sidebar.contains(e.target) &&
-            !button.contains(e.target)
-        ) {
-            sidebar.classList.remove('show');
-        }
-    });
 
-    // Закрытие по Esc
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            sidebar.classList.remove('show');
-        }
-    });
+    /* ===============================
+       APPLY
+    =============================== */
 
-    // Закрытие после применения фильтров на <576px
     if (applyBtn) {
         applyBtn.addEventListener('click', () => {
-            if (window.innerWidth < 576) {
-                sidebar.classList.remove('show');
+
+            if (window.innerWidth <= 768) {
+                sidebar.classList.remove('opened');
+                updateFilterToggleText();
+                updateBodyFixed();
             }
+
         });
     }
+
+
+    /* ===============================
+       ESC
+    =============================== */
+
+    document.addEventListener('keydown', (e) => {
+
+        if (e.key === 'Escape' && window.innerWidth <= 768) {
+            sidebar.classList.remove('opened');
+            updateFilterToggleText();
+            updateBodyFixed();
+        }
+
+    });
+
+
+    /* ===============================
+       ИНИЦИАЛИЗАЦИЯ
+    =============================== */
+
+    function updateMobileFilters() {
+
+        if (window.innerWidth <= 768) {
+            sidebar.classList.remove('opened');
+        }
+
+        updateFilterToggleText();
+        updateBodyFixed();
+    }
+
+    updateMobileFilters();
+
+
+    /* ===============================
+       RESIZE
+    =============================== */
+
+    window.addEventListener('resize', updateMobileFilters);
+
 });
