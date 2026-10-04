@@ -694,6 +694,7 @@ a.button.wc-forward:hover {
 .button.button-black.buy-one-click {
     border-radius: 25px;
     transition: all .5s var(--transition);
+    background: var(--theme-color-primary);
 }
 
 .button.button-black.buy-one-click:hover {
