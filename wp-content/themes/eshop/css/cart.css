@@ -235,6 +235,9 @@
 
 .cart-totals__checkout a.button {
     background: var(--theme-color-primary);
+    width: max-content;
+    border-radius: 5px;
+    color: var(--white);
 }
 
 .cart-items {
