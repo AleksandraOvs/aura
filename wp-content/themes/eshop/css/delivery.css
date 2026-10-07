@@ -35,7 +35,7 @@
 }
 
 .custom-delivery-method__label input {
-    transform: translateY(10px);
+    transform: translateY(5px);
 }
 
 .custom-delivery-method__types {
