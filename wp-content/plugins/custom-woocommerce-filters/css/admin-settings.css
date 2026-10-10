@@ -1,0 +1,206 @@
+/* ===============================
+   ОСНОВНАЯ ОБЛАСТЬ
+================================ */
+
+.cwc-settings {
+    max-width: 1200px;
+    padding-bottom: 24px;
+    color: #2c2931;
+    position: relative;
+}
+
+.cwc-settings__header {
+    margin: 18px 0;
+}
+
+.cwc-settings__header h1 {
+    margin: 0 0 6px;
+    font-size: 23px;
+    font-weight: 600;
+}
+
+.cwc-settings__header p {
+    max-width: 760px;
+    margin: 0;
+    color: #64616b;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* ===============================
+   КАТЕГОРИИ
+================================ */
+
+.cwc-settings__categories {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.cwc-category-card {
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid #dedbe3;
+    border-radius: 6px;
+}
+
+.cwc-category-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 16px;
+    background: #f7f6f8;
+    border-bottom: 1px solid #e7e4eb;
+}
+
+.cwc-category-card__title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: #302b38;
+}
+
+.cwc-category-card__count {
+    flex-shrink: 0;
+    color: #71647f;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.cwc-category-card__body {
+    padding: 14px 16px;
+}
+
+/* ===============================
+   СПИСОК АТРИБУТОВ
+================================ */
+
+.cwc-attributes-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: 24px;
+    row-gap: 9px;
+}
+
+.cwc-attribute-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+.cwc-attribute-option input[type="checkbox"] {
+    flex-shrink: 0;
+    margin: 2px 0 0;
+    accent-color: #614881;
+}
+
+.cwc-attribute-option__content {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 3px 7px;
+    min-width: 0;
+}
+
+.cwc-attribute-option__label {
+    color: #38343e;
+    font-size: 13px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.cwc-attribute-option__taxonomy {
+    padding: 0;
+    background: transparent;
+    color: #96909d;
+    font-size: 11px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+.cwc-attribute-option:hover .cwc-attribute-option__label {
+    color: #614881;
+}
+
+.cwc-attribute-option:has(input:checked) .cwc-attribute-option__label {
+    font-weight: 500;
+}
+
+/* ===============================
+   СОХРАНЕНИЕ
+================================ */
+
+.cwc-settings__footer {
+    margin-top: 18px;
+    position: fixed;
+    bottom: 2em;
+    right: 2em;
+}
+
+.cwc-settings__footer .button-primary {
+    min-height: 34px;
+    padding: 2px 16px;
+    background: #1e1e1e;
+    border-color: #1e1e1e;
+    border-radius: 4px;
+    font-size: 13px;
+    transition: all .5s linear;
+}
+
+.cwc-settings__footer .button-primary:hover,
+.cwc-settings__footer .button-primary:focus {
+    background: #3858e9;
+    border-color: #3858e9;
+    color: #fff;
+}
+
+.cwc-settings__empty {
+    margin: 0;
+    padding: 12px;
+    color: #716b78;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* ===============================
+   АДАПТИВНОСТЬ
+================================ */
+
+@media screen and (max-width: 1100px) {
+    .cwc-attributes-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 18px;
+    }
+}
+
+@media screen and (max-width: 782px) {
+    .cwc-settings {
+        margin-right: 12px;
+    }
+
+    .cwc-category-card__body {
+        padding: 12px;
+    }
+
+    .cwc-category-card__header {
+        padding: 10px 12px;
+    }
+}
+
+@media screen and (max-width: 520px) {
+    .cwc-attributes-grid {
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: 10px;
+    }
+
+    .cwc-settings__header h1 {
+        font-size: 21px;
+    }
+}

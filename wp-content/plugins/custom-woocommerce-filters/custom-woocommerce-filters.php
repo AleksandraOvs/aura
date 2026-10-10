@@ -8,6 +8,59 @@ Author: PurpleWeb
 
 if (!defined('ABSPATH')) exit;
 
+require_once plugin_dir_path(__FILE__) . 'admin-settings.php';
+
+if (!function_exists('cwc_get_enabled_filter_attributes')) {
+    function cwc_get_enabled_filter_attributes($category_id = 0)
+    {
+        // Все зарегистрированные атрибуты WooCommerce.
+        $attributes = wc_get_attribute_taxonomies();
+        $all_attributes = [];
+
+        foreach ($attributes as $attribute) {
+            $all_attributes[] = 'pa_' . $attribute->attribute_name;
+        }
+
+        // Если категория не выбрана — показываем все атрибуты.
+        if (!$category_id) {
+            return $all_attributes;
+        }
+
+        // Находим родительскую категорию верхнего уровня.
+        $ancestors = get_ancestors(
+            (int) $category_id,
+            'product_cat',
+            'taxonomy'
+        );
+
+        $root_category_id = $ancestors
+            ? (int) end($ancestors)
+            : (int) $category_id;
+
+        // Настройки атрибутов из админки плагина.
+        $settings = get_option('cwc_filter_attributes_by_category', []);
+
+        // Если настройки ещё не сохранены, не скрываем все фильтры.
+        if (
+            !is_array($settings)
+            || !array_key_exists($root_category_id, $settings)
+        ) {
+            return $all_attributes;
+        }
+
+        $enabled = $settings[$root_category_id];
+
+        if (!is_array($enabled)) {
+            return [];
+        }
+
+        // Возвращаем только существующие атрибуты, разрешённые в настройках.
+        return array_values(
+            array_intersect($all_attributes, $enabled)
+        );
+    }
+}
+
 /* ---------------------------------------------------
  * Подключение JS и CSS
  * --------------------------------------------------- */
@@ -49,7 +102,7 @@ add_action('wp_enqueue_scripts', function () {
  * Фильтр по брендам
  * --------------------------------------------------- */
 
-function cwc_get_brand_filter($current_cat_id = 0)
+function cwc_get_brand_filter($category_id = 0)
 {
     $taxonomy = 'product_brand';
 
@@ -57,22 +110,10 @@ function cwc_get_brand_filter($current_cat_id = 0)
         return '';
     }
 
-    $terms = get_terms([
-        'taxonomy'   => $taxonomy,
-        'hide_empty' => true,
-        'orderby'    => 'count',
-        'order'      => 'DESC',
-    ]);
-
-    if (is_wp_error($terms) || empty($terms)) {
-        return '';
-    }
-
-    // 🔥 используем твою же функцию
     return cwc_render_attribute_filter(
         $taxonomy,
         'Бренд',
-        $current_cat_id
+        $category_id
     );
 }
 
@@ -174,31 +215,108 @@ function cwc_clean_title($title)
     return preg_replace('/^Товар\s*[:\-–—]?\s*/ui', '', $title);
 }
 
-/* ---------------------------------------------------
- * ТЕКСТОВЫЙ АТРИБУТ
- * --------------------------------------------------- */
-/* ---------------------------------------------------
- * ТЕКСТОВЫЙ АТРИБУТ
- * --------------------------------------------------- */
-function cwc_render_attribute_filter($taxonomy, $title, $product_ids = [])
+/**
+ * Получает значения атрибута только для товаров выбранной категории
+ * и её дочерних категорий, не загружая ID всех товаров в PHP.
+ *
+ * @param string $taxonomy    Таксономия атрибута или бренда.
+ * @param int    $category_id ID текущей категории.
+ *
+ * @return array
+ */
+function cwc_get_category_filter_terms($taxonomy, $category_id = 0)
 {
-    $args = [
-        'taxonomy'   => $taxonomy,
-        'hide_empty' => true,
-    ];
+    global $wpdb;
 
-    // Если находимся на странице категории —
-    // показываем только значения атрибута,
-    // которые используются товарами этой категории.
-    if ($product_ids) {
-        $args['object_ids'] = $product_ids;
-    } elseif (is_product_category()) {
-        return '';
+    if (!taxonomy_exists($taxonomy)) {
+        return [];
     }
 
-    $terms = get_terms($args);
+    // На странице магазина или другой странице показываем все значения.
+    if (!$category_id) {
+        $terms = get_terms([
+            'taxonomy'   => $taxonomy,
+            'hide_empty' => true,
+        ]);
 
-    if (!$terms || is_wp_error($terms)) {
+        return is_wp_error($terms) ? [] : $terms;
+    }
+
+    // Получаем ID дочерних категорий, а не ID товаров.
+    $children = get_term_children(
+        (int) $category_id,
+        'product_cat'
+    );
+
+    if (is_wp_error($children)) {
+        $children = [];
+    }
+
+    $category_ids = array_unique(array_map(
+        'absint',
+        array_merge([(int) $category_id], $children)
+    ));
+
+    $placeholders = implode(
+        ', ',
+        array_fill(0, count($category_ids), '%d')
+    );
+
+    // Ищем только термины, назначенные опубликованным товарам
+    // из выбранной категории или её потомков.
+    $sql = "
+        SELECT DISTINCT filter_tt.term_id
+        FROM {$wpdb->term_relationships} AS filter_tr
+        INNER JOIN {$wpdb->term_taxonomy} AS filter_tt
+            ON filter_tt.term_taxonomy_id = filter_tr.term_taxonomy_id
+        INNER JOIN {$wpdb->posts} AS p
+            ON p.ID = filter_tr.object_id
+        INNER JOIN {$wpdb->term_relationships} AS cat_tr
+            ON cat_tr.object_id = p.ID
+        INNER JOIN {$wpdb->term_taxonomy} AS cat_tt
+            ON cat_tt.term_taxonomy_id = cat_tr.term_taxonomy_id
+        WHERE filter_tt.taxonomy = %s
+          AND cat_tt.taxonomy = 'product_cat'
+          AND cat_tt.term_id IN ($placeholders)
+          AND p.post_type = 'product'
+          AND p.post_status = 'publish'
+    ";
+
+    $params = array_merge([$taxonomy], $category_ids);
+
+    $term_ids = $wpdb->get_col(
+        $wpdb->prepare($sql, $params)
+    );
+
+    if (empty($term_ids)) {
+        return [];
+    }
+
+    // Получаем полноценные WP_Term без выборки всех товаров.
+    $terms = get_terms([
+        'taxonomy'   => $taxonomy,
+        'include'    => array_map('absint', $term_ids),
+        'hide_empty' => false,
+    ]);
+
+    return is_wp_error($terms) ? [] : $terms;
+}
+
+/* ---------------------------------------------------
+ * ТЕКСТОВЫЙ АТРИБУТ
+ * --------------------------------------------------- */
+/* ---------------------------------------------------
+ * ФИЛЬТР АТРИБУТА / БРЕНДА
+ * --------------------------------------------------- */
+function cwc_render_attribute_filter($taxonomy, $title, $category_id = 0)
+{
+    // Получаем термины без загрузки ID всех товаров в PHP.
+    $terms = cwc_get_category_filter_terms(
+        $taxonomy,
+        $category_id
+    );
+
+    if (empty($terms)) {
         return '';
     }
 
@@ -226,8 +344,9 @@ function cwc_render_attribute_filter($taxonomy, $title, $product_ids = [])
         </div>
 
         <div class="filter-item__content">
-            <ul class="sidebar-list" data-taxonomy="<?php echo esc_attr($taxonomy); ?>">
-                <?php foreach ($terms as $term): ?>
+            <ul class="sidebar-list"
+                data-taxonomy="<?php echo esc_attr($taxonomy); ?>">
+                <?php foreach ($terms as $term) : ?>
                     <li>
                         <a
                             href="#"
@@ -285,24 +404,7 @@ function cwc_shop_filters_shortcode()
     error_log('CWC START ' . microtime(true));
     $current_cat_id = is_product_category() ? get_queried_object_id() : 0;
 
-    $current_product_ids = [];
 
-    if ($current_cat_id) {
-        $current_product_ids = get_posts([
-            'post_type'      => 'product',
-            'post_status'    => 'publish',
-            'posts_per_page' => -1,
-            'fields'         => 'ids',
-            'tax_query'      => [
-                [
-                    'taxonomy'         => 'product_cat',
-                    'field'            => 'term_id',
-                    'terms'            => $current_cat_id,
-                    'include_children' => true,
-                ],
-            ],
-        ]);
-    }
 
     $text_filters = [];
     $brand_filter = cwc_get_brand_filter($current_cat_id);
@@ -310,8 +412,11 @@ function cwc_shop_filters_shortcode()
 
     $filters = [];
 
-    foreach (cwc_get_all_product_attributes() as $taxonomy) {
+    $enabled_attributes = cwc_get_enabled_filter_attributes(
+        $current_cat_id
+    );
 
+    foreach ($enabled_attributes as $taxonomy) {
         if (!taxonomy_exists($taxonomy)) {
             continue;
         }
@@ -321,9 +426,8 @@ function cwc_shop_filters_shortcode()
         $filters[] = cwc_render_attribute_filter(
             $taxonomy,
             $tax->label ?? $taxonomy,
-            $current_product_ids
+            $current_cat_id
         );
-        error_log('CWC FILTER ' . $taxonomy . ' ' . microtime(true));
     }
 
     $initial_count_args = [
@@ -543,11 +647,11 @@ function cwc_filter_products_callback()
      */
 
     if (!empty($_POST['current_cat_id'])) {
-
         $tax_query[] = [
-            'taxonomy' => 'product_cat',
-            'field'    => 'term_id',
-            'terms'    => absint($_POST['current_cat_id']),
+            'taxonomy'         => 'product_cat',
+            'field'            => 'term_id',
+            'terms'            => absint($_POST['current_cat_id']),
+            'include_children' => true,
         ];
     }
 
