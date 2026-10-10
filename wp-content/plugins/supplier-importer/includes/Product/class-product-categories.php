@@ -13,7 +13,8 @@ class Product_Categories
 {
     public function assign(
         WC_Product $product,
-        $category_path
+        $category_path,
+        $supplier = ''
     ) {
         if (!$product instanceof WC_Product) {
             throw new InvalidArgumentException(
@@ -28,7 +29,8 @@ class Product_Categories
         }
 
         $term_ids = $this->get_or_create_path(
-            $category_path
+            $category_path,
+            $supplier
         );
 
         if (empty($term_ids)) {
@@ -41,9 +43,10 @@ class Product_Categories
 
         return $term_ids;
     }
-
-    private function get_or_create_path($category_path)
-    {
+    private function get_or_create_path(
+        $category_path,
+        $supplier = ''
+    ) {
         $parts = preg_split(
             '/\s*\/\s*/',
             $category_path
@@ -65,7 +68,8 @@ class Product_Categories
         foreach ($parts as $part) {
             $term = $this->get_or_create_category(
                 $part,
-                $parent_id
+                $parent_id,
+                $supplier
             );
 
             if (!$term) {
@@ -87,7 +91,8 @@ class Product_Categories
 
     private function get_or_create_category(
         $name,
-        $parent_id = 0
+        $parent_id = 0,
+        $supplier = ''
     ) {
         $term = get_term_by(
             'name',
@@ -116,28 +121,65 @@ class Product_Categories
             }
         }
 
+        $args = [
+            'parent' => $parent_id,
+        ];
+
+        if ($supplier === 'crystal_lux') {
+            $args['slug'] = sanitize_title($name)
+                . '-'
+                . (int) $parent_id;
+        }
+
+        \Supplier_Importer\Core\Logger::info(
+            'CATEGORY INSERT DEBUG: ' . wp_json_encode([
+                'name'        => $name,
+                'parent_id'   => $parent_id,
+                'supplier'    => $supplier,
+                'args'        => $args,
+                'slug_length' => isset($args['slug'])
+                    ? strlen($args['slug'])
+                    : null,
+            ], JSON_UNESCAPED_UNICODE)
+        );
+
         $result = wp_insert_term(
             $name,
             'product_cat',
-            [
-                'parent' => $parent_id,
-            ]
+            $args
         );
 
+
         if (is_wp_error($result)) {
-            if (
-                $result->get_error_code()
-                === 'term_exists'
-            ) {
-                $term_id = (int) $result->get_error_data(
-                    'term_exists'
-                );
+            $error_code = $result->get_error_code();
+            $error_data = $result->get_error_data($error_code);
+
+            \Supplier_Importer\Core\Logger::info(
+                'CATEGORY ERROR: ' . wp_json_encode([
+                    'name'       => $name,
+                    'parent_id'  => $parent_id,
+                    'error_code' => $error_code,
+                    'message'    => $result->get_error_message(),
+                    'error_data' => $error_data,
+                ], JSON_UNESCAPED_UNICODE)
+            );
+
+            if ($error_code === 'term_exists') {
+                $term_id = (int) $error_data;
 
                 if ($term_id) {
-                    return get_term(
+                    $existing_term = get_term(
                         $term_id,
                         'product_cat'
                     );
+
+                    if (
+                        $existing_term
+                        && !is_wp_error($existing_term)
+                        && (int) $existing_term->parent === (int) $parent_id
+                    ) {
+                        return $existing_term;
+                    }
                 }
             }
 

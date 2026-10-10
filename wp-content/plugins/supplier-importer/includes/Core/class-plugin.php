@@ -9,6 +9,7 @@ if (!defined('ABSPATH')) {
 use Supplier_Importer\AJAX\Ajax_Errors;
 use Supplier_Importer\Suppliers\Denkirs\Denkirs;
 use Supplier_Importer\Suppliers\Maytoni\Maytoni;
+use Supplier_Importer\Suppliers\CrystalLux\Crystal_Lux;
 use Supplier_Importer\Suppliers\Supplier_Manager;
 use Supplier_Importer\AJAX\Ajax_Import;
 use Supplier_Importer\AJAX\Ajax_Process;
@@ -78,6 +79,10 @@ class Plugin
 
         self::$supplier_manager->register(
             new Maytoni()
+        );
+
+        self::$supplier_manager->register(
+            new Crystal_Lux()
         );
     }
 

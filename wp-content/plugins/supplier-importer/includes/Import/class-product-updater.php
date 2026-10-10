@@ -67,10 +67,40 @@ class Product_Updater
 
         $start = microtime(true);
 
-        $this->product_categories->assign(
-            $product,
-            $product_data->get('category', '')
-        );
+        try {
+            $category_path = $product_data->get('category', '');
+
+            \Supplier_Importer\Core\Logger::info(
+                'UPDATE DEBUG: categories START SKU=' . $sku
+                    . ', path=' . (string) $category_path
+            );
+
+            \Supplier_Importer\Core\Logger::info(
+                'SUPPLIER DEBUG: ' . wp_json_encode([
+                    'supplier' => $product_data->get_supplier(),
+                ], JSON_UNESCAPED_UNICODE)
+            );
+
+            $this->product_categories->assign(
+                $product,
+                $category_path,
+                $product_data->get_supplier()
+            );
+
+            \Supplier_Importer\Core\Logger::info(
+                'UPDATE DEBUG: categories SKU=' . $sku
+                    . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+            );
+        } catch (\Throwable $e) {
+            \Supplier_Importer\Core\Logger::info(
+                'UPDATE ERROR: categories SKU=' . $sku
+                    . ', message=' . $e->getMessage()
+                    . ', file=' . $e->getFile()
+                    . ', line=' . $e->getLine()
+            );
+
+            throw $e;
+        }
 
         \Supplier_Importer\Core\Logger::info(
             'UPDATE DEBUG: categories SKU=' . $sku
@@ -174,16 +204,27 @@ class Product_Updater
             );
         }
 
-        /*
-         * Остаток обновляется только если поставщик
-         * действительно передал его.
-         */
         if ($product_data->has_stock()) {
             $product->set_manage_stock(true);
+            $product->set_stock_quantity($product_data->get_stock());
+        }
 
-            $product->set_stock_quantity(
-                $product_data->get_stock()
-            );
+        // Специальная обработка наличия для Crystal Lux.
+        if ($product_data->get_supplier() === 'crystal_lux') {
+            $meta = $product_data->get_meta();
+            $discontinued = !empty($meta['discontinued']);
+
+            if ($discontinued) {
+                // Снят с производства — публикуем, но купить нельзя.
+                $product->set_stock_status('outofstock');
+            } elseif ($product_data->has_stock()) {
+                // Если количество указано в файле поставщика.
+                $stock = (float) $product_data->get_stock();
+
+                $product->set_stock_status(
+                    $stock > 0 ? 'instock' : 'outofstock'
+                );
+            }
         }
     }
 
