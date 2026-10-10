@@ -13,26 +13,6 @@ $search_query = get_search_query();
 $columns      = wc_get_loop_prop('columns') ?: 4;
 $total_posts  = (int) $wp_query->found_posts;
 
-// DEBUG: информация об основном запросе поиска
-if (current_user_can('manage_options') && isset($_GET['search_debug'])) {
-    echo '<pre style="position:relative;z-index:999999;background:#fff;color:#111;padding:20px;margin:20px;border:2px solid red;white-space:pre-wrap;">';
-
-    echo "=== SEARCH DEBUG ===\n";
-    echo 'URL query: ' . esc_html(wp_json_encode($_GET, JSON_UNESCAPED_UNICODE)) . "\n";
-    echo 'is_search: ' . (is_search() ? 'true' : 'false') . "\n";
-    echo 'is_shop: ' . (is_shop() ? 'true' : 'false') . "\n";
-    echo 'post_type: ' . esc_html(wp_json_encode($wp_query->get('post_type'), JSON_UNESCAPED_UNICODE)) . "\n";
-    echo 'search term: ' . esc_html($search_query) . "\n";
-    echo 'found_posts: ' . (int) $wp_query->found_posts . "\n";
-    echo 'post_count: ' . (int) $wp_query->post_count . "\n";
-    echo 'posts_per_page: ' . (int) $wp_query->get('posts_per_page') . "\n";
-    echo 'paged: ' . (int) max(1, $wp_query->get('paged')) . "\n";
-    echo 'max_num_pages: ' . (int) $wp_query->max_num_pages . "\n";
-    echo 'IDs in main query: ' . esc_html(implode(', ', wp_list_pluck($wp_query->posts, 'ID'))) . "\n";
-
-    echo '</pre>';
-}
-
 ?>
 
 <main class="search-page">
@@ -78,14 +58,6 @@ if (current_user_can('manage_options') && isset($_GET['search_debug'])) {
                         <?php endwhile; ?>
 
                     </ul>
-
-                    <?php if (current_user_can('manage_options') && isset($_GET['search_debug'])) : ?>
-                        <pre style="background:#fff;color:#111;padding:20px;border:2px solid blue;white-space:pre-wrap;">
-=== RENDER DEBUG ===
-Карточек выведено циклом: <?php echo (int) $rendered_products; ?>
-
-    </pre>
-                    <?php endif; ?>
 
                     <?php eshop_search_pagination(); ?>
 
