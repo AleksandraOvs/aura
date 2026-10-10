@@ -23,18 +23,9 @@ get_header('shop');
 do_action('woocommerce_before_main_content');
 ?>
 
-
 <?php //get_template_part('template-parts/page-header') 
 ?>
 <?php
-echo '<pre style="background:#fff;color:#000;padding:15px;position:relative;z-index:99999;">';
-var_dump([
-    'is_search' => is_search(),
-    'is_shop' => is_shop(),
-    'post_type' => get_query_var('post_type'),
-    'template' => get_page_template(),
-]);
-echo '</pre>';
 if (is_shop()) {
 
     get_template_part('woocommerce/shop-page-hero');
