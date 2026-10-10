@@ -1029,6 +1029,7 @@
     background: var(--theme-color-accent);
     padding: .5em 1em;
     border-radius: 5px;
+    color: var(--theme-color-primary);
   }
 
   .filters-wrapper__header {
