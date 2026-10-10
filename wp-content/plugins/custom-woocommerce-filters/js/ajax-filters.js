@@ -242,12 +242,18 @@
                     return;
                 }
 
-                const countElement =
-                    document.querySelector('#cwc-products-count');
+                // Обновляем количество найденных товаров
+                const countElement = document.querySelector('#cwc-products-count');
 
                 if (countElement) {
-                    countElement.textContent =
-                        response.data.found;
+                    countElement.textContent = response.data.found;
+                }
+
+                // Обновляем количество товаров на кнопке
+                const applyButton = document.querySelector('#cwc-apply-filters');
+
+                if (applyButton) {
+                    applyButton.textContent = `Показать товары ( ${response.data.found} )`;
                 }
 
 
