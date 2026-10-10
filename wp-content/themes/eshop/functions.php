@@ -330,3 +330,123 @@ function get_page_siblings()
         'order'       => 'ASC',
     ]);
 }
+
+
+/**
+ * Нумерованная пагинация для результатов поиска товаров.
+ */
+function eshop_search_pagination()
+{
+    global $wp_query;
+
+    $total_pages = (int) $wp_query->max_num_pages;
+
+    if ($total_pages <= 1) {
+        return;
+    }
+
+    $big = 999999999;
+
+    // Стрелка «Назад».
+    $prev = '
+        <svg
+            width="19"
+            height="15"
+            viewBox="0 0 19 15"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+            focusable="false"
+        >
+            <path
+                d="M18.5 7.487L0.711001 7.5M7.487 0.499999L0.500001 7.5L7.488 14.5"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+            />
+        </svg>
+    ';
+
+    // Стрелка «Вперёд».
+    $next = '
+        <svg
+            width="19"
+            height="15"
+            viewBox="0 0 19 15"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+            focusable="false"
+        >
+            <path
+                d="M0.5 7.513L18.289 7.5M11.513 14.5L18.5 7.5L11.512 0.5"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+            />
+        </svg>
+    ';
+
+    $pagination = paginate_links([
+        'base'      => str_replace(
+            $big,
+            '%#%',
+            esc_url(get_pagenum_link($big))
+        ),
+        'format'    => '?paged=%#%',
+        'current'   => max(1, (int) get_query_var('paged')),
+        'total'     => $total_pages,
+        'type'      => 'array',
+        'mid_size'  => 2,
+        'end_size'  => 1,
+        'prev_text' => $prev,
+        'next_text' => $next,
+    ]);
+
+    if (empty($pagination)) {
+        return;
+    }
+
+    $allowed_html = [
+        'a' => [
+            'href'  => true,
+            'class' => true,
+            'aria-label' => true,
+        ],
+        'span' => [
+            'class' => true,
+            'aria-current' => true,
+        ],
+        'svg' => [
+            'width'       => true,
+            'height'      => true,
+            'viewBox'     => true,
+            'fill'        => true,
+            'xmlns'       => true,
+            'aria-hidden' => true,
+            'focusable'   => true,
+        ],
+        'path' => [
+            'd'               => true,
+            'stroke'          => true,
+            'stroke-width'    => true,
+            'stroke-linecap'  => true,
+            'stroke-linejoin' => true,
+            'fill'            => true,
+        ],
+    ];
+
+    echo '<nav class="search-pagination" aria-label="Страницы результатов поиска">';
+
+    foreach ($pagination as $link) {
+        $link = str_replace(
+            ['page-numbers', 'current'],
+            ['search-pagination__link', 'is-current'],
+            $link
+        );
+
+        echo wp_kses($link, $allowed_html);
+    }
+
+    echo '</nav>';
+}

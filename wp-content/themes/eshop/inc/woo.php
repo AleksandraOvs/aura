@@ -23,6 +23,26 @@ add_action('wp_enqueue_scripts', function () {
     // }
 });
 
+/**
+ * Используем отдельный шаблон для поиска товаров.
+ */
+add_filter('template_include', 'eshop_product_search_template', 99);
+
+function eshop_product_search_template($template)
+{
+
+    if (is_search() && get_query_var('post_type') === 'product') {
+
+        $search_template = locate_template('search.php');
+
+        if ($search_template) {
+            return $search_template;
+        }
+    }
+
+    return $template;
+}
+
 //КНОПКА В КОРЗИНУ - ИКОНКОЙ
 
 add_filter('woocommerce_loop_add_to_cart_link', function ($html, $product) {

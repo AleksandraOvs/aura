@@ -748,7 +748,8 @@ header.scroll .header__top {
 }
 
 /*AJAX SEARCH STYLES*/
-.search-results {
+.search-results__list {
+    display: flex;
     flex-wrap: wrap;
     gap: .5em;
     width: 100%;
@@ -759,6 +760,21 @@ header.scroll .header__top {
 
 .search-results.show {
     display: flex;
+    flex-direction: column;
+    gap: 1em;
+}
+
+.search-results__header {
+    display: flex;
+    gap: 2em;
+    justify-content: space-between;
+}
+
+.search-results__all {
+    color: var(--theme-color-grey);
+    text-decoration: underline;
+    position: relative;
+    padding-bottom: 3px;
 }
 
 .search-results__item:last-child {
@@ -795,7 +811,7 @@ header.scroll .header__top {
     gap: 1em;
     color: inherit;
     text-decoration: none;
-    width: calc(100% / 3 - .67em);
+    width: calc(100% / 2 - .5em);
     padding: .5em;
     background: transparent;
     transition: all .5s var(--transition);
@@ -845,6 +861,7 @@ header.scroll .header__top {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    width: 100%;
     gap: 1em;
     width: 100%;
     font-size: 14px;
@@ -880,6 +897,57 @@ header.scroll .header__top {
 
 .search-results__dots i:nth-child(3) {
     animation-delay: 0.3s;
+}
+
+/*PAGINATION*/
+
+.search-pagination__link {
+    color: #272727;
+    font-size: 20px;
+    transition: all .5s linear;
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-pagination a:first-child,
+.search-pagination a:last-child {
+    border: 1px solid var(--theme-color-grey);
+    height: 40px;
+    border-radius: 100%;
+    transition: all .5s linear;
+}
+
+.search-pagination a:first-child:hover,
+.search-pagination a:last-child:hover {
+    background: var(--theme-color-accent);
+    border-color: var(--theme-color-accent);
+}
+
+.search-pagination__link:hover {
+    color: var(--theme-color-accent);
+}
+
+.search-pagination__link.is-current {
+    font-weight: 600;
+    color: var(--theme-color-grey);
+}
+
+.search-pagination__link svg {
+    display: block;
+}
+
+.search-pagination__link svg path {
+    stroke: var(--theme-color-primary);
+}
+
+.search-pagination {
+    display: flex;
+    align-items: center;
+    margin-top: 2em;
+    gap: 1em;
+    justify-content: center;
 }
 
 @keyframes search-dot {

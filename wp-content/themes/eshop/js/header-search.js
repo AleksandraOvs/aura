@@ -51,51 +51,54 @@ document.addEventListener('DOMContentLoaded', function () {
      * ==========================================================
      */
 
+    function toggleSearch(isOpen) {
+
+        if (!searchBlock) return;
+
+        searchBlock.classList.toggle('show', isOpen);
+        document.body.classList.toggle('fixed', isOpen);
+
+    }
+
+    // Открытие / закрытие по кнопке поиска
     if (searchButton && searchBlock) {
 
         searchButton.addEventListener('click', function () {
 
-            searchBlock.classList.toggle('show');
+            const isOpen = !searchBlock.classList.contains('show');
+
+            toggleSearch(isOpen);
 
         });
 
     }
 
 
-    /*
-     * Закрытие по кнопке
-     */
 
-    if (closeButton && searchBlock) {
+    // Закрытие по кнопке
+    if (closeButton) {
 
         closeButton.addEventListener('click', function () {
 
-            searchBlock.classList.remove('show');
+            toggleSearch(false);
 
         });
 
     }
 
 
-    /*
-     * Закрытие поиска при открытии каталога
-     */
-
-    if (catalogButton && searchBlock) {
+    // Закрытие поиска при открытии каталога
+    if (catalogButton) {
 
         catalogButton.addEventListener('click', function () {
 
-            searchBlock.classList.remove('show');
+            toggleSearch(false);
 
         });
 
     }
 
-
-    /*
-     * Закрытие при клике вне поиска
-     */
-
+    // Закрытие при клике вне поиска
     if (searchBlock && searchButton) {
 
         document.addEventListener('click', function (event) {
@@ -106,7 +109,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 !searchButton.contains(event.target)
             ) {
 
-                searchBlock.classList.remove('show');
+                toggleSearch(false);
 
             }
 
@@ -205,61 +208,73 @@ document.addEventListener('DOMContentLoaded', function () {
      * ==========================================================
      */
 
-    function renderResults(results) {
+    function renderResults(results, total, query) {
 
         if (!results.length) {
-
             showEmpty();
-
             return;
-
         }
 
+        const searchUrl = `/?s=${encodeURIComponent(query)}&post_type=product`;
 
-        searchResults.innerHTML = results.map(function (item) {
+        const header = `
+        <div class="search-results__header">
+            <div class="search-results__count">
+                Найдено товаров: <strong>${total}</strong>
+            </div>
+
+            <a
+                href="${searchUrl}"
+                class="search-results__all"
+            >
+                Смотреть найденные товары
+                <span aria-hidden="true">→</span>
+            </a>
+        </div>
+    `;
+
+        const items = results.map(function (item) {
 
             return `
-                <a
-                    href="${item.url}"
-                    class="search-results__item"
-                >
+            <a
+                href="${item.url}"
+                class="search-results__item"
+            >
+                ${item.image ? `
+                    <span class="search-results__image">
+                        <img src="${item.image}" alt="">
+                    </span>
+                ` : ''}
 
-                    ${item.image ? `
-                        <span class="search-results__image">
-                            <img
-                                src="${item.image}"
-                                alt=""
-                            >
+                <span class="search-results__content">
+                    <span class="search-results__title">
+                        ${item.title}
+                    </span>
+
+                    ${item.sku ? `
+                        <span class="search-results__sku">
+                            Артикул: ${item.sku}
                         </span>
                     ` : ''}
 
-                    <span class="search-results__content">
-
-                        <span class="search-results__title">
-                            ${item.title}
+                    ${item.type ? `
+                        <span class="search-results__type">
+                            ${item.type}
                         </span>
-
-                        ${item.sku ? `
-                            <span class="search-results__sku">
-                                Артикул: ${item.sku}
-                            </span>
-                        ` : ''}
-
-                        ${item.type ? `
-                            <span class="search-results__type">
-                                ${item.type}
-                            </span>
-                        ` : ''}
-
-                    </span>
-
-                </a>
-            `;
+                    ` : ''}
+                </span>
+            </a>
+        `;
 
         }).join('');
 
-        showResults();
+        searchResults.innerHTML = header + `
+        <div class="search-results__list">
+            ${items}
+        </div>
+    `;
 
+        showResults();
     }
 
 
@@ -356,7 +371,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
             renderResults(
-                data.data?.results || []
+                data.data?.results || [],
+                Number(data.data?.total) || 0,
+                query
             );
 
 
