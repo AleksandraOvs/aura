@@ -306,7 +306,7 @@
             <div class="header__search">
                 <div class="fixed-container">
                     <form role="search" method="get" class="search-form" action="/">
-
+                        <input type="hidden" name="post_type" value="product">
                         <input
                             id="search-input"
                             type="search"

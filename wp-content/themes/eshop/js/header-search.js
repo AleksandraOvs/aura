@@ -372,7 +372,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             renderResults(
                 data.data?.results || [],
-                Number(data.data?.total) || 0,
+                Number(data.data?.total_products) || 0,
                 query
             );
 

@@ -8,9 +8,7 @@ add_action('wp_ajax_nopriv_live_search', 'aura_live_search');
 
 function aura_live_search()
 {
-
     global $wpdb;
-
     $query = isset($_POST['s'])
         ? sanitize_text_field(wp_unslash($_POST['s']))
         : '';
@@ -26,6 +24,21 @@ function aura_live_search()
 
     $results = [];
     $limit   = 10;
+
+    // Общее количество товаров для страницы поиска.
+    $count_query = new WP_Query([
+        'post_type'           => 'product',
+        'post_status'         => 'publish',
+        'posts_per_page'      => 1,
+        's'                   => $query,
+        'fields'              => 'ids',
+        'no_found_rows'       => false,
+        'ignore_sticky_posts' => true,
+    ]);
+
+    $total_products = (int) $count_query->found_posts;
+
+    wp_reset_postdata();
 
     /*
      * ==========================================================
@@ -201,8 +214,9 @@ function aura_live_search()
      */
 
     wp_send_json_success([
-        'results' => $results,
-        'total'   => count($results),
-        'query'   => $query,
+        'results'        => $results,
+        'total'          => count($results),
+        'total_products' => $total_products,
+        'query'          => $query,
     ]);
 }

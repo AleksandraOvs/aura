@@ -64,9 +64,9 @@ class Plugin
 
         new Admin();
 
-        Logger::info(
-            'Плагин Supplier Importer успешно загружен.'
-        );
+        // Logger::info(
+        //     'Плагин Supplier Importer успешно загружен.'
+        // );
     }
 
     private static function register_suppliers()

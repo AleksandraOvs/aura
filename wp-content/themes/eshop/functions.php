@@ -450,3 +450,19 @@ function eshop_search_pagination()
 
     echo '</nav>';
 }
+
+add_action('init', function () {
+    $message = 'CWC TEST: ' . date('Y-m-d H:i:s');
+
+    $result = file_put_contents(
+        WP_CONTENT_DIR . '/debug.log',
+        $message . PHP_EOL,
+        FILE_APPEND
+    );
+
+    error_log('CWC PHP ERROR LOG TEST');
+
+    if ($result === false) {
+        error_log('CWC: не удалось записать в debug.log');
+    }
+});

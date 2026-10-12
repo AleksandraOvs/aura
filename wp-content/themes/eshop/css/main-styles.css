@@ -754,7 +754,7 @@ header.scroll .header__top {
     gap: .5em;
     width: 100%;
     padding-bottom: 2em;
-    max-height: 80vh;
+    height: 55vh;
     overflow-y: scroll;
 }
 
