@@ -82,6 +82,34 @@ body.fixed {
     flex: 1;
 }
 
+/* Все элементы со скроллом */
+* {
+    scrollbar-width: thin;
+    /* Firefox */
+    scrollbar-color: var(--siniy) #f1f1f1;
+}
+
+/* Chrome, Edge, Safari */
+*::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+    /* горизонтальный скролл */
+}
+
+*::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: var(--theme-color-primary);
+    border-radius: 10px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: transparent;
+}
+
 /* =========================================
    Typography
 ========================================= */
