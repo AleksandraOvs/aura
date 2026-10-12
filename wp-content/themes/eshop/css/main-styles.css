@@ -102,7 +102,7 @@ body.fixed {
 }
 
 *::-webkit-scrollbar-thumb {
-    background: var(--theme-color-primary);
+    background: #1a1a1a;
     border-radius: 10px;
 }
 
