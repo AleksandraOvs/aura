@@ -54,6 +54,7 @@ function e_shop_enqueue_styles()
     wp_enqueue_script('woo-scripts', get_stylesheet_directory_uri() . '/js/woo-scripts.js', array(), _S_VERSION, true);
     wp_enqueue_script('sliders-script', get_stylesheet_directory_uri() . '/js/sliders.js', array(), _S_VERSION, true);
     wp_enqueue_script('minicart-script', get_stylesheet_directory_uri() . '/js/mini-cart-scripts.js', array(), _S_VERSION, true);
+    wp_enqueue_script('reviews-script', get_stylesheet_directory_uri() . '/js/reviews.js', array(), _S_VERSION, true);
 
     wp_enqueue_script('header-search-script', get_stylesheet_directory_uri() . '/js/header-search.js', array(), _S_VERSION, true);
 

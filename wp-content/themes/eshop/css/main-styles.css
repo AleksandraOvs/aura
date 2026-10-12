@@ -1661,13 +1661,29 @@ section.partners h2 {
 .reviews-slider__slide__text p {
     display: -webkit-box;
     -webkit-line-clamp: 10;
-    /* количество строк */
     -webkit-box-orient: vertical;
     overflow: hidden;
+
 }
 
-.reviews-slider__slide__text p.is-open {
+.reviews-slider__slide__text p.is-expanded {
+    display: block;
     -webkit-line-clamp: unset;
+    overflow: visible;
+}
+
+.reviews-slider__more {
+    cursor: pointer;
+}
+
+.reviews-slider__slide__text {
+    height: 100%;
+    overflow-y: scroll;
+    padding-bottom: 80px;
+}
+
+.reviews-slider__more.is-hidden {
+    display: none;
 }
 
 .reviews-slider__more {
@@ -1691,6 +1707,8 @@ section.partners h2 {
     display: flex;
     gap: 1em;
     flex-wrap: wrap;
+    position: fixed;
+    bottom: 2em;
 }
 
 .reviews-photo a {
