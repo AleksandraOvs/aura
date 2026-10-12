@@ -86,7 +86,7 @@ body.fixed {
 * {
     scrollbar-width: thin;
     /* Firefox */
-    scrollbar-color: var(--siniy) #f1f1f1;
+    scrollbar-color: var(--siniy) #807f7f;
 }
 
 /* Chrome, Edge, Safari */
@@ -97,7 +97,7 @@ body.fixed {
 }
 
 *::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: #807f7f;
     border-radius: 10px;
 }
 
