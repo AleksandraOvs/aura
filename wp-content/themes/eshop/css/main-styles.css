@@ -1709,6 +1709,10 @@ section.partners h2 {
     flex-wrap: wrap;
     position: fixed;
     bottom: 2em;
+    width: 100%;
+    background: var(--white);
+    left: 0;
+    padding-inline: 2em;
 }
 
 .reviews-photo a {
