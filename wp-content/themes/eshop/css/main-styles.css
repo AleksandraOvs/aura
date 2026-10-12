@@ -1680,6 +1680,7 @@ section.partners h2 {
     height: 100%;
     overflow-y: scroll;
     padding-bottom: 80px;
+    padding-right: 1em;
 }
 
 .reviews-slider__more.is-hidden {
