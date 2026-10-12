@@ -1642,7 +1642,7 @@ section.partners h2 {
     background: var(--white);
     padding: 2em;
     padding-top: 2em;
-    padding-top: 100px;
+    padding-bottom: 1em;
 }
 
 .swiper-slide.reviews-slider__slide:before {
@@ -1709,11 +1709,11 @@ section.partners h2 {
     gap: 1em;
     flex-wrap: wrap;
     position: fixed;
-    bottom: 2em;
+    bottom: 1em;
     width: 100%;
     background: var(--white);
     left: 0;
-    padding-inline: 2em;
+    padding: .5em 2em;
 }
 
 .reviews-photo a {
