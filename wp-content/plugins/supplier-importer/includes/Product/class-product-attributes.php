@@ -71,48 +71,79 @@ class Product_Attributes
             return true;
         }
 
-        if (
-            !function_exists('wc_create_attribute')
-            || !function_exists('wc_register_product_attributes')
-        ) {
+        if (!function_exists('wc_create_attribute')) {
+            error_log('[Supplier Importer] wc_create_attribute() недоступна.');
             return false;
         }
 
-        // Убираем префикс pa_ для работы с глобальным атрибутом.
         $slug = preg_replace('/^pa_/', '', $taxonomy);
         $slug = wc_sanitize_taxonomy_name($slug);
 
         if ($slug === '' || strlen($slug) > 28) {
+            error_log(
+                '[Supplier Importer] Некорректный slug атрибута: ' . $slug
+            );
             return false;
         }
 
-        // Возможно, атрибут существует в базе,
-        // но его таксономия ещё не зарегистрирована.
         $attribute_id = wc_attribute_taxonomy_id_by_name($taxonomy);
 
         if (!$attribute_id) {
-            $name = ucwords(
-                str_replace(['-', '_'], ' ', $slug)
-            );
-
             $attribute_id = wc_create_attribute([
-                'name'         => $name,
+                'name'         => ucwords(str_replace(['-', '_'], ' ', $slug)),
                 'slug'         => $slug,
                 'type'         => 'select',
                 'order_by'     => 'menu_order',
                 'has_archives' => false,
             ]);
 
-            if (is_wp_error($attribute_id) || !$attribute_id) {
+            if (is_wp_error($attribute_id)) {
+                error_log(
+                    '[Supplier Importer] Ошибка создания атрибута '
+                        . $slug . ': ' . $attribute_id->get_error_message()
+                );
+                return false;
+            }
+
+            if (!$attribute_id) {
+                error_log(
+                    '[Supplier Importer] Не удалось создать атрибут: ' . $slug
+                );
                 return false;
             }
         }
 
-        // Регистрируем таксономию в текущем запросе,
-        // чтобы можно было создавать её термины.
-        wc_register_product_attributes();
+        // Обновляем кэш глобальных атрибутов WooCommerce.
+        delete_transient('wc_attribute_taxonomies');
 
-        return taxonomy_exists($taxonomy);
+        if (function_exists('wc_register_product_attributes')) {
+            wc_register_product_attributes();
+        }
+
+        // Если WooCommerce не зарегистрировала новую таксономию,
+        // регистрируем её для текущего запроса.
+        if (!taxonomy_exists($taxonomy)) {
+            register_taxonomy(
+                $taxonomy,
+                ['product'],
+                [
+                    'hierarchical' => false,
+                    'show_ui'      => false,
+                    'query_var'    => true,
+                    'rewrite'      => false,
+                ]
+            );
+        }
+
+        if (!taxonomy_exists($taxonomy)) {
+            error_log(
+                '[Supplier Importer] Таксономия не зарегистрирована: '
+                    . $taxonomy
+            );
+            return false;
+        }
+
+        return true;
     }
 
     private function build_attribute($taxonomy, $value)
