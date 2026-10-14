@@ -259,22 +259,46 @@ class Maytoni_Mapper
         );
 
         $attributes = [];
+        $sku = $this->get_value($row, 'vendorCode');
 
         foreach ($config as $source => $item) {
-            if (!isset($row[$source]) || !is_array($item)) {
+            if (!is_array($item)) {
+                $this->log_attribute(
+                    'warning',
+                    'Поле пропущено: некорректная конфигурация.',
+                    [
+                        'sku' => $sku,
+                        'source' => $source,
+                    ]
+                );
+
                 continue;
             }
 
-            // Пустая таксономия означает, что поле не импортируем.
+            if (!array_key_exists($source, $row)) {
+                // В источнике нет такого поля — не считаем это ошибкой.
+                continue;
+            }
+
             $taxonomy = sanitize_key($item['taxonomy'] ?? '');
 
             if ($taxonomy === '') {
+                $this->log_attribute(
+                    'warning',
+                    'Атрибут пропущен: в настройках пустой taxonomy.',
+                    [
+                        'sku' => $sku,
+                        'source' => $source,
+                        'default_taxonomy' =>
+                        $this->get_default_attribute_config()[$source]['taxonomy']
+                            ?? '',
+                    ]
+                );
+
                 continue;
             }
 
-            // На случай, если в настройках сохранён префикс pa_.
             $taxonomy = preg_replace('/^pa_/', '', $taxonomy);
-
             $value = trim((string) $row[$source]);
 
             if ($value === '') {
@@ -293,9 +317,55 @@ class Maytoni_Mapper
                 'value' => $value,
                 'name'  => $label !== '' ? $label : $source,
             ];
+
+            $this->log_attribute(
+                'info',
+                'Атрибут подготовлен к импорту.',
+                [
+                    'sku' => $sku,
+                    'source' => $source,
+                    'taxonomy' => 'pa_' . $taxonomy,
+                    'value' => $value,
+                ]
+            );
         }
 
+        $this->log_attribute(
+            empty($attributes) ? 'warning' : 'info',
+            'Итог формирования атрибутов в Maytoni_Mapper.',
+            [
+                'sku' => $sku,
+                'count' => count($attributes),
+                'taxonomies' => array_keys($attributes),
+            ]
+        );
+
         return $attributes;
+    }
+
+    private function log_attribute(
+        $level,
+        $message,
+        array $context = []
+    ) {
+        if (!function_exists('wc_get_logger')) {
+            error_log(
+                '[Supplier Importer][' . strtoupper($level) . '] '
+                    . $message . ' '
+                    . wp_json_encode($context, JSON_UNESCAPED_UNICODE)
+            );
+
+            return;
+        }
+
+        wc_get_logger()->log(
+            $level,
+            $message,
+            array_merge(
+                ['source' => 'supplier-importer'],
+                $context
+            )
+        );
     }
 
     private function get_attribute_label($source)
