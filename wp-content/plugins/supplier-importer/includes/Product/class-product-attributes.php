@@ -1,4 +1,3 @@
-
 <?php
 
 namespace Supplier_Importer\Product;
