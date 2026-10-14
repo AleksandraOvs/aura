@@ -1070,22 +1070,30 @@ document.addEventListener('DOMContentLoaded', function () {
                 const selectedTaxonomy = item.taxonomy || '';
                 const label = item.label || '';
 
+                const defaultTaxonomy = availableWooAttributes.find(
+                    attribute => attribute.slug === source
+                )?.slug || '';
+
+                const taxonomyToSelect = selectedTaxonomy || defaultTaxonomy;
+
                 const options = [
-                    '<option value="">Не импортировать</option>',
+                    `<option value="" ${taxonomyToSelect ? '' : 'selected'}>
+        Не импортировать
+    </option>`,
                     ...availableWooAttributes.map(function (attribute) {
                         const selected =
-                            attribute.slug === selectedTaxonomy
+                            attribute.slug === taxonomyToSelect
                                 ? ' selected'
                                 : '';
 
                         return `
-                    <option
-                        value="${escapeHtml(attribute.slug)}"${selected}
-                    >
-                        ${escapeHtml(attribute.label)}
-                        (${escapeHtml(attribute.slug)})
-                    </option>
-                `;
+            <option
+                value="${escapeHtml(attribute.slug)}"${selected}
+            >
+                ${escapeHtml(attribute.label)}
+                (${escapeHtml(attribute.slug)})
+            </option>
+        `;
                     })
                 ].join('');
 

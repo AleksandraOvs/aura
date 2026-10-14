@@ -81,7 +81,7 @@ class Product_Attributes
     /**
      * Создаёт глобальный атрибут WooCommerce при необходимости.
      */
-    private function ensure_attribute_taxonomy(
+    public function ensure_attribute_taxonomy(
         $taxonomy,
         $label
     ) {

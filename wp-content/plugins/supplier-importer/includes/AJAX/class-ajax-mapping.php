@@ -8,6 +8,7 @@ if (!defined('ABSPATH')) {
 require_once __DIR__ . '/../Import/class-attribute-config-repository.php';
 
 use RuntimeException;
+use Supplier_Importer\Product\Product_Attributes;
 
 class Ajax_Mapping
 {
@@ -516,6 +517,42 @@ class Ajax_Mapping
 
             // Получаем конфигурацию по умолчанию.
             $defaults = [];
+
+            // Создаём отсутствующие глобальные атрибуты WooCommerce.
+            if ($supplier === 'maytoni') {
+                $attribute_manager = new Product_Attributes();
+
+                foreach ($defaults as $item) {
+                    if (!is_array($item)) {
+                        continue;
+                    }
+
+                    $taxonomy = sanitize_key(
+                        $item['taxonomy'] ?? ''
+                    );
+
+                    $label = sanitize_text_field(
+                        $item['label'] ?? ''
+                    );
+
+                    if ($taxonomy === '') {
+                        continue;
+                    }
+
+                    $taxonomy = preg_replace(
+                        '/^pa_/',
+                        '',
+                        $taxonomy
+                    );
+
+                    $attribute_manager->ensure_attribute_taxonomy(
+                        'pa_' . $taxonomy,
+                        $label !== '' ? $label : $taxonomy
+                    );
+                }
+            }
+
+
 
             if ($supplier === 'maytoni') {
                 $mapper = new \Supplier_Importer\Suppliers\Maytoni\Maytoni_Mapper();
