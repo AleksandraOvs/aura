@@ -22,45 +22,37 @@ class Product_Attributes
             );
         }
 
-        if (!is_array($attributes) || empty($attributes)) {
+        if (
+            !is_array($attributes)
+            || empty($attributes)
+        ) {
             return;
         }
 
         $product_attributes = [];
 
-        foreach ($attributes as $taxonomy => $data) {
-            $taxonomy = trim((string) $taxonomy);
+        foreach ($attributes as $taxonomy => $value) {
+            $taxonomy = trim(
+                (string) $taxonomy
+            );
 
-            // Поддерживаем новый формат и старый формат других поставщиков.
-            if (is_array($data)) {
-                $value = trim((string) ($data['value'] ?? ''));
-                $label = trim((string) ($data['name'] ?? ''));
-            } else {
-                $value = trim((string) $data);
-                $label = '';
-            }
+            $value = trim(
+                (string) $value
+            );
 
-            if ($taxonomy === '' || $value === '') {
+            if (
+                $taxonomy === ''
+                || $value === ''
+            ) {
                 continue;
             }
 
-            $taxonomy_name = $this->get_taxonomy_name($taxonomy);
-
-            if ($label === '') {
-                $label = $this->get_default_attribute_label(
-                    $taxonomy_name
-                );
-            }
-
-            if (!$this->ensure_attribute_taxonomy(
-                $taxonomy_name,
-                $label
-            )) {
+            if (!taxonomy_exists($this->get_taxonomy_name($taxonomy))) {
                 continue;
             }
 
             $attribute = $this->build_attribute(
-                $taxonomy_name,
+                $taxonomy,
                 $value
             );
 
@@ -68,108 +60,28 @@ class Product_Attributes
                 continue;
             }
 
-            $product_attributes[$taxonomy_name] = $attribute;
+            $product_attributes[$taxonomy] = $attribute;
         }
 
         if (empty($product_attributes)) {
             return;
         }
 
-        $product->set_attributes($product_attributes);
+        $product->set_attributes(
+            $product_attributes
+        );
     }
 
-    /**
-     * Создаёт глобальный атрибут WooCommerce при необходимости.
-     */
-    public function ensure_attribute_taxonomy(
+    private function build_attribute(
         $taxonomy,
-        $label
+        $value
     ) {
-        if (taxonomy_exists($taxonomy)) {
-            return true;
-        }
+        $taxonomy_name = $this->get_taxonomy_name(
+            $taxonomy
+        );
 
-        if (!function_exists('wc_create_attribute')) {
-            error_log(
-                '[Supplier Importer] wc_create_attribute() недоступна.'
-            );
-            return false;
-        }
-
-        $slug = preg_replace('/^pa_/', '', $taxonomy);
-        $slug = wc_sanitize_taxonomy_name($slug);
-
-        if ($slug === '' || strlen($slug) > 28) {
-            error_log(
-                '[Supplier Importer] Некорректный slug атрибута: '
-                    . $slug
-            );
-            return false;
-        }
-
-        $attribute_id = wc_attribute_taxonomy_id_by_name($taxonomy);
-
-        if (!$attribute_id) {
-            $attribute_id = wc_create_attribute([
-                'name'         => $label,
-                'slug'         => $slug,
-                'type'         => 'select',
-                'order_by'     => 'menu_order',
-                'has_archives' => false,
-            ]);
-
-            if (is_wp_error($attribute_id)) {
-                error_log(
-                    '[Supplier Importer] Ошибка создания атрибута '
-                        . $slug . ': '
-                        . $attribute_id->get_error_message()
-                );
-                return false;
-            }
-
-            if (!$attribute_id) {
-                error_log(
-                    '[Supplier Importer] Не удалось создать атрибут: '
-                        . $slug
-                );
-                return false;
-            }
-        }
-
-        delete_transient('wc_attribute_taxonomies');
-
-        if (function_exists('wc_register_product_attributes')) {
-            wc_register_product_attributes();
-        }
-
-        if (!taxonomy_exists($taxonomy)) {
-            register_taxonomy(
-                $taxonomy,
-                ['product'],
-                [
-                    'hierarchical' => false,
-                    'show_ui'      => false,
-                    'query_var'    => true,
-                    'rewrite'      => false,
-                ]
-            );
-        }
-
-        if (!taxonomy_exists($taxonomy)) {
-            error_log(
-                '[Supplier Importer] Таксономия не зарегистрирована: '
-                    . $taxonomy
-            );
-            return false;
-        }
-
-        return true;
-    }
-
-    private function build_attribute($taxonomy, $value)
-    {
         $term_ids = $this->get_or_create_terms(
-            $taxonomy,
+            $taxonomy_name,
             $value
         );
 
@@ -180,11 +92,19 @@ class Product_Attributes
         $attribute = new WC_Product_Attribute();
 
         $attribute->set_id(
-            wc_attribute_taxonomy_id_by_name($taxonomy)
+            wc_attribute_taxonomy_id_by_name(
+                $taxonomy_name
+            )
         );
 
-        $attribute->set_name($taxonomy);
-        $attribute->set_options($term_ids);
+        $attribute->set_name(
+            $taxonomy_name
+        );
+
+        $attribute->set_options(
+            $term_ids
+        );
+
         $attribute->set_position(0);
         $attribute->set_visible(true);
         $attribute->set_variation(false);
@@ -192,8 +112,9 @@ class Product_Attributes
         return $attribute;
     }
 
-    private function get_taxonomy_name($taxonomy)
-    {
+    private function get_taxonomy_name(
+        $taxonomy
+    ) {
         if (strpos($taxonomy, 'pa_') === 0) {
             return $taxonomy;
         }
@@ -201,34 +122,31 @@ class Product_Attributes
         return 'pa_' . $taxonomy;
     }
 
-    /**
-     * Запасное название, если поставщик не передал его явно.
-     */
-    private function get_default_attribute_label($taxonomy)
-    {
-        $slug = preg_replace('/^pa_/', '', $taxonomy);
-        $slug = str_replace(['-', '_'], ' ', $slug);
-
-        return ucwords($slug);
-    }
-
-    private function get_or_create_terms($taxonomy, $value)
-    {
-        $values = preg_split('/\s*[,;]\s*/', $value);
+    private function get_or_create_terms(
+        $taxonomy,
+        $value
+    ) {
+        $values = preg_split(
+            '/\s*[,;]\s*/',
+            $value
+        );
 
         $values = array_values(
             array_filter(
-                array_map('trim', $values),
-                static function ($value) {
-                    return $value !== '';
-                }
+                array_map(
+                    'trim',
+                    $values
+                )
             )
         );
 
         $term_ids = [];
 
         foreach ($values as $term_name) {
-            $term = term_exists($term_name, $taxonomy);
+            $term = term_exists(
+                $term_name,
+                $taxonomy
+            );
 
             if (!$term) {
                 $term = wp_insert_term(
@@ -237,7 +155,7 @@ class Product_Attributes
                 );
             }
 
-            if (is_wp_error($term) || !$term) {
+            if (is_wp_error($term)) {
                 continue;
             }
 
@@ -248,6 +166,8 @@ class Product_Attributes
             }
         }
 
-        return array_values(array_unique($term_ids));
+        return array_values(
+            array_unique($term_ids)
+        );
     }
 }

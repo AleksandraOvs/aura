@@ -6,11 +6,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-require_once __DIR__ . '/../../Import/class-attribute-config-repository.php';
-
 use Supplier_Importer\Product\Product_Data;
 use Supplier_Importer\Import\Mapping_Repository;
-use Supplier_Importer\Import\Attribute_Config_Repository;
 
 class Maytoni_Mapper
 {
@@ -253,52 +250,14 @@ class Maytoni_Mapper
 
     private function get_attributes($row)
     {
-        $config = Attribute_Config_Repository::get(
-            'maytoni',
-            $this->get_default_attribute_config()
-        );
-
+        $mapping = $this->get_attribute_mapping();
         $attributes = [];
-        $sku = $this->get_value($row, 'vendorCode');
 
-        foreach ($config as $source => $item) {
-            if (!is_array($item)) {
-                $this->log_attribute(
-                    'warning',
-                    'Поле пропущено: некорректная конфигурация.',
-                    [
-                        'sku' => $sku,
-                        'source' => $source,
-                    ]
-                );
-
+        foreach ($mapping as $source => $taxonomy) {
+            if (!isset($row[$source])) {
                 continue;
             }
 
-            if (!array_key_exists($source, $row)) {
-                // В источнике нет такого поля — не считаем это ошибкой.
-                continue;
-            }
-
-            $taxonomy = sanitize_key($item['taxonomy'] ?? '');
-
-            if ($taxonomy === '') {
-                $this->log_attribute(
-                    'warning',
-                    'Атрибут пропущен: в настройках пустой taxonomy.',
-                    [
-                        'sku' => $sku,
-                        'source' => $source,
-                        'default_taxonomy' =>
-                        $this->get_default_attribute_config()[$source]['taxonomy']
-                            ?? '',
-                    ]
-                );
-
-                continue;
-            }
-
-            $taxonomy = preg_replace('/^pa_/', '', $taxonomy);
             $value = trim((string) $row[$source]);
 
             if ($value === '') {
@@ -311,61 +270,13 @@ class Maytoni_Mapper
                 'pa_' . $taxonomy
             );
 
-            $label = trim((string) ($item['label'] ?? ''));
-
             $attributes[$taxonomy] = [
                 'value' => $value,
-                'name'  => $label !== '' ? $label : $source,
+                'name'  => $this->get_attribute_label($source),
             ];
-
-            $this->log_attribute(
-                'info',
-                'Атрибут подготовлен к импорту.',
-                [
-                    'sku' => $sku,
-                    'source' => $source,
-                    'taxonomy' => 'pa_' . $taxonomy,
-                    'value' => $value,
-                ]
-            );
         }
-
-        $this->log_attribute(
-            empty($attributes) ? 'warning' : 'info',
-            'Итог формирования атрибутов в Maytoni_Mapper.',
-            [
-                'sku' => $sku,
-                'count' => count($attributes),
-                'taxonomies' => array_keys($attributes),
-            ]
-        );
 
         return $attributes;
-    }
-
-    private function log_attribute(
-        $level,
-        $message,
-        array $context = []
-    ) {
-        if (!function_exists('wc_get_logger')) {
-            error_log(
-                '[Supplier Importer][' . strtoupper($level) . '] '
-                    . $message . ' '
-                    . wp_json_encode($context, JSON_UNESCAPED_UNICODE)
-            );
-
-            return;
-        }
-
-        wc_get_logger()->log(
-            $level,
-            $message,
-            array_merge(
-                ['source' => 'supplier-importer'],
-                $context
-            )
-        );
     }
 
     private function get_attribute_label($source)
@@ -463,21 +374,6 @@ class Maytoni_Mapper
         return '';
     }
 
-    public function get_default_attribute_config()
-    {
-        $mapping = $this->get_attribute_mapping();
-        $config = [];
-
-        foreach ($mapping as $source => $taxonomy) {
-            $config[$source] = [
-                'taxonomy' => $taxonomy,
-                'label'    => $this->get_attribute_label($source),
-            ];
-        }
-
-        return $config;
-    }
-
     private function get_attribute_mapping()
     {
         return [
@@ -493,6 +389,7 @@ class Maytoni_Mapper
 
             'ЦветАрматуры' => 'armature-color',
             'МатериалАрматуры' => 'armature-material',
+
             'ЦветХрусталя' => 'shade-color',
 
             'Диаметр' => 'shirina-diametr',
@@ -521,6 +418,7 @@ class Maytoni_Mapper
             'ДлинаЦепи' => 'chain-length',
 
             'ФормаЧашиКрепления' => 'base',
+
             'ШиринаЧашиКрепления' => 'shirina-mont-otv',
             'ДлинаЧашиКрепления' => 'dlina-mont-otv',
             'ДиаметрЧашиКрепления' => 'diametr-mont-otv',
