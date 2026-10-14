@@ -251,6 +251,7 @@ class Maytoni_Mapper
     private function get_attributes($row)
     {
         $mapping = $this->get_attribute_mapping();
+
         $attributes = [];
 
         foreach ($mapping as $source => $taxonomy) {
@@ -258,7 +259,9 @@ class Maytoni_Mapper
                 continue;
             }
 
-            $value = trim((string) $row[$source]);
+            $value = trim(
+                (string) $row[$source]
+            );
 
             if ($value === '') {
                 continue;
@@ -270,30 +273,10 @@ class Maytoni_Mapper
                 'pa_' . $taxonomy
             );
 
-            $attributes[$taxonomy] = [
-                'value' => $value,
-                'name'  => $this->get_attribute_label($source),
-            ];
+            $attributes[$taxonomy] = $value;
         }
 
         return $attributes;
-    }
-
-    private function get_attribute_label($source)
-    {
-        $labels = [
-            'ЦветАрматуры' => 'Цвет арматуры',
-            'МатериалАрматуры' => 'Материал арматуры',
-            'ЦветХрусталя' => 'Цвет хрусталя',
-            'ДлинаЦепи' => 'Длина цепи',
-            'Цоколь' => 'Цоколь',
-            'КоличествоЛамп' => 'Количество ламп',
-            'Мощность' => 'Мощность лампы, Вт',
-            'ЦветоваяТемпература' => 'Цветовая температура',
-            'Страна происхождения' => 'Страна происхождения',
-        ];
-
-        return $labels[$source] ?? $source;
     }
 
     private function get_mapped_attribute_value(
