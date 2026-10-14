@@ -30,7 +30,19 @@ class Product_Attributes
 
         foreach ($attributes as $taxonomy => $value) {
             $taxonomy = trim((string) $taxonomy);
-            $value = trim((string) $value);
+            $label = $taxonomy;
+
+            if (is_array($value)) {
+                $label = isset($value['label'])
+                    ? trim((string) $value['label'])
+                    : $taxonomy;
+
+                $value = isset($value['value'])
+                    ? trim((string) $value['value'])
+                    : '';
+            } else {
+                $value = trim((string) $value);
+            }
 
             if ($taxonomy === '' || $value === '') {
                 continue;

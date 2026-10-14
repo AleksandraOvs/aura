@@ -259,9 +259,7 @@ class Maytoni_Mapper
                 continue;
             }
 
-            $value = trim(
-                (string) $row[$source]
-            );
+            $value = trim((string) $row[$source]);
 
             if ($value === '') {
                 continue;
@@ -273,12 +271,14 @@ class Maytoni_Mapper
                 'pa_' . $taxonomy
             );
 
-            $attributes[$taxonomy] = $value;
+            $attributes[$taxonomy] = [
+                'label' => $source,
+                'value' => $value,
+            ];
         }
 
         return $attributes;
     }
-
     private function get_mapped_attribute_value(
         $source,
         $value,
