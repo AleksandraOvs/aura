@@ -36,6 +36,16 @@ class Ajax_Mapping
             'wp_ajax_supplier_mapping_get',
             [$this, 'get_mappings']
         );
+
+        add_action(
+            'wp_ajax_supplier_mapping_get_attribute_labels',
+            [$this, 'get_attribute_labels']
+        );
+
+        add_action(
+            'wp_ajax_supplier_mapping_save_attribute_labels',
+            [$this, 'save_attribute_labels']
+        );
     }
 
     public function search_categories()
@@ -472,6 +482,170 @@ class Ajax_Mapping
             ]);
         } catch (\Throwable $e) {
 
+            wp_send_json_error(
+                [
+                    'message' => $e->getMessage(),
+                ],
+                400
+            );
+        }
+    }
+
+
+    /**
+     * Возвращает список глобальных атрибутов WooCommerce.
+     */
+    public function get_attribute_labels()
+    {
+        try {
+            $this->check_permissions();
+            $this->check_nonce();
+
+            if (!function_exists('wc_get_attribute_taxonomies')) {
+                throw new RuntimeException(
+                    'WooCommerce недоступен.'
+                );
+            }
+
+            $attributes = wc_get_attribute_taxonomies();
+            $items = [];
+
+            foreach ($attributes as $attribute) {
+                $items[] = [
+                    'id'    => (int) $attribute->attribute_id,
+                    'slug'  => (string) $attribute->attribute_name,
+                    'label' => (string) $attribute->attribute_label,
+                ];
+            }
+
+            wp_send_json_success([
+                'items' => $items,
+            ]);
+        } catch (\Throwable $e) {
+            wp_send_json_error(
+                [
+                    'message' => $e->getMessage(),
+                ],
+                400
+            );
+        }
+    }
+
+    /**
+     * Обновляет отображаемые названия глобальных атрибутов.
+     * Slug и настройки атрибутов сохраняются.
+     */
+    public function save_attribute_labels()
+    {
+        try {
+            $this->check_permissions();
+            $this->check_nonce();
+
+            if (
+                !function_exists('wc_get_attribute_taxonomies')
+                || !function_exists('wc_update_attribute')
+            ) {
+                throw new RuntimeException(
+                    'WooCommerce недоступен.'
+                );
+            }
+
+            $json = isset($_POST['labels'])
+                ? wp_unslash($_POST['labels'])
+                : '';
+
+            if ($json === '') {
+                throw new RuntimeException(
+                    'Не переданы названия атрибутов.'
+                );
+            }
+
+            $labels = json_decode($json, true);
+
+            if (!is_array($labels)) {
+                throw new RuntimeException(
+                    'Некорректный формат данных.'
+                );
+            }
+
+            $attributes = wc_get_attribute_taxonomies();
+            $attributes_by_id = [];
+
+            foreach ($attributes as $attribute) {
+                $attributes_by_id[(int) $attribute->attribute_id] = $attribute;
+            }
+
+            $saved = 0;
+            $errors = [];
+
+            foreach ($labels as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+
+                $attribute_id = isset($item['attribute_id'])
+                    ? absint($item['attribute_id'])
+                    : 0;
+
+                $label = isset($item['label'])
+                    ? sanitize_text_field($item['label'])
+                    : '';
+
+                if ($attribute_id === 0 || $label === '') {
+                    continue;
+                }
+
+                if (!isset($attributes_by_id[$attribute_id])) {
+                    $errors[] = sprintf(
+                        'Атрибут с ID %d не найден.',
+                        $attribute_id
+                    );
+                    continue;
+                }
+
+                $attribute = $attributes_by_id[$attribute_id];
+
+                // Не меняем slug, тип, сортировку или архивы.
+                $result = wc_update_attribute(
+                    $attribute_id,
+                    [
+                        'name'         => $label,
+                        'slug'         => $attribute->attribute_name,
+                        'type'         => $attribute->attribute_type,
+                        'order_by'     => $attribute->attribute_orderby,
+                        'has_archives' => (int) $attribute->attribute_public,
+                    ]
+                );
+
+                if (is_wp_error($result)) {
+                    $errors[] = sprintf(
+                        '%s: %s',
+                        $attribute->attribute_label,
+                        $result->get_error_message()
+                    );
+                    continue;
+                }
+
+                if ($result === false) {
+                    $errors[] = sprintf(
+                        'Не удалось обновить атрибут «%s».',
+                        $attribute->attribute_label
+                    );
+                    continue;
+                }
+
+                $saved++;
+            }
+
+            wp_send_json_success([
+                'saved'   => $saved,
+                'errors'  => $errors,
+                'message' => sprintf(
+                    'Обновлено названий атрибутов: %d',
+                    $saved
+                ),
+            ]);
+        } catch (\Throwable $e) {
             wp_send_json_error(
                 [
                     'message' => $e->getMessage(),

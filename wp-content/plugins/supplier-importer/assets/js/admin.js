@@ -686,6 +686,215 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
+    function loadAttributeLabels(mappingBlock) {
+        const content = mappingBlock.querySelector(
+            '[data-attribute-labels-content]'
+        );
+
+        const status = mappingBlock.querySelector(
+            '[data-attribute-labels-status]'
+        );
+
+        if (!content) {
+            return;
+        }
+
+        content.textContent = 'Загрузка атрибутов...';
+
+        const params = new URLSearchParams({
+            action: 'supplier_mapping_get_attribute_labels',
+            nonce: supplierImporter.nonce,
+        });
+
+        fetch(supplierImporter.ajaxUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            },
+            body: params.toString(),
+        })
+            .then((response) => response.json())
+            .then((response) => {
+                if (!response.success) {
+                    throw new Error(
+                        response.data?.message || 'Не удалось загрузить атрибуты.'
+                    );
+                }
+
+                const items = response.data?.items || [];
+
+                content.replaceChildren();
+
+                if (!items.length) {
+                    content.textContent =
+                        'Глобальные атрибуты WooCommerce не найдены.';
+                    return;
+                }
+
+                items.forEach((attribute) => {
+                    const row = document.createElement('div');
+                    row.className = 'supplier-importer__attribute-label-row';
+
+                    const label = document.createElement('label');
+                    label.className = 'supplier-importer__attribute-label-name';
+                    label.textContent = attribute.label;
+                    label.htmlFor = `attribute-label-${attribute.id}`;
+
+                    const slug = document.createElement('code');
+                    slug.className = 'supplier-importer__attribute-label-slug';
+                    slug.textContent = `pa_${attribute.slug}`;
+
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'regular-text';
+                    input.id = `attribute-label-${attribute.id}`;
+                    input.value = attribute.label;
+                    input.dataset.attributeLabelId = attribute.id;
+                    input.dataset.originalLabel = attribute.label;
+
+                    row.append(label, slug, input);
+                    content.append(row);
+                });
+
+                if (status) {
+                    status.hidden = true;
+                    status.textContent = '';
+                }
+            })
+            .catch((error) => {
+                content.textContent = error.message;
+
+                if (status) {
+                    status.hidden = false;
+                    status.textContent = 'Ошибка загрузки.';
+                }
+            });
+    }
+
+    function initAttributeLabelsSave(mappingBlock) {
+        const button = mappingBlock.querySelector(
+            '[data-save-attribute-labels]'
+        );
+
+        const content = mappingBlock.querySelector(
+            '[data-attribute-labels-content]'
+        );
+
+        const status = mappingBlock.querySelector(
+            '[data-attribute-labels-status]'
+        );
+
+        if (!button || !content) {
+            return;
+        }
+
+        button.addEventListener('click', async () => {
+            const inputs = content.querySelectorAll(
+                '[data-attribute-label-id]'
+            );
+
+            const labels = [];
+            let hasInvalidLabel = false;
+
+            inputs.forEach((input) => {
+                const label = input.value.trim();
+
+                if (!label) {
+                    input.setCustomValidity('Введите название атрибута.');
+                    input.reportValidity();
+                    hasInvalidLabel = true;
+                    return;
+                }
+
+                input.setCustomValidity('');
+
+                if (label !== input.dataset.originalLabel) {
+                    labels.push({
+                        attribute_id: Number(input.dataset.attributeLabelId),
+                        label,
+                    });
+                }
+            });
+
+            if (hasInvalidLabel) {
+                return;
+            }
+
+            if (!labels.length) {
+                if (status) {
+                    status.hidden = false;
+                    status.textContent = 'Изменений нет.';
+                }
+                return;
+            }
+
+            button.disabled = true;
+
+            if (status) {
+                status.hidden = false;
+                status.textContent = 'Сохранение...';
+            }
+
+            const params = new URLSearchParams({
+                action: 'supplier_mapping_save_attribute_labels',
+                nonce: supplierImporter.nonce,
+                labels: JSON.stringify(labels),
+            });
+
+            try {
+                const response = await fetch(supplierImporter.ajaxUrl, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type':
+                            'application/x-www-form-urlencoded; charset=UTF-8',
+                    },
+                    body: params.toString(),
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(
+                        result.data?.message || 'Не удалось сохранить названия.'
+                    );
+                }
+
+                const data = result.data || {};
+                const errors = data.errors || [];
+
+                // Обновляем исходные названия только после успешного ответа.
+                const savedIds = new Set(
+                    labels.map((item) => String(item.attribute_id))
+                );
+
+                if (errors.length === 0) {
+                    inputs.forEach((input) => {
+                        input.dataset.originalLabel = input.value.trim();
+                    });
+                } else {
+                    // При частичных ошибках повторно запрашиваем актуальные данные.
+                    loadAttributeLabels(mappingBlock);
+                }
+
+                if (status) {
+                    status.hidden = false;
+                    status.textContent = errors.length
+                        ? `${data.message || 'Сохранение завершено.'} Ошибок: ${errors.length}. ${errors.join(' ')}`
+                        : data.message || 'Названия успешно сохранены.';
+                }
+            } catch (error) {
+                if (status) {
+                    status.hidden = false;
+                    status.textContent = error.message;
+                }
+            } finally {
+                button.disabled = false;
+            }
+        });
+    }
+
     async function renderAnalysis(analysis, supplier) {
         const mappingBlock = document.querySelector(
             '#supplier-import-mapping'
@@ -733,7 +942,27 @@ document.addEventListener('DOMContentLoaded', function () {
         );
 
         mappingBlock.innerHTML = `
-        <h3>Сопоставление данных</h3>
+    <h3>Настройка импорта</h3>
+
+    <nav class="nav-tab-wrapper supplier-importer__inner-tabs">
+        <button
+            type="button"
+            class="nav-tab nav-tab-active"
+            data-import-tab="mapping"
+        >
+            Сопоставление
+        </button>
+
+        <button
+            type="button"
+            class="nav-tab"
+            data-import-tab="attribute-labels"
+        >
+            Названия атрибутов
+        </button>
+    </nav>
+
+    <div data-import-panel="mapping">
 
         <div class="supplier-importer__mapping-section">
             <h4>Категории</h4>
@@ -828,7 +1057,6 @@ document.addEventListener('DOMContentLoaded', function () {
         )}
             </div>
         </div>
-
         <div class="supplier-importer__mapping-actions">
             <button
                 type="button"
@@ -840,23 +1068,75 @@ document.addEventListener('DOMContentLoaded', function () {
 
             <span
                 class="supplier-importer__mapping-status"
+                data-mapping-status
                 hidden
             ></span>
         </div>
+</div>
+
+    <div
+        data-import-panel="attribute-labels"
+        hidden
+    >
+        <div class="supplier-importer__mapping-section">
+            <h4>Названия атрибутов WooCommerce</h4>
+
+            <p>
+                Здесь можно изменить отображаемые названия,
+                не меняя технические slug атрибутов.
+            </p>
+
+            <div data-attribute-labels-content>
+                Загрузка атрибутов...
+            </div>
+
+            <button
+                type="button"
+                class="button button-primary"
+                data-save-attribute-labels
+            >
+                Сохранить названия
+            </button>
+
+            <span
+                class="supplier-importer__mapping-status"
+                data-attribute-labels-status
+                hidden
+            ></span>
+        </div>
+    </div>
     `;
 
-        initCategorySearch(
-            mappingBlock
-        );
+        initCategorySearch(mappingBlock);
+        initAttributeSearch(mappingBlock);
+        initImportTabs(mappingBlock);
 
-        initAttributeSearch(
-            mappingBlock
-        );
+        loadAttributeLabels(mappingBlock);
+        initAttributeLabelsSave(mappingBlock);
 
-        initMappingSave(
-            mappingBlock,
-            currentImportId
-        );
+        initMappingSave(mappingBlock, currentImportId);
+    }
+
+    function initImportTabs(mappingBlock) {
+        const tabs = mappingBlock.querySelectorAll('[data-import-tab]');
+        const panels = mappingBlock.querySelectorAll('[data-import-panel]');
+
+        tabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                const target = tab.dataset.importTab;
+
+                tabs.forEach(function (item) {
+                    item.classList.toggle(
+                        'nav-tab-active',
+                        item === tab
+                    );
+                });
+
+                panels.forEach(function (panel) {
+                    panel.hidden = panel.dataset.importPanel !== target;
+                });
+            });
+        });
     }
 
     function renderAttributes(attributes) {
@@ -971,7 +1251,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function initCategorySearch(mappingBlock) {
         const items = mappingBlock.querySelectorAll(
-            '.supplier-importer__mapping-item'
+            '.supplier-importer__mapping-categories > .supplier-importer__mapping-item'
         );
 
         items.forEach(function (item) {
@@ -1510,7 +1790,7 @@ document.addEventListener('DOMContentLoaded', function () {
         );
 
         const status = mappingBlock.querySelector(
-            '.supplier-importer__mapping-status'
+            '[data-mapping-status]'
         );
 
         if (!button) {
@@ -1526,7 +1806,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 const items =
                     mappingBlock.querySelectorAll(
-                        '.supplier-importer__mapping-item'
+                        '.supplier-importer__mapping-categories > .supplier-importer__mapping-item'
                     );
 
                 const mappings = [];
