@@ -5,6 +5,7 @@ namespace Supplier_Importer\AJAX;
 if (!defined('ABSPATH')) {
     exit;
 }
+require_once __DIR__ . '/../Import/class-attribute-config-repository.php';
 
 use RuntimeException;
 
@@ -35,6 +36,16 @@ class Ajax_Mapping
         add_action(
             'wp_ajax_supplier_mapping_get',
             [$this, 'get_mappings']
+        );
+
+        add_action(
+            'wp_ajax_supplier_mapping_get_attribute_config',
+            [$this, 'get_attribute_config']
+        );
+
+        add_action(
+            'wp_ajax_supplier_mapping_save_attribute_config',
+            [$this, 'save_attribute_config']
         );
     }
 
@@ -478,6 +489,166 @@ class Ajax_Mapping
                 ],
                 400
             );
+        }
+    }
+
+    /**
+     * Получить конфигурацию атрибутов поставщика.
+     */
+    /**
+     * Получить конфигурацию атрибутов поставщика.
+     */
+    public function get_attribute_config()
+    {
+        try {
+            $this->check_permissions();
+            $this->check_nonce();
+
+            $supplier = isset($_POST['supplier'])
+                ? sanitize_key(wp_unslash($_POST['supplier']))
+                : '';
+
+            if ($supplier === '') {
+                throw new RuntimeException(
+                    'Не указан поставщик.'
+                );
+            }
+
+            // Получаем конфигурацию по умолчанию.
+            $defaults = [];
+
+            if ($supplier === 'maytoni') {
+                $mapper = new \Supplier_Importer\Suppliers\Maytoni\Maytoni_Mapper();
+
+                $defaults = $mapper->get_default_attribute_config();
+            }
+
+            // Объединяем настройки по умолчанию с сохранёнными.
+            $config = \Supplier_Importer\Import\Attribute_Config_Repository::get(
+                $supplier,
+                $defaults
+            );
+
+            // Получаем существующие глобальные атрибуты WooCommerce.
+            $attributes = [];
+
+            if (function_exists('wc_get_attribute_taxonomies')) {
+                $taxonomies = wc_get_attribute_taxonomies();
+
+                foreach ((array) $taxonomies as $attribute) {
+                    $slug = $attribute->attribute_name ?? '';
+                    $label = $attribute->attribute_label ?? '';
+
+                    if ($slug === '') {
+                        continue;
+                    }
+
+                    $attributes[] = [
+                        'taxonomy' => 'pa_' . $slug,
+                        'slug'     => $slug,
+                        'label'    => $label,
+                    ];
+                }
+            }
+
+            wp_send_json_success([
+                'config'     => $config,
+                'attributes' => $attributes,
+            ]);
+        } catch (\Throwable $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    /**
+     * Сохранить конфигурацию атрибутов поставщика.
+     */
+    public function save_attribute_config()
+    {
+        try {
+            $this->check_permissions();
+            $this->check_nonce();
+
+            $supplier = isset($_POST['supplier'])
+                ? sanitize_key(wp_unslash($_POST['supplier']))
+                : '';
+
+            $json = isset($_POST['config'])
+                ? wp_unslash($_POST['config'])
+                : '';
+
+            if ($supplier === '') {
+                throw new RuntimeException(
+                    'Не указан поставщик.'
+                );
+            }
+
+            $config = json_decode($json, true);
+
+            if (!is_array($config)) {
+                throw new RuntimeException(
+                    'Некорректная конфигурация атрибутов.'
+                );
+            }
+
+            $sanitized = [];
+
+            foreach ($config as $source => $item) {
+                if (!is_string($source) || !is_array($item)) {
+                    continue;
+                }
+
+                $source = sanitize_text_field($source);
+                $taxonomy = isset($item['taxonomy'])
+                    ? sanitize_key($item['taxonomy'])
+                    : '';
+
+                $label = isset($item['label'])
+                    ? sanitize_text_field($item['label'])
+                    : '';
+
+                // Разрешаем пустой taxonomy для отключённых полей.
+                if ($taxonomy !== '') {
+                    $taxonomy = preg_replace(
+                        '/^pa_/',
+                        '',
+                        $taxonomy
+                    );
+
+                    if (
+                        !taxonomy_exists('pa_' . $taxonomy)
+                        || !wc_attribute_taxonomy_id_by_name($taxonomy)
+                    ) {
+                        throw new RuntimeException(
+                            sprintf(
+                                'Атрибут «%s» не существует в WooCommerce.',
+                                $source
+                            )
+                        );
+                    }
+                }
+
+                $sanitized[$source] = [
+                    'taxonomy' => $taxonomy,
+                    'label'    => $label,
+                ];
+            }
+
+            \Supplier_Importer\Import\Attribute_Config_Repository::save(
+                $supplier,
+                $sanitized
+            );
+
+            wp_send_json_success([
+                'message' => 'Настройки атрибутов сохранены.',
+                'config'  => $sanitized,
+            ]);
+        } catch (\Throwable $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage(),
+            ], 400);
         }
     }
 }

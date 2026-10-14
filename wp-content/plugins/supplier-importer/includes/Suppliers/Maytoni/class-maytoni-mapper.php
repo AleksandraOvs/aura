@@ -6,8 +6,11 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+require_once __DIR__ . '/../../Import/class-attribute-config-repository.php';
+
 use Supplier_Importer\Product\Product_Data;
 use Supplier_Importer\Import\Mapping_Repository;
+use Supplier_Importer\Import\Attribute_Config_Repository;
 
 class Maytoni_Mapper
 {
@@ -250,18 +253,29 @@ class Maytoni_Mapper
 
     private function get_attributes($row)
     {
-        $mapping = $this->get_attribute_mapping();
+        $config = Attribute_Config_Repository::get(
+            'maytoni',
+            $this->get_default_attribute_config()
+        );
 
         $attributes = [];
 
-        foreach ($mapping as $source => $taxonomy) {
-            if (!isset($row[$source])) {
+        foreach ($config as $source => $item) {
+            if (!isset($row[$source]) || !is_array($item)) {
                 continue;
             }
 
-            $value = trim(
-                (string) $row[$source]
-            );
+            // Пустая таксономия означает, что поле не импортируем.
+            $taxonomy = sanitize_key($item['taxonomy'] ?? '');
+
+            if ($taxonomy === '') {
+                continue;
+            }
+
+            // На случай, если в настройках сохранён префикс pa_.
+            $taxonomy = preg_replace('/^pa_/', '', $taxonomy);
+
+            $value = trim((string) $row[$source]);
 
             if ($value === '') {
                 continue;
@@ -273,10 +287,32 @@ class Maytoni_Mapper
                 'pa_' . $taxonomy
             );
 
-            $attributes[$taxonomy] = $value;
+            $label = trim((string) ($item['label'] ?? ''));
+
+            $attributes[$taxonomy] = [
+                'value' => $value,
+                'name'  => $label !== '' ? $label : $source,
+            ];
         }
 
         return $attributes;
+    }
+
+    private function get_attribute_label($source)
+    {
+        $labels = [
+            'ЦветАрматуры' => 'Цвет арматуры',
+            'МатериалАрматуры' => 'Материал арматуры',
+            'ЦветХрусталя' => 'Цвет хрусталя',
+            'ДлинаЦепи' => 'Длина цепи',
+            'Цоколь' => 'Цоколь',
+            'КоличествоЛамп' => 'Количество ламп',
+            'Мощность' => 'Мощность лампы, Вт',
+            'ЦветоваяТемпература' => 'Цветовая температура',
+            'Страна происхождения' => 'Страна происхождения',
+        ];
+
+        return $labels[$source] ?? $source;
     }
 
     private function get_mapped_attribute_value(
@@ -357,6 +393,21 @@ class Maytoni_Mapper
         return '';
     }
 
+    public function get_default_attribute_config()
+    {
+        $mapping = $this->get_attribute_mapping();
+        $config = [];
+
+        foreach ($mapping as $source => $taxonomy) {
+            $config[$source] = [
+                'taxonomy' => $taxonomy,
+                'label'    => $this->get_attribute_label($source),
+            ];
+        }
+
+        return $config;
+    }
+
     private function get_attribute_mapping()
     {
         return [
@@ -372,7 +423,6 @@ class Maytoni_Mapper
 
             'ЦветАрматуры' => 'armature-color',
             'МатериалАрматуры' => 'armature-material',
-
             'ЦветХрусталя' => 'shade-color',
 
             'Диаметр' => 'shirina-diametr',
@@ -401,7 +451,6 @@ class Maytoni_Mapper
             'ДлинаЦепи' => 'chain-length',
 
             'ФормаЧашиКрепления' => 'base',
-
             'ШиринаЧашиКрепления' => 'shirina-mont-otv',
             'ДлинаЧашиКрепления' => 'dlina-mont-otv',
             'ДиаметрЧашиКрепления' => 'diametr-mont-otv',

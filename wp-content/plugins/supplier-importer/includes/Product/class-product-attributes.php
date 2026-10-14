@@ -28,9 +28,17 @@ class Product_Attributes
 
         $product_attributes = [];
 
-        foreach ($attributes as $taxonomy => $value) {
+        foreach ($attributes as $taxonomy => $data) {
             $taxonomy = trim((string) $taxonomy);
-            $value = trim((string) $value);
+
+            // Поддерживаем новый формат и старый формат других поставщиков.
+            if (is_array($data)) {
+                $value = trim((string) ($data['value'] ?? ''));
+                $label = trim((string) ($data['name'] ?? ''));
+            } else {
+                $value = trim((string) $data);
+                $label = '';
+            }
 
             if ($taxonomy === '' || $value === '') {
                 continue;
@@ -38,8 +46,16 @@ class Product_Attributes
 
             $taxonomy_name = $this->get_taxonomy_name($taxonomy);
 
-            // Создаём глобальный атрибут, если он был удалён.
-            if (!$this->ensure_attribute_taxonomy($taxonomy_name)) {
+            if ($label === '') {
+                $label = $this->get_default_attribute_label(
+                    $taxonomy_name
+                );
+            }
+
+            if (!$this->ensure_attribute_taxonomy(
+                $taxonomy_name,
+                $label
+            )) {
                 continue;
             }
 
@@ -65,14 +81,18 @@ class Product_Attributes
     /**
      * Создаёт глобальный атрибут WooCommerce при необходимости.
      */
-    private function ensure_attribute_taxonomy($taxonomy)
-    {
+    private function ensure_attribute_taxonomy(
+        $taxonomy,
+        $label
+    ) {
         if (taxonomy_exists($taxonomy)) {
             return true;
         }
 
         if (!function_exists('wc_create_attribute')) {
-            error_log('[Supplier Importer] wc_create_attribute() недоступна.');
+            error_log(
+                '[Supplier Importer] wc_create_attribute() недоступна.'
+            );
             return false;
         }
 
@@ -81,7 +101,8 @@ class Product_Attributes
 
         if ($slug === '' || strlen($slug) > 28) {
             error_log(
-                '[Supplier Importer] Некорректный slug атрибута: ' . $slug
+                '[Supplier Importer] Некорректный slug атрибута: '
+                    . $slug
             );
             return false;
         }
@@ -90,7 +111,7 @@ class Product_Attributes
 
         if (!$attribute_id) {
             $attribute_id = wc_create_attribute([
-                'name'         => ucwords(str_replace(['-', '_'], ' ', $slug)),
+                'name'         => $label,
                 'slug'         => $slug,
                 'type'         => 'select',
                 'order_by'     => 'menu_order',
@@ -100,28 +121,27 @@ class Product_Attributes
             if (is_wp_error($attribute_id)) {
                 error_log(
                     '[Supplier Importer] Ошибка создания атрибута '
-                        . $slug . ': ' . $attribute_id->get_error_message()
+                        . $slug . ': '
+                        . $attribute_id->get_error_message()
                 );
                 return false;
             }
 
             if (!$attribute_id) {
                 error_log(
-                    '[Supplier Importer] Не удалось создать атрибут: ' . $slug
+                    '[Supplier Importer] Не удалось создать атрибут: '
+                        . $slug
                 );
                 return false;
             }
         }
 
-        // Обновляем кэш глобальных атрибутов WooCommerce.
         delete_transient('wc_attribute_taxonomies');
 
         if (function_exists('wc_register_product_attributes')) {
             wc_register_product_attributes();
         }
 
-        // Если WooCommerce не зарегистрировала новую таксономию,
-        // регистрируем её для текущего запроса.
         if (!taxonomy_exists($taxonomy)) {
             register_taxonomy(
                 $taxonomy,
@@ -179,6 +199,17 @@ class Product_Attributes
         }
 
         return 'pa_' . $taxonomy;
+    }
+
+    /**
+     * Запасное название, если поставщик не передал его явно.
+     */
+    private function get_default_attribute_label($taxonomy)
+    {
+        $slug = preg_replace('/^pa_/', '', $taxonomy);
+        $slug = str_replace(['-', '_'], ' ', $slug);
+
+        return ucwords($slug);
     }
 
     private function get_or_create_terms($taxonomy, $value)

@@ -45,6 +45,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     let currentImportId = null;
     let lastErrorsCount = 0;
+
+    let currentAttributeConfig = {};
+    let availableWooAttributes = [];
+
     console.log('SUPPLIER IMPORTER FORM HANDLER INIT');
     form.addEventListener('submit', function (event) {
         event.preventDefault();
@@ -109,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 info.innerHTML = `
                     <p>
                         <strong>Поставщик:</strong>
-                        ${data.supplier.name}
+                       ${escapeHtml(data.supplier.name || '')}
                     </p>
 
                     <p>
@@ -202,9 +206,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateProgress(data) {
 
+        const progressCount = document.querySelector(
+            '#supplier-import-progress-count'
+        );
+
         progressBlock.hidden = false;
 
-        const progress = data.progress;
+        const progress = data.progress || {};
 
         const processed = Number(
             progress.processed || 0
@@ -226,18 +234,18 @@ document.addEventListener('DOMContentLoaded', function () {
         console.log('ERRORS COUNT:', errorsCount);
         console.log('CURRENT IMPORT ID:', currentImportId);
 
-        const progressCount = document.querySelector(
-            '#supplier-import-progress-count'
-        );
+        if (progressCount) {
+            const processed = Number(progress.processed || 0);
+            const total = Number(progress.total || data.total || 0);
+
+            progressCount.textContent = processed + ' / ' + total;
+        }
 
         progressBar.style.width =
             percent + '%';
 
         progressPercent.textContent =
             percent + '%';
-
-        progressCount.textContent =
-            processed + ' / ' + total;
 
         progressStats.innerHTML = `
         <div class="supplier-importer__stat">
@@ -309,10 +317,10 @@ document.addEventListener('DOMContentLoaded', function () {
         );
 
         if (progressCount) {
-            progressCount.textContent =
-                Number(progress.processed || 0)
-                + ' / ' +
-                Number(progress.total || data.total || 0);
+            const processed = Number(progress.processed || 0);
+            const total = Number(progress.total || data.total || 0);
+
+            progressCount.textContent = processed + ' / ' + total;
         }
 
         progressStats.innerHTML = `
@@ -364,7 +372,7 @@ document.addEventListener('DOMContentLoaded', function () {
     `;
 
         if (Number(progress.errors || 0) > 0) {
-            loadImportErrors(data.import_id);
+            loadImportErrors(data.import_id || currentImportId);
         }
 
         console.log(
@@ -686,6 +694,33 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
+    function loadAttributeConfig(supplier) {
+        const formData = new FormData();
+
+        formData.append('action', 'supplier_mapping_get_attribute_config');
+        formData.append('nonce', supplierImporter.nonce);
+        formData.append('supplier', supplier);
+
+        return fetch(supplierImporter.ajaxUrl, {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (!result.success) {
+                    throw new Error(
+                        result.data?.message ||
+                        'Не удалось загрузить настройки атрибутов.'
+                    );
+                }
+
+                currentAttributeConfig = result.data.config || {};
+                availableWooAttributes = result.data.attributes || [];
+
+                return currentAttributeConfig;
+            });
+    }
+
     async function renderAnalysis(analysis, supplier) {
         const mappingBlock = document.querySelector(
             '#supplier-import-mapping'
@@ -697,6 +732,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
         mappingBlock.hidden = false;
         mappingBlock.dataset.supplier = supplier;
+
+        try {
+            await loadAttributeConfig(supplier);
+        } catch (error) {
+            console.error(error);
+            info.textContent = error.message;
+            return;
+        }
 
         const categories = Array.isArray(
             analysis.categories
@@ -729,30 +772,57 @@ document.addEventListener('DOMContentLoaded', function () {
 
         console.log(
             'CSV attribute values:',
-            analysis.attributes[2]
+            Array.isArray(analysis.attributes)
+                ? analysis.attributes[2]
+                : undefined
         );
 
         mappingBlock.innerHTML = `
-        <h3>Сопоставление данных</h3>
+    <h3>Сопоставление данных</h3>
 
+    <div class="supplier-importer__mapping-tabs">
+        <button
+            type="button"
+            class="button is-active"
+            data-mapping-tab="categories"
+        >
+            Категории
+        </button>
+
+        <button
+            type="button"
+            class="button"
+            data-mapping-tab="values"
+        >
+            Значения атрибутов
+        </button>
+
+        <button
+            type="button"
+            class="button"
+            data-mapping-tab="config"
+        >
+            Названия атрибутов
+        </button>
+    </div>
+
+    <div
+        class="supplier-importer__mapping-panel"
+        data-mapping-panel="categories"
+    >
         <div class="supplier-importer__mapping-section">
-            <h4>Категории</h4>
+            <h4>Сопоставление категорий</h4>
 
             <div class="supplier-importer__mapping-categories">
                 ${categories.map(function (category, index) {
-
             const saved =
                 savedMappings[category.source] || null;
 
             const savedTargetId =
-                saved
-                    ? Number(saved.target_id)
-                    : 0;
+                saved ? Number(saved.target_id) : 0;
 
             const savedTargetName =
-                saved
-                    ? saved.target_name
-                    : '';
+                saved ? saved.target_name : '';
 
             return `
                         <div
@@ -760,7 +830,6 @@ document.addEventListener('DOMContentLoaded', function () {
                             data-category-index="${index}"
                         >
                             <div class="supplier-importer__mapping-source">
-
                                 <span class="supplier-importer__mapping-label">
                                     Категория поставщика
                                 </span>
@@ -772,11 +841,9 @@ document.addEventListener('DOMContentLoaded', function () {
                                 <span>
                                     Товаров: ${category.count}
                                 </span>
-
                             </div>
 
                             <div class="supplier-importer__mapping-search">
-
                                 <label>
                                     Категория на сайте
                                 </label>
@@ -792,7 +859,6 @@ document.addEventListener('DOMContentLoaded', function () {
                                     class="supplier-importer__mapping-results"
                                     hidden
                                 ></div>
-
                             </div>
 
                             <div
@@ -801,24 +867,29 @@ document.addEventListener('DOMContentLoaded', function () {
                                 ${savedTargetId ? '' : 'hidden'}
                             >
                                 ${savedTargetId
-                    ? `
-                                        <span>
-                                            ${escapeHtml(savedTargetName)}
-                                        </span>
-                                    `
+                    ? `<span>${escapeHtml(savedTargetName)}</span>`
                     : ''
                 }
                             </div>
-
                         </div>
                     `;
-
         }).join('')}
             </div>
         </div>
+    </div>
 
+    <div
+        class="supplier-importer__mapping-panel"
+        data-mapping-panel="values"
+        hidden
+    >
         <div class="supplier-importer__mapping-section">
-            <h4>Атрибуты</h4>
+            <h4>Сопоставление значений атрибутов</h4>
+
+            <p>
+                Здесь можно связать значения из файла поставщика
+                с существующими значениями атрибутов WooCommerce.
+            </p>
 
             <div class="supplier-importer__mapping-attributes">
                 ${renderAttributes(
@@ -828,54 +899,242 @@ document.addEventListener('DOMContentLoaded', function () {
         )}
             </div>
         </div>
+    </div>
 
-        <div class="supplier-importer__mapping-actions">
-            <button
-                type="button"
-                class="button button-primary"
-                id="supplier-import-mapping-save"
-            >
-                Сохранить и начать импорт
-            </button>
+    <div
+        class="supplier-importer__mapping-panel"
+        data-mapping-panel="config"
+        hidden
+    >
+        <div class="supplier-importer__mapping-section">
+            <h4>Названия атрибутов</h4>
 
-            <span
-                class="supplier-importer__mapping-status"
-                hidden
-            ></span>
+            <p>
+                Выберите, в какой атрибут WooCommerce импортировать
+                каждое поле поставщика. Здесь же можно изменить
+                название атрибута для импортируемого товара.
+                Чтобы пропустить поле, выберите «Не импортировать».
+            </p>
+
+            <div class="supplier-importer__attribute-config">
+                ${renderAttributeConfig()}
+            </div>
         </div>
-    `;
+    </div>
 
-        initCategorySearch(
-            mappingBlock
-        );
+    <div class="supplier-importer__mapping-actions">
+        <button
+            type="button"
+            class="button button-primary"
+            id="supplier-import-mapping-save"
+        >
+            Сохранить и начать импорт
+        </button>
 
-        initAttributeSearch(
-            mappingBlock
-        );
+        <span
+            class="supplier-importer__mapping-status"
+            hidden
+        ></span>
+    </div>
+`;
+
+        mappingBlock
+            .querySelectorAll('.supplier-importer__attribute-taxonomy')
+            .forEach(function (select) {
+                select.addEventListener('change', function () {
+                    const row = select.closest(
+                        '.supplier-importer__attribute-config-row'
+                    );
+
+                    if (!row) {
+                        return;
+                    }
+
+                    const source = row.dataset.source;
+
+                    if (currentAttributeConfig[source]) {
+                        currentAttributeConfig[source].taxonomy = select.value;
+                    }
+
+                    mappingBlock
+                        .querySelectorAll('.supplier-importer__attribute-value')
+                        .forEach(function (item) {
+                            if (item.dataset.attribute !== source) {
+                                return;
+                            }
+
+                            const selected = item.querySelector(
+                                '.supplier-importer__mapping-selected'
+                            );
+
+                            const input = item.querySelector(
+                                '.supplier-importer__mapping-input'
+                            );
+
+                            const results = item.querySelector(
+                                '.supplier-importer__mapping-results'
+                            );
+
+                            if (selected) {
+                                selected.hidden = true;
+                                selected.dataset.targetId = '';
+                                selected.dataset.taxonomy = '';
+                                selected.innerHTML = '';
+                            }
+
+                            if (input) {
+                                input.value = '';
+                            }
+
+                            if (results) {
+                                results.hidden = true;
+                                results.innerHTML = '';
+                            }
+                        });
+                });
+            });
+
+        initMappingTabs(mappingBlock);
+
+        initCategorySearch(mappingBlock);
+
+        mappingBlock.addEventListener('click', function (event) {
+            const button = event.target.closest(
+                '.supplier-importer__mapping-clear'
+            );
+
+            if (!button || !mappingBlock.contains(button)) {
+                return;
+            }
+
+            const selected = button.closest(
+                '.supplier-importer__mapping-selected'
+            );
+
+            if (!selected) {
+                return;
+            }
+
+            selected.hidden = true;
+            selected.dataset.targetId = '';
+            selected.dataset.taxonomy = '';
+            selected.innerHTML = '';
+
+            const item = selected.closest(
+                '.supplier-importer__mapping-item'
+            );
+
+            const input = item?.querySelector(
+                '.supplier-importer__mapping-input'
+            );
+
+            if (input) {
+                input.focus();
+            }
+        });
+
+        initAttributeSearch(mappingBlock);
 
         initMappingSave(
             mappingBlock,
             currentImportId
         );
-    }
 
-    function renderAttributes(attributes) {
+        function initMappingTabs(mappingBlock) {
+            const tabs = mappingBlock.querySelectorAll('[data-mapping-tab]');
+            const panels = mappingBlock.querySelectorAll('[data-mapping-panel]');
 
-        if (!attributes.length) {
-            return `
+            tabs.forEach(function (tab) {
+                tab.addEventListener('click', function () {
+                    const target = tab.dataset.mappingTab;
+
+                    tabs.forEach(function (item) {
+                        item.classList.toggle('is-active', item === tab);
+                    });
+
+                    panels.forEach(function (panel) {
+                        panel.hidden = panel.dataset.mappingPanel !== target;
+                    });
+                });
+            });
+        }
+
+        function renderAttributeConfig() {
+            const entries = Object.entries(currentAttributeConfig);
+
+            if (!entries.length) {
+                return '<p>Настройки атрибутов не найдены.</p>';
+            }
+
+            return entries.map(function ([source, item]) {
+                const selectedTaxonomy = item.taxonomy || '';
+                const label = item.label || '';
+
+                const options = [
+                    '<option value="">Не импортировать</option>',
+                    ...availableWooAttributes.map(function (attribute) {
+                        const selected =
+                            attribute.slug === selectedTaxonomy
+                                ? ' selected'
+                                : '';
+
+                        return `
+                    <option
+                        value="${escapeHtml(attribute.slug)}"${selected}
+                    >
+                        ${escapeHtml(attribute.label)}
+                        (${escapeHtml(attribute.slug)})
+                    </option>
+                `;
+                    })
+                ].join('');
+
+                return `
+            <div
+                class="supplier-importer__attribute-config-row"
+                data-source="${escapeHtml(source)}"
+            >
+                <div class="supplier-importer__attribute-config-source">
+                    <strong>${escapeHtml(source)}</strong>
+                </div>
+
+                <label>
+                    Атрибут WooCommerce
+                    <select class="supplier-importer__attribute-taxonomy">
+                        ${options}
+                    </select>
+                </label>
+
+                <label>
+                    Название для товара
+                    <input
+                        type="text"
+                        class="supplier-importer__attribute-label"
+                        value="${escapeHtml(label)}"
+                    >
+                </label>
+            </div>
+        `;
+            }).join('');
+        }
+
+        function renderAttributes(attributes) {
+
+            if (!attributes.length) {
+                return `
             <p>
                 Атрибутов для сопоставления не найдено.
             </p>
         `;
-        }
+            }
 
-        return attributes.map(function (attribute, attributeIndex) {
+            return attributes.map(function (attribute, attributeIndex) {
 
-            const values = Array.isArray(attribute.values)
-                ? attribute.values
-                : [];
+                const values = Array.isArray(attribute.values)
+                    ? attribute.values
+                    : [];
 
-            return `
+                return `
             <div
                 class="supplier-importer__attribute"
                 data-attribute-index="${attributeIndex}"
@@ -898,17 +1157,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     ${values.map(function (item, valueIndex) {
 
-                const sourceValue =
-                    typeof item === 'object'
-                        ? item.value
-                        : item;
+                    const sourceValue =
+                        typeof item === 'object'
+                            ? item.value
+                            : item;
 
-                const count =
-                    typeof item === 'object'
-                        ? Number(item.count || 0)
-                        : 0;
+                    const count =
+                        typeof item === 'object'
+                            ? Number(item.count || 0)
+                            : 0;
 
-                return `
+                    return `
                             <div
                                 class="supplier-importer__mapping-item supplier-importer__attribute-value"
                                 data-attribute="${escapeHtml(attribute.source)}"
@@ -959,151 +1218,155 @@ document.addEventListener('DOMContentLoaded', function () {
                             </div>
                         `;
 
-            }).join('')}
+                }).join('')}
 
                 </div>
 
             </div>
         `;
 
-        }).join('');
-    }
+            }).join('');
+        }
 
-    function initCategorySearch(mappingBlock) {
-        const items = mappingBlock.querySelectorAll(
-            '.supplier-importer__mapping-item'
-        );
-
-        items.forEach(function (item) {
-            const input = item.querySelector(
-                '.supplier-importer__mapping-input'
+        function initCategorySearch(mappingBlock) {
+            const items = mappingBlock.querySelectorAll(
+                '.supplier-importer__mapping-categories .supplier-importer__mapping-item'
             );
+            items.forEach(function (item) {
+                const input = item.querySelector(
+                    '.supplier-importer__mapping-input'
+                );
 
-            const results = item.querySelector(
-                '.supplier-importer__mapping-results'
-            );
+                const results = item.querySelector(
+                    '.supplier-importer__mapping-results'
+                );
 
-            const selected = item.querySelector(
-                '.supplier-importer__mapping-selected'
-            );
+                const selected = item.querySelector(
+                    '.supplier-importer__mapping-selected'
+                );
 
-            if (!input || !results || !selected) {
-                return;
-            }
-
-            let timeout = null;
-
-            input.addEventListener(
-                'input',
-                function () {
-                    const search = input.value.trim();
-
-                    clearTimeout(timeout);
-
-                    if (search.length < 2) {
-                        results.innerHTML = '';
-                        results.hidden = true;
-
-                        return;
-                    }
-
-                    timeout = setTimeout(
-                        function () {
-                            searchCategories(
-                                search,
-                                results,
-                                selected,
-                                input
-                            );
-                        },
-                        300
-                    );
+                if (!input || !results || !selected) {
+                    return;
                 }
+
+                let timeout = null;
+
+                input.addEventListener(
+                    'input',
+                    function () {
+                        const search = input.value.trim();
+
+                        selected.dataset.targetId = '';
+                        selected.dataset.taxonomy = '';
+                        selected.hidden = true;
+                        selected.innerHTML = '';
+
+                        clearTimeout(timeout);
+
+                        if (search.length < 2) {
+                            results.innerHTML = '';
+                            results.hidden = true;
+
+                            return;
+                        }
+
+                        timeout = setTimeout(
+                            function () {
+                                searchCategories(
+                                    search,
+                                    results,
+                                    selected,
+                                    input
+                                );
+                            },
+                            300
+                        );
+                    }
+                );
+            });
+        }
+
+        function searchCategories(
+            search,
+            results,
+            selected,
+            input
+        ) {
+            const formData = new FormData();
+
+            formData.append(
+                'action',
+                'supplier_mapping_search_categories'
             );
-        });
-    }
 
-    function searchCategories(
-        search,
-        results,
-        selected,
-        input
-    ) {
-        const formData = new FormData();
+            formData.append(
+                'nonce',
+                supplierImporter.nonce
+            );
 
-        formData.append(
-            'action',
-            'supplier_mapping_search_categories'
-        );
+            formData.append(
+                'search',
+                search
+            );
 
-        formData.append(
-            'nonce',
-            supplierImporter.nonce
-        );
+            results.hidden = false;
 
-        formData.append(
-            'search',
-            search
-        );
-
-        results.hidden = false;
-
-        results.innerHTML = `
+            results.innerHTML = `
         <div class="supplier-importer__mapping-loading">
             Поиск...
         </div>
     `;
 
-        fetch(
-            supplierImporter.ajaxUrl,
-            {
-                method: 'POST',
-                body: formData
-            }
-        )
-            .then(function (response) {
-                return response.json();
-            })
-            .then(function (result) {
-
-                if (!result.success) {
-                    throw new Error(
-                        result.data?.message
-                        || 'Не удалось выполнить поиск.'
-                    );
+            fetch(
+                supplierImporter.ajaxUrl,
+                {
+                    method: 'POST',
+                    body: formData
                 }
+            )
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (result) {
 
-                const items = Array.isArray(
-                    result.data.items
-                )
-                    ? result.data.items
-                    : [];
+                    if (!result.success) {
+                        throw new Error(
+                            result.data?.message
+                            || 'Не удалось выполнить поиск.'
+                        );
+                    }
 
-                if (!items.length) {
-                    results.innerHTML = `
+                    const items = Array.isArray(
+                        result.data.items
+                    )
+                        ? result.data.items
+                        : [];
+
+                    if (!items.length) {
+                        results.innerHTML = `
                     <div class="supplier-importer__mapping-empty">
                         Ничего не найдено.
                     </div>
                 `;
 
-                    return;
-                }
+                        return;
+                    }
 
-                results.innerHTML = items.map(
-                    function (item) {
-                        return `
+                    results.innerHTML = items.map(
+                        function (item) {
+                            return `
                         <button
                             type="button"
                             class="supplier-importer__mapping-result"
                             data-id="${item.id}"
                             data-name="${escapeHtml(
-                            item.name
-                        )}"
+                                item.name
+                            )}"
                         >
                             <span>
                                 ${escapeHtml(
-                            item.name
-                        )}
+                                item.name
+                            )}
                             </span>
 
                             <small>
@@ -1111,42 +1374,42 @@ document.addEventListener('DOMContentLoaded', function () {
                             </small>
                         </button>
                     `;
-                    }
-                ).join('');
+                        }
+                    ).join('');
 
-                results
-                    .querySelectorAll(
-                        '.supplier-importer__mapping-result'
-                    )
-                    .forEach(function (button) {
+                    results
+                        .querySelectorAll(
+                            '.supplier-importer__mapping-result'
+                        )
+                        .forEach(function (button) {
 
-                        button.addEventListener(
-                            'click',
-                            function () {
+                            button.addEventListener(
+                                'click',
+                                function () {
 
-                                const id =
-                                    Number(
-                                        button.dataset.id
-                                    );
+                                    const id =
+                                        Number(
+                                            button.dataset.id
+                                        );
 
-                                const name =
-                                    button.dataset.name;
+                                    const name =
+                                        button.dataset.name;
 
-                                input.value = name;
+                                    input.value = name;
 
-                                results.innerHTML = '';
+                                    results.innerHTML = '';
 
-                                results.hidden = true;
+                                    results.hidden = true;
 
-                                selected.hidden = false;
+                                    selected.hidden = false;
 
-                                selected.innerHTML = `
+                                    selected.innerHTML = `
                                 <span>
                                     Выбрано:
                                     <strong>
                                         ${escapeHtml(
-                                    name
-                                )}
+                                        name
+                                    )}
                                     </strong>
                                 </span>
 
@@ -1158,72 +1421,75 @@ document.addEventListener('DOMContentLoaded', function () {
                                 </button>
                             `;
 
-                                selected.dataset.targetId =
-                                    id;
-                            }
-                        );
-                    });
-            })
-            .catch(function (error) {
+                                    selected.dataset.targetId =
+                                        id;
+                                }
+                            );
 
-                console.error(
-                    'Ошибка поиска категорий:',
-                    error
-                );
 
-                results.innerHTML = `
+
+                        });
+                })
+                .catch(function (error) {
+
+                    console.error(
+                        'Ошибка поиска категорий:',
+                        error
+                    );
+
+                    results.innerHTML = `
                 <div class="supplier-importer__mapping-error">
                     ${escapeHtml(
-                    error.message
-                )}
+                        error.message
+                    )}
                 </div>
             `;
-            });
-    }
+                });
+        }
 
-    function initAttributeSearch(mappingBlock) {
+        function initAttributeSearch(mappingBlock) {
 
-        const items = mappingBlock.querySelectorAll(
-            '.supplier-importer__attribute-value'
-        );
-
-        items.forEach(function (item) {
-
-            const input = item.querySelector(
-                '.supplier-importer__mapping-input'
+            const items = mappingBlock.querySelectorAll(
+                '.supplier-importer__attribute-value'
             );
 
-            const results = item.querySelector(
-                '.supplier-importer__mapping-results'
-            );
+            items.forEach(function (item) {
 
-            const selected = item.querySelector(
-                '.supplier-importer__mapping-selected'
-            );
+                const input = item.querySelector(
+                    '.supplier-importer__mapping-input'
+                );
 
-            if (
-                !input
-                || !results
-                || !selected
-            ) {
-                return;
-            }
+                const results = item.querySelector(
+                    '.supplier-importer__mapping-results'
+                );
 
-            let timeout = null;
+                const selected = item.querySelector(
+                    '.supplier-importer__mapping-selected'
+                );
 
-            input.addEventListener(
-                'input',
-                function () {
+                if (
+                    !input
+                    || !results
+                    || !selected
+                ) {
+                    return;
+                }
 
-                    const search =
-                        input.value.trim();
+                let timeout = null;
+
+                input.addEventListener('input', function () {
+                    const search = input.value.trim();
+
+                    selected.dataset.targetId = '';
+                    selected.dataset.taxonomy = '';
+                    selected.hidden = true;
+                    selected.innerHTML = '';
 
                     clearTimeout(timeout);
 
                     if (search.length < 2) {
                         results.innerHTML = '';
                         results.hidden = true;
-
                         return;
                     }
 
@@ -1245,326 +1511,178 @@ document.addEventListener('DOMContentLoaded', function () {
                         300
                     );
                 }
-            );
-        });
-    }
-
-    function searchAttributeTerms(
-        attribute,
-        search,
-        results,
-        selected,
-        input
-    ) {
-
-        const formData = new FormData();
-
-        formData.append(
-            'action',
-            'supplier_mapping_search_attribute_terms'
-        );
-
-        formData.append(
-            'nonce',
-            supplierImporter.nonce
-        );
-
-        /*
-         * Пока передаём source напрямую.
-         *
-         * Сервер сам добавит pa_:
-         *
-         * цвет арматуры
-         * → pa_цвет арматуры
-         *
-         * Но это НЕ то, что нам нужно.
-         *
-         * Поэтому taxonomy будем брать
-         * из карты ниже.
-         */
-        const taxonomyMap = {
-
-            'стиль': 'style',
-
-            'форма': 'forma',
-
-            'цвет арматуры': 'armature-color',
-
-            'материал арматуры':
-                'armature-material',
-
-            'цвет плафона':
-                'shade-color',
-
-            'материал плафона':
-                'shade-material',
-
-            'ширина/диаметр':
-                'shirina-diametr',
-
-            'длина':
-                'dlina-mm',
-
-            'высота':
-                'vysota-mm',
-
-            'тип лампы':
-                'tip-lampochki',
-
-            'мощность общая':
-                'obshhaya-moshhnost',
-
-            'напряжение':
-                'napryazhenie',
-
-            'тип цоколя':
-                'base',
-
-            'степень защиты ip':
-                'ip',
-
-            'цвет свечения':
-                'color-temperature',
-
-            'место установки':
-                'tip-krepleniya',
-
-            'страна происхождения':
-                'strana-proishozhdenia',
-
-            'коллекция':
-                'collection',
-
-            'Назначение помещения':
-                'room-purpose',
-
-            'форма плафона':
-                'shade-shape',
-
-            'лампы в комплекте':
-                'led',
-
-            'площадь освещения':
-                'light-area',
-
-            'световой поток':
-                'light-flux'
-        };
-
-        const taxonomy =
-            taxonomyMap[attribute] || '';
-
-        if (!taxonomy) {
-            results.hidden = false;
-
-            results.innerHTML = `
-            <div class="supplier-importer__mapping-error">
-                Для атрибута не настроена таксономия.
-            </div>
-        `;
-
-            return;
+                );
+            });
         }
 
-        formData.append(
-            'taxonomy',
-            taxonomy
-        );
+        function searchAttributeTerms(
+            attribute,
+            search,
+            results,
+            selected,
+            input
+        ) {
+            const config = currentAttributeConfig[attribute];
+            const taxonomy = config?.taxonomy || '';
 
-        formData.append(
-            'search',
-            search
-        );
+            if (!taxonomy) {
+                results.hidden = false;
+                results.innerHTML = `
+            <div class="supplier-importer__mapping-error">
+                Для этого поля не выбран атрибут WooCommerce.
+                Настройте его во вкладке «Названия атрибутов».
+            </div>
+        `;
+                return;
+            }
 
-        results.hidden = false;
+            const formData = new FormData();
 
-        results.innerHTML = `
+            formData.append(
+                'action',
+                'supplier_mapping_search_attribute_terms'
+            );
+            formData.append('nonce', supplierImporter.nonce);
+            formData.append('taxonomy', taxonomy);
+            formData.append('search', search);
+
+            results.hidden = false;
+            results.innerHTML = `
         <div class="supplier-importer__mapping-loading">
             Поиск...
         </div>
     `;
 
-        fetch(
-            supplierImporter.ajaxUrl,
-            {
+            fetch(supplierImporter.ajaxUrl, {
                 method: 'POST',
                 body: formData
-            }
-        )
-            .then(function (response) {
-                return response.json();
             })
-            .then(function (result) {
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (result) {
+                    if (!result.success) {
+                        throw new Error(
+                            result.data?.message ||
+                            'Не удалось выполнить поиск.'
+                        );
+                    }
 
-                if (!result.success) {
-                    throw new Error(
-                        result.data?.message
-                        || 'Не удалось выполнить поиск.'
-                    );
-                }
+                    if (input.value.trim() !== search) {
+                        return;
+                    }
 
-                const items =
-                    Array.isArray(result.data.items)
+                    const terms = Array.isArray(result.data.items)
                         ? result.data.items
                         : [];
 
-                if (!items.length) {
-
-                    results.innerHTML = `
+                    if (!terms.length) {
+                        results.innerHTML = `
                     <div class="supplier-importer__mapping-empty">
                         Ничего не найдено.
                     </div>
                 `;
+                        return;
+                    }
 
-                    return;
-                }
-
-                results.innerHTML =
-                    items.map(function (term) {
-
+                    results.innerHTML = terms.map(function (term) {
                         return `
-                        <button
-                            type="button"
-                            class="supplier-importer__mapping-result"
-                            data-id="${term.id}"
-                            data-name="${escapeHtml(term.name)}"
-                        >
-                            ${escapeHtml(term.name)}
-                        </button>
-                    `;
-
+                    <button
+                        type="button"
+                        class="supplier-importer__mapping-result"
+                        data-id="${term.id}"
+                        data-name="${escapeHtml(term.name)}"
+                    >
+                        ${escapeHtml(term.name)}
+                    </button>
+                `;
                     }).join('');
 
-                results
-                    .querySelectorAll(
-                        '.supplier-importer__mapping-result'
-                    )
-                    .forEach(function (button) {
+                    results
+                        .querySelectorAll('.supplier-importer__mapping-result')
+                        .forEach(function (button) {
+                            button.addEventListener('click', function () {
+                                selected.dataset.targetId = button.dataset.id;
+                                selected.dataset.taxonomy = taxonomy;
+                                selected.hidden = false;
 
-                        button.addEventListener(
-                            'click',
-                            function () {
-
-                                const id =
-                                    Number(
-                                        button.dataset.id
-                                    );
-
-                                const name =
-                                    button.dataset.name;
-
-                                input.value = name;
-
+                                input.value = button.dataset.name;
                                 results.innerHTML = '';
                                 results.hidden = true;
 
-                                selected.hidden = false;
-
                                 selected.innerHTML = `
-                                <span>
-                                    Выбрано:
-                                    <strong>
-                                        ${escapeHtml(name)}
-                                    </strong>
-                                </span>
+                            <span>
+                                Выбрано:
+                                <strong>${escapeHtml(button.dataset.name)}</strong>
+                            </span>
 
-                                <button
-                                    type="button"
-                                    class="supplier-importer__mapping-clear"
-                                >
-                                    Изменить
-                                </button>
-                            `;
+                            <button
+                                type="button"
+                                class="supplier-importer__mapping-clear"
+                            >
+                                Изменить
+                            </button>
+                        `;
+                            });
+                        });
+                })
+                .catch(function (error) {
+                    console.error('Ошибка поиска атрибутов:', error);
 
-                                selected.dataset.targetId =
-                                    id;
-
-                                selected.dataset.taxonomy =
-                                    taxonomy;
-                            }
-                        );
-                    });
-            })
-            .catch(function (error) {
-
-                console.error(
-                    'Ошибка поиска атрибутов:',
-                    error
-                );
-
-                results.innerHTML = `
+                    results.hidden = false;
+                    results.innerHTML = `
                 <div class="supplier-importer__mapping-error">
                     ${escapeHtml(error.message)}
                 </div>
             `;
-            });
-    }
-
-    function initMappingSave(
-        mappingBlock,
-        importId
-    ) {
-
-        const button = mappingBlock.querySelector(
-            '#supplier-import-mapping-save'
-        );
-
-        const status = mappingBlock.querySelector(
-            '.supplier-importer__mapping-status'
-        );
-
-        if (!button) {
-            return;
+                });
         }
 
-        button.addEventListener(
-            'click',
-            function () {
+        function initMappingSave(mappingBlock, importId) {
+            const button = mappingBlock.querySelector(
+                '#supplier-import-mapping-save'
+            );
 
-                const supplier =
-                    mappingBlock.dataset.supplier;
+            const status = mappingBlock.querySelector(
+                '.supplier-importer__mapping-status'
+            );
 
-                const items =
-                    mappingBlock.querySelectorAll(
-                        '.supplier-importer__mapping-item'
-                    );
+            if (!button || !status) {
+                return;
+            }
+
+            button.addEventListener('click', function () {
+                const supplier = mappingBlock.dataset.supplier;
+
+                // Собираем только категории, не значения атрибутов.
+                const items = mappingBlock.querySelectorAll(
+                    '.supplier-importer__mapping-categories .supplier-importer__mapping-item'
+                );
 
                 const mappings = [];
 
                 items.forEach(function (item) {
+                    const sourceElement = item.querySelector(
+                        '.supplier-importer__mapping-source strong'
+                    );
 
-                    const sourceElement =
-                        item.querySelector(
-                            '.supplier-importer__mapping-source strong'
-                        );
+                    const selected = item.querySelector(
+                        '.supplier-importer__mapping-selected'
+                    );
 
-                    const selected =
-                        item.querySelector(
-                            '.supplier-importer__mapping-selected'
-                        );
-
-                    if (
-                        !sourceElement
-                        || !selected
-                    ) {
+                    if (!sourceElement || !selected) {
                         return;
                     }
 
-                    const targetId =
-                        Number(
-                            selected.dataset.targetId
-                        );
+                    const targetId = Number(selected.dataset.targetId);
 
                     if (!targetId) {
                         return;
                     }
 
                     mappings.push({
-                        source_value:
-                            sourceElement.textContent.trim(),
-
-                        target_id:
-                            targetId
+                        source_value: sourceElement.textContent.trim(),
+                        target_id: targetId
                     });
                 });
 
@@ -1576,254 +1694,236 @@ document.addEventListener('DOMContentLoaded', function () {
                     button,
                     status
                 );
-            }
-        );
-    }
+            });
+        }
 
-    function saveMappings(
-        supplier,
-        mappings,
-        mappingBlock,
-        importId,
-        button,
-        status
-    ) {
+        function saveAttributeConfig(supplier, mappingBlock) {
+            const config = {};
 
-        const formData = new FormData();
+            const rows = mappingBlock.querySelectorAll(
+                '.supplier-importer__attribute-config-row'
+            );
 
-        formData.append(
-            'action',
-            'supplier_mapping_save'
-        );
+            rows.forEach(function (row) {
+                const source = row.dataset.source;
 
-        formData.append(
-            'nonce',
-            supplierImporter.nonce
-        );
+                const taxonomySelect = row.querySelector(
+                    '.supplier-importer__attribute-taxonomy'
+                );
 
-        formData.append(
-            'supplier',
-            supplier
-        );
+                const labelInput = row.querySelector(
+                    '.supplier-importer__attribute-label'
+                );
 
-        formData.append(
-            'mappings',
-            JSON.stringify(mappings)
-        );
-
-        button.disabled = true;
-
-        status.hidden = false;
-        status.textContent = 'Сохраняем...';
-
-        fetch(
-            supplierImporter.ajaxUrl,
-            {
-                method: 'POST',
-                body: formData
-            }
-        )
-            .then(function (response) {
-                return response.json();
-            })
-            .then(function (result) {
-
-                if (!result.success) {
-                    throw new Error(
-                        result.data?.message
-                        || 'Не удалось сохранить сопоставления.'
-                    );
+                if (!source || !taxonomySelect || !labelInput) {
+                    return;
                 }
 
-                status.textContent =
-                    'Сопоставления сохранены.';
-
-                console.log(
-                    'Сохранено mappings:',
-                    result.data.saved
-                );
-
-                button.disabled = false;
-
-                const savedCount = Number(
-                    result.data.saved || 0
-                );
-
-                status.textContent =
-                    'Категории сохранены.';
-
-                saveAttributeMappings(
-                    supplier,
-                    mappingBlock,
-                    importId,
-                    button,
-                    status
-                );
-
-            })
-            .catch(function (error) {
-
-                console.error(
-                    'Ошибка сохранения mappings:',
-                    error
-                );
-
-                status.textContent =
-                    error.message;
-
-                button.disabled = false;
+                config[source] = {
+                    taxonomy: taxonomySelect.value,
+                    label: labelInput.value.trim()
+                };
             });
-    }
 
-    function saveAttributeMappings(
-        supplier,
-        mappingBlock,
-        importId,
-        button,
-        status
-    ) {
+            if (!rows.length) {
+                return Promise.reject(
+                    new Error(
+                        'Не найдены строки настроек атрибутов. Конфигурация не сохранена.'
+                    )
+                );
+            }
 
-        const items =
-            mappingBlock.querySelectorAll(
+            const formData = new FormData();
+
+            formData.append(
+                'action',
+                'supplier_mapping_save_attribute_config'
+            );
+
+            formData.append('nonce', supplierImporter.nonce);
+            formData.append('supplier', supplier);
+            formData.append('config', JSON.stringify(config));
+
+            return fetch(supplierImporter.ajaxUrl, {
+                method: 'POST',
+                body: formData
+            })
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (result) {
+                    if (!result.success) {
+                        throw new Error(
+                            result.data?.message ||
+                            'Не удалось сохранить настройки атрибутов.'
+                        );
+                    }
+
+                    currentAttributeConfig = config;
+
+                    return result;
+                });
+        }
+
+        function saveMappings(
+            supplier,
+            mappings,
+            mappingBlock,
+            importId,
+            button,
+            status
+        ) {
+            button.disabled = true;
+            status.hidden = false;
+            status.textContent = 'Сохраняем настройки атрибутов...';
+
+            // Сначала сохраняем настройки полей поставщика.
+            saveAttributeConfig(supplier, mappingBlock)
+
+                .then(function () {
+                    // Затем сохраняем категории.
+                    status.textContent = 'Сохраняем категории...';
+
+                    const formData = new FormData();
+
+                    formData.append('action', 'supplier_mapping_save');
+                    formData.append('nonce', supplierImporter.nonce);
+                    formData.append('supplier', supplier);
+                    formData.append('mappings', JSON.stringify(mappings));
+
+                    return fetch(supplierImporter.ajaxUrl, {
+                        method: 'POST',
+                        body: formData
+                    });
+                })
+
+                .then(function (response) {
+                    return response.json();
+                })
+
+                .then(function (result) {
+                    if (!result.success) {
+                        throw new Error(
+                            result.data?.message ||
+                            'Не удалось сохранить сопоставление категорий.'
+                        );
+                    }
+
+                    // Внутри этой функции сохраняются значения атрибутов.
+                    // Если всё успешно, она сама запускает импорт.
+                    status.textContent = 'Сохраняем значения атрибутов...';
+
+                    return saveAttributeMappings(
+                        supplier,
+                        mappingBlock,
+                        importId,
+                        button,
+                        status
+                    );
+                })
+
+                .catch(function (error) {
+                    console.error('Ошибка сохранения настроек:', error);
+
+                    status.hidden = false;
+                    status.textContent = error.message;
+
+                    button.disabled = false;
+                });
+        }
+
+        function saveAttributeMappings(
+            supplier,
+            mappingBlock,
+            importId,
+            button,
+            status
+        ) {
+            const items = mappingBlock.querySelectorAll(
                 '.supplier-importer__attribute-value'
             );
 
-        const mappings = [];
+            const mappings = [];
 
-        items.forEach(function (item) {
-
-            const selected =
-                item.querySelector(
+            items.forEach(function (item) {
+                const selected = item.querySelector(
                     '.supplier-importer__mapping-selected'
                 );
 
-            const sourceValue =
-                item.querySelector(
+                const sourceValue = item.querySelector(
                     '.supplier-importer__mapping-source strong'
                 );
 
-            if (
-                !selected
-                || !sourceValue
-            ) {
-                return;
-            }
-
-            const targetId =
-                Number(
-                    selected.dataset.targetId
-                );
-
-            const taxonomy =
-                selected.dataset.taxonomy || '';
-
-            const sourceParent =
-                item.dataset.attribute || '';
-
-            if (
-                !targetId
-                || !taxonomy
-                || !sourceParent
-            ) {
-                return;
-            }
-
-            mappings.push({
-
-                source_parent:
-                    sourceParent,
-
-                source_value:
-                    sourceValue.textContent.trim(),
-
-                target_id:
-                    targetId,
-
-                taxonomy:
-                    taxonomy
-            });
-        });
-
-        /*
-         * Если пользователь ничего
-         * не сопоставил — просто запускаем импорт.
-         */
-        if (!mappings.length) {
-
-            status.textContent =
-                'Сопоставления сохранены.';
-
-            button.disabled = true;
-
-            processImport(importId);
-
-            return;
-        }
-
-        const formData = new FormData();
-
-        formData.append(
-            'action',
-            'supplier_mapping_save_attribute_values'
-        );
-
-        formData.append(
-            'nonce',
-            supplierImporter.nonce
-        );
-
-        formData.append(
-            'supplier',
-            supplier
-        );
-
-        formData.append(
-            'mappings',
-            JSON.stringify(mappings)
-        );
-
-        status.textContent =
-            'Сохраняем атрибуты...';
-
-        fetch(
-            supplierImporter.ajaxUrl,
-            {
-                method: 'POST',
-                body: formData
-            }
-        )
-            .then(function (response) {
-                return response.json();
-            })
-            .then(function (result) {
-
-                if (!result.success) {
-                    throw new Error(
-                        result.data?.message
-                        || 'Не удалось сохранить атрибуты.'
-                    );
+                if (!selected || !sourceValue) {
+                    return;
                 }
 
-                status.textContent =
-                    'Сохранено сопоставлений: '
-                    + Number(result.data.saved || 0);
+                const targetId = Number(selected.dataset.targetId);
+                const taxonomy = selected.dataset.taxonomy || '';
+                const sourceParent = item.dataset.attribute || '';
 
-                button.disabled = true;
+                if (!targetId || !taxonomy || !sourceParent) {
+                    return;
+                }
 
-                processImport(importId);
-            })
-            .catch(function (error) {
-
-                console.error(
-                    'Ошибка сохранения атрибутов:',
-                    error
-                );
-
-                status.textContent =
-                    error.message;
-
-                button.disabled = false;
+                mappings.push({
+                    source_parent: sourceParent,
+                    source_value: sourceValue.textContent.trim(),
+                    target_id: targetId,
+                    taxonomy: taxonomy
+                });
             });
+
+            // Если значения не сопоставляли, запускаем импорт.
+            if (!mappings.length) {
+                status.textContent = 'Запускаем импорт...';
+                processImport(importId);
+                return Promise.resolve();
+            }
+
+            const formData = new FormData();
+
+            formData.append(
+                'action',
+                'supplier_mapping_save_attribute_values'
+            );
+
+            formData.append('nonce', supplierImporter.nonce);
+            formData.append('supplier', supplier);
+            formData.append('mappings', JSON.stringify(mappings));
+
+            return fetch(supplierImporter.ajaxUrl, {
+                method: 'POST',
+                body: formData
+            })
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (result) {
+                    if (!result.success) {
+                        throw new Error(
+                            result.data?.message ||
+                            'Не удалось сохранить значения атрибутов.'
+                        );
+                    }
+
+                    status.textContent =
+                        'Сопоставления сохранены. Запускаем импорт...';
+
+                    processImport(importId);
+                })
+                .catch(function (error) {
+                    console.error(
+                        'Ошибка сохранения значений атрибутов:',
+                        error
+                    );
+
+                    status.textContent = error.message;
+                    button.disabled = false;
+
+                    throw error;
+                });
+        }
     }
 });
 
