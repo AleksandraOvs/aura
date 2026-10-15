@@ -58,8 +58,9 @@ class Crystal_Lux implements Supplier
                 'Путь из названий разделов',
             ],
 
+            'brand_field' => 'Брэнд [brand]',
+
             'attribute_fields' => [
-                'Брэнд [brand]',
                 'Стиль [STYLE]',
                 'Коллекция [COLLECTION]',
                 'Тип [TYPE]',

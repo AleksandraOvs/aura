@@ -1,5 +1,5 @@
 .supplier-importer {
-    max-width: 900px;
+    max-width: 100%;
 }
 
 .supplier-importer__card {
@@ -78,10 +78,6 @@
     font-weight: 600;
 }
 
-.supplier-importer__mapping-section {
-    margin-top: 30px;
-}
-
 .supplier-importer__mapping-categories {
     display: flex;
     flex-direction: column;
@@ -90,12 +86,16 @@
 
 .supplier-importer__mapping-item {
     display: grid;
-    grid-template-columns: minmax(280px, 1fr) minmax(300px, 1fr);
-    gap: 20px;
-    padding: 16px;
+    grid-template-columns: 1fr 1fr;
+    gap: 1em;
+    padding: 1em;
     background: #fff;
     border: 1px solid #dcdcde;
     border-radius: 6px;
+}
+
+.supplier-importer__mapping-item:not(:last-child) {
+    margin-bottom: 1em;
 }
 
 .supplier-importer__mapping-source {
@@ -223,7 +223,6 @@
     display: flex;
     width: 100%;
     justify-content: space-between;
-    font-size: 20px;
     padding: 1em 0;
 }
 
@@ -387,6 +386,60 @@
 .supplier-importer__tree-children[hidden],
 .supplier-importer__mapping-results[hidden] {
     display: none;
+}
+
+.panel-attributes {
+    flex-wrap: wrap;
+    gap: 2em;
+}
+
+.panel-attributes .supplier-importer__mapping-section {
+    width: calc(50% - 1em);
+}
+
+.panel-attributes__inner {
+    display: flex;
+    gap: 2em;
+}
+
+.panel-attributes h3 {
+    width: 100%;
+}
+
+.supplier-importer__attribute-label-row {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+}
+
+.supplier-importer__attribute-label-row:not(:last-child) {
+    margin-bottom: 1em;
+}
+
+.supplier-importer__attribute-label-row {
+    position: relative;
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    background: #fff;
+    padding: 2.5em 1em 1em 1em;
+    border-radius: 6px;
+    border: 1px solid #dcdcde;
+    align-items: center;
+}
+
+.supplier-importer__attribute-label-row input {
+    max-width: 60%;
+}
+
+.supplier-importer__attribute-label-name {
+    font-weight: 600;
+}
+
+.supplier-importer__attribute-label-row code {
+    position: absolute;
+    top: .3em;
+    left: .3em;
 }
 
 @media (max-width: 782px) {

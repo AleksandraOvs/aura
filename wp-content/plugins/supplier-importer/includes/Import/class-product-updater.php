@@ -13,6 +13,7 @@ use Supplier_Importer\Product\Product_Meta;
 use Supplier_Importer\Product\Product_Categories;
 use Supplier_Importer\Product\Product_Attributes;
 use Supplier_Importer\Product\Product_Images;
+use Supplier_Importer\Product\Product_Brand;
 
 class Product_Updater
 {
@@ -20,6 +21,7 @@ class Product_Updater
     private $product_categories;
     private $product_attributes;
     private $product_images;
+    private $product_brand;
 
     public function __construct()
     {
@@ -27,6 +29,7 @@ class Product_Updater
         $this->product_categories = new Product_Categories();
         $this->product_attributes = new Product_Attributes();
         $this->product_images = new Product_Images();
+        $this->product_brand = new Product_Brand();
     }
 
     /**
@@ -64,6 +67,21 @@ class Product_Updater
             'UPDATE DEBUG: basic_data SKU=' . $sku
                 . ', time=' . round(microtime(true) - $start, 2) . ' sec'
         );
+
+        // Назначаем бренду товара значение из данных поставщика.
+        $start = microtime(true);
+
+        $this->product_brand->assign(
+            $product,
+            $product_data->get('brand', '')
+        );
+
+        \Supplier_Importer\Core\Logger::info(
+            'UPDATE DEBUG: brand SKU=' . $sku
+                . ', brand=' . $product_data->get('brand', '')
+                . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+        );
+
 
         $start = microtime(true);
 
@@ -227,6 +245,7 @@ class Product_Updater
             }
         }
     }
+
 
     /**
      * Обновить мета-данные поставщика.

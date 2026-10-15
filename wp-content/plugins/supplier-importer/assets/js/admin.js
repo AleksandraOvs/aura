@@ -907,23 +907,23 @@ document.addEventListener('DOMContentLoaded', function () {
         mappingBlock.hidden = false;
         mappingBlock.dataset.supplier = supplier;
 
-        const categories = Array.isArray(
-            analysis.categories
-        )
+        const categories = Array.isArray(analysis.categories)
             ? analysis.categories
+            : [];
+
+        const attributes = Array.isArray(analysis.attributes)
+            ? analysis.attributes
             : [];
 
         let savedMappings = {};
 
         try {
-            savedMappings =
-                await loadCategoryMappings(supplier);
+            savedMappings = await loadCategoryMappings(supplier);
 
             console.log(
                 'Сохранённые сопоставления категорий:',
                 savedMappings
             );
-
         } catch (error) {
             console.error(
                 'Ошибка загрузки сохранённых категорий:',
@@ -931,132 +931,168 @@ document.addEventListener('DOMContentLoaded', function () {
             );
         }
 
-        console.log(
-            'CSV analysis:',
-            analysis
-        );
-
-        console.log(
-            'CSV attribute values:',
-            analysis.attributes[2]
-        );
-
         mappingBlock.innerHTML = `
-    <h3>Настройка импорта</h3>
+        <h3>Настройка импорта</h3>
 
-    <nav class="nav-tab-wrapper supplier-importer__inner-tabs">
-        <button
-            type="button"
-            class="nav-tab nav-tab-active"
-            data-import-tab="mapping"
-        >
-            Сопоставление
-        </button>
+        <nav class="nav-tab-wrapper supplier-importer__inner-tabs">
+            <button
+                type="button"
+                class="nav-tab nav-tab-active"
+                data-import-tab="categories"
+            >
+                Категории
+            </button>
 
-        <button
-            type="button"
-            class="nav-tab"
-            data-import-tab="attribute-labels"
-        >
-            Названия атрибутов
-        </button>
-    </nav>
+            <button
+                type="button"
+                class="nav-tab"
+                data-import-tab="attributes"
+            >
+                Атрибуты
+            </button>
+        </nav>
 
-    <div data-import-panel="mapping">
+        <!-- Вкладка «Категории» -->
+        <div data-import-panel="categories">
+<h3>Категории</h3>
+            <div class="supplier-importer__mapping-section">
+            
+                <h4>Сопоставление категорий</h4>
+                <p class="supplier-importer__section-description">
+    Для каждой категории поставщика выберите соответствующую категорию
+    вашего сайта. При импорте товары будут распределены по выбранным категориям.
+</p>
 
-        <div class="supplier-importer__mapping-section">
-            <h4>Категории</h4>
-
-            <div class="supplier-importer__mapping-categories">
-                ${categories.map(function (category, index) {
-
+                <div class="supplier-importer__mapping-categories">
+                    ${categories.map(function (category, index) {
             const saved =
                 savedMappings[category.source] || null;
 
-            const savedTargetId =
-                saved
-                    ? Number(saved.target_id)
-                    : 0;
+            const savedTargetId = saved
+                ? Number(saved.target_id)
+                : 0;
 
-            const savedTargetName =
-                saved
-                    ? saved.target_name
-                    : '';
+            const savedTargetName = saved
+                ? saved.target_name
+                : '';
 
             return `
-                        <div
-                            class="supplier-importer__mapping-item"
-                            data-category-index="${index}"
-                        >
-                            <div class="supplier-importer__mapping-source">
-
-                                <span class="supplier-importer__mapping-label">
-                                    Категория поставщика
-                                </span>
-
-                                <strong>
-                                    ${escapeHtml(category.source)}
-                                </strong>
-
-                                <span>
-                                    Товаров: ${category.count}
-                                </span>
-
-                            </div>
-
-                            <div class="supplier-importer__mapping-search">
-
-                                <label>
-                                    Категория на сайте
-                                </label>
-
-                                <input
-    type="text"
-    class="supplier-importer__mapping-input"
-    placeholder="Выберите категорию сайта..."
-    autocomplete="off"
-    readonly
->
-<div
-    class="supplier-importer__mapping-results"
-    hidden
-></div>
-
-                            </div>
-
                             <div
-                                class="supplier-importer__mapping-selected"
-                                data-target-id="${savedTargetId}"
-                                ${savedTargetId ? '' : 'hidden'}
+                                class="supplier-importer__mapping-item"
+                                data-category-index="${index}"
                             >
-                                ${savedTargetId
+                                <div class="supplier-importer__mapping-source">
+                                    <span class="supplier-importer__mapping-label">
+                                        Категория поставщика
+                                    </span>
+
+                                    <strong>
+                                        ${escapeHtml(category.source)}
+                                    </strong>
+
+                                    <span>
+                                        Товаров: ${Number(category.count || 0)}
+                                    </span>
+                                </div>
+
+                                <div class="supplier-importer__mapping-search">
+                                    <label>Категория на сайте</label>
+
+                                    <input
+                                        type="text"
+                                        class="supplier-importer__mapping-input"
+                                        placeholder="Выберите категорию сайта..."
+                                        autocomplete="off"
+                                        readonly
+                                    >
+
+                                    <div
+                                        class="supplier-importer__mapping-results"
+                                        hidden
+                                    ></div>
+                                </div>
+
+                                <div
+                                    class="supplier-importer__mapping-selected"
+                                    data-target-id="${savedTargetId}"
+                                    ${savedTargetId ? '' : 'hidden'}
+                                >
+                                    ${savedTargetId
                     ? `
-                                        <span>
-                                            ${escapeHtml(savedTargetName)}
-                                        </span>
-                                    `
+                                            <span>
+                                                Выбрано:
+                                                <strong>
+                                                    ${escapeHtml(savedTargetName)}
+                                                </strong>
+                                            </span>
+
+                                            <button
+                                                type="button"
+                                                class="supplier-importer__mapping-clear"
+                                            >
+                                                Изменить
+                                            </button>
+                                        `
                     : ''
                 }
+                                </div>
                             </div>
-
-                        </div>
-                    `;
-
+                        `;
         }).join('')}
+                </div>
             </div>
         </div>
 
-        <div class="supplier-importer__mapping-section">
-            <h4>Атрибуты</h4>
+        <!-- Вкладка «Атрибуты» -->
+        <div data-import-panel="attributes" class="panel-attributes" hidden>
+ <h3>Атрибуты</h3>
+ <div class="panel-attributes__inner">
+            <div class="supplier-importer__mapping-section">
+           
+                <h4>Сопоставление значений атрибутов</h4>
+                <p class="supplier-importer__section-description">
+    Свяжите значения из файла поставщика с существующими значениями
+    на сайте. Это поможет избежать дублей и сохранить единообразие каталога.
+</p>
 
-            <div class="supplier-importer__mapping-attributes">
-                ${renderAttributes(
-            Array.isArray(analysis.attributes)
-                ? analysis.attributes
-                : []
-        )}
+                <div class="supplier-importer__mapping-attributes">
+                    ${renderAttributes(attributes)}
+                </div>
+            </div>
+
+            <div class="supplier-importer__mapping-section">
+                <h4>Названия атрибутов WooCommerce</h4>
+<p class="supplier-importer__section-description">
+    Измените названия атрибутов, которые отображаются покупателям
+    на сайте. Технические идентификаторы и slug при этом не изменятся.
+</p>
+                <p>
+                    Здесь можно изменить отображаемые названия,
+                    не меняя технические slug атрибутов.
+                </p>
+
+                <div data-attribute-labels-content>
+                    Загрузка атрибутов...
+                </div>
+
+                <button
+                    type="button"
+                    class="button button-primary"
+                    data-save-attribute-labels
+                >
+                    Сохранить названия
+                </button>
+
+                <span
+                    class="supplier-importer__mapping-status"
+                    data-attribute-labels-status
+                    hidden
+                ></span>
+            </div>
             </div>
         </div>
+
+        <!-- Общие действия вне вкладок -->
         <div class="supplier-importer__mapping-actions">
             <button
                 type="button"
@@ -1072,39 +1108,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 hidden
             ></span>
         </div>
-</div>
-
-    <div
-        data-import-panel="attribute-labels"
-        hidden
-    >
-        <div class="supplier-importer__mapping-section">
-            <h4>Названия атрибутов WooCommerce</h4>
-
-            <p>
-                Здесь можно изменить отображаемые названия,
-                не меняя технические slug атрибутов.
-            </p>
-
-            <div data-attribute-labels-content>
-                Загрузка атрибутов...
-            </div>
-
-            <button
-                type="button"
-                class="button button-primary"
-                data-save-attribute-labels
-            >
-                Сохранить названия
-            </button>
-
-            <span
-                class="supplier-importer__mapping-status"
-                data-attribute-labels-status
-                hidden
-            ></span>
-        </div>
-    </div>
     `;
 
         initCategorySearch(mappingBlock);
@@ -1533,9 +1536,8 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
 
-        // Закрываем открытые деревья при клике за пределами строки.
-        mappingBlock.addEventListener('click', function (event) {
-            items.forEach(function (item) {
+        items.forEach(function (item) {
+            document.addEventListener('click', function (event) {
                 if (item.contains(event.target)) {
                     return;
                 }

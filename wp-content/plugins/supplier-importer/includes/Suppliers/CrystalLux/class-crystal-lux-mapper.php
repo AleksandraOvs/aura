@@ -311,7 +311,6 @@ class Crystal_Lux_Mapper
     private function get_attribute_mapping()
     {
         return [
-            'Брэнд [brand]' => 'proizoditel',
             'Стиль [STYLE]' => 'style',
             'Коллекция [COLLECTION]' => 'collection',
 

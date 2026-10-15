@@ -95,8 +95,10 @@ class Maytoni implements Supplier
                 'Категория',
             ],
 
+            'brand_field' => 'brand_name',
+
             'attribute_fields' => [
-                'brand_name',
+
                 'style_name',
                 'collection_name',
                 'series_name',

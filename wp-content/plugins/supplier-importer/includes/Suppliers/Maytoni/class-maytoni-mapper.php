@@ -360,7 +360,6 @@ class Maytoni_Mapper
     private function get_attribute_mapping()
     {
         return [
-            'brand_name' => 'proizoditel',
             'style_name' => 'style',
             'collection_name' => 'collection',
             'series_name' => 'collection',

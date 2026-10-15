@@ -13,6 +13,7 @@ use Supplier_Importer\Product\Product_Meta;
 use Supplier_Importer\Product\Product_Categories;
 use Supplier_Importer\Product\Product_Attributes;
 use Supplier_Importer\Product\Product_Images;
+use Supplier_Importer\Product\Product_Brand;
 
 class Product_Creator
 {
@@ -25,6 +26,7 @@ class Product_Creator
     private $product_categories;
     private $product_attributes;
     private $product_images;
+    private $product_brand;
 
     /**
      * Конструктор.
@@ -35,6 +37,7 @@ class Product_Creator
         $this->product_categories = new Product_Categories();
         $this->product_attributes = new Product_Attributes();
         $this->product_images = new Product_Images();
+        $this->product_brand = new Product_Brand();
     }
 
     /**
@@ -75,6 +78,11 @@ class Product_Creator
         $start = microtime(true);
 
         $product->save();
+
+        $this->product_brand->assign(
+            $product,
+            $product_data->get('brand', '')
+        );
 
         \Supplier_Importer\Core\Logger::info(
             'CREATE DEBUG: save_1 SKU=' . $sku
