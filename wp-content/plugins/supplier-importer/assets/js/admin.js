@@ -1011,16 +1011,16 @@ document.addEventListener('DOMContentLoaded', function () {
                                 </label>
 
                                 <input
-                                    type="text"
-                                    class="supplier-importer__mapping-input"
-                                    placeholder="Начните вводить название..."
-                                    autocomplete="off"
-                                >
-
-                                <div
-                                    class="supplier-importer__mapping-results"
-                                    hidden
-                                ></div>
+    type="text"
+    class="supplier-importer__mapping-input"
+    placeholder="Выберите категорию сайта..."
+    autocomplete="off"
+    readonly
+>
+<div
+    class="supplier-importer__mapping-results"
+    hidden
+></div>
 
                             </div>
 
@@ -1254,6 +1254,135 @@ document.addEventListener('DOMContentLoaded', function () {
             '.supplier-importer__mapping-categories > .supplier-importer__mapping-item'
         );
 
+        let categoryTreePromise = null;
+
+        function loadCategoryTree() {
+            if (categoryTreePromise) {
+                return categoryTreePromise;
+            }
+
+            const formData = new FormData();
+
+            formData.append(
+                'action',
+                'supplier_mapping_get_category_tree'
+            );
+
+            formData.append(
+                'nonce',
+                supplierImporter.nonce
+            );
+
+            categoryTreePromise = fetch(
+                supplierImporter.ajaxUrl,
+                {
+                    method: 'POST',
+                    body: formData,
+                }
+            )
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (result) {
+                    if (!result.success) {
+                        throw new Error(
+                            result.data?.message
+                            || 'Не удалось загрузить категории.'
+                        );
+                    }
+
+                    return Array.isArray(result.data.items)
+                        ? result.data.items
+                        : [];
+                })
+                .catch(function (error) {
+                    // Разрешаем повторную загрузку после ошибки.
+                    categoryTreePromise = null;
+
+                    throw error;
+                });
+
+            return categoryTreePromise;
+        }
+
+        function buildCategoryTree(items) {
+            const nodes = new Map();
+
+            items.forEach(function (item) {
+                nodes.set(Number(item.id), {
+                    id: Number(item.id),
+                    name: item.name,
+                    count: Number(item.count || 0),
+                    parent_id: Number(item.parent_id || 0),
+                    children: [],
+                });
+            });
+
+            const roots = [];
+
+            nodes.forEach(function (node) {
+                const parent = nodes.get(node.parent_id);
+
+                if (parent && parent.id !== node.id) {
+                    parent.children.push(node);
+                } else {
+                    roots.push(node);
+                }
+            });
+
+            return roots;
+        }
+
+        function renderCategoryNodes(nodes) {
+            return nodes.map(function (node) {
+                const hasChildren = node.children.length > 0;
+
+                const childrenHtml = hasChildren
+                    ? `
+                    <div
+                        class="supplier-importer__tree-children"
+                        hidden
+                    >
+                        ${renderCategoryNodes(node.children)}
+                    </div>
+                `
+                    : '';
+
+                return `
+                <div class="supplier-importer__tree-item">
+                    <div class="supplier-importer__tree-line">
+                        ${hasChildren
+                        ? `
+                                    <button
+                                        type="button"
+                                        class="supplier-importer__tree-toggle"
+                                        aria-expanded="false"
+                                        aria-label="Раскрыть подкатегории"
+                                    >+</button>
+                                `
+                        : `
+                                    <span class="supplier-importer__tree-spacer"></span>
+                                `
+                    }
+
+                        <button
+                            type="button"
+                            class="supplier-importer__tree-category"
+                            data-id="${node.id}"
+                            data-name="${escapeHtml(node.name)}"
+                        >
+                            ${escapeHtml(node.name)}
+                        </button>
+
+                        <small>${node.count} товаров</small>
+                    </div>
+
+                    ${childrenHtml}
+                </div>
+            `;
+            }).join('');
+        }
+
         items.forEach(function (item) {
             const input = item.querySelector(
                 '.supplier-importer__mapping-input'
@@ -1271,35 +1400,154 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            let timeout = null;
+            function openTree() {
+                results.hidden = false;
 
-            input.addEventListener(
-                'input',
-                function () {
-                    const search = input.value.trim();
+                results.innerHTML = `
+                <div class="supplier-importer__mapping-loading">
+                    Загружаем категории...
+                </div>
+            `;
 
-                    clearTimeout(timeout);
+                loadCategoryTree()
+                    .then(function (categories) {
+                        const tree = buildCategoryTree(categories);
 
-                    if (search.length < 2) {
-                        results.innerHTML = '';
-                        results.hidden = true;
+                        if (!tree.length) {
+                            results.innerHTML = `
+                            <div class="supplier-importer__mapping-empty">
+                                Категории не найдены.
+                            </div>
+                        `;
 
+                            return;
+                        }
+
+                        results.innerHTML = `
+                        <div class="supplier-importer__tree">
+                            ${renderCategoryNodes(tree)}
+                        </div>
+                    `;
+                    })
+                    .catch(function (error) {
+                        console.error(
+                            'Ошибка загрузки дерева категорий:',
+                            error
+                        );
+
+                        results.innerHTML = `
+                        <div class="supplier-importer__mapping-error">
+                            ${escapeHtml(error.message)}
+                        </div>
+                    `;
+                    });
+            }
+
+            input.addEventListener('click', function () {
+                if (results.hidden) {
+                    openTree();
+                } else {
+                    results.hidden = true;
+                }
+            });
+
+            selected.addEventListener('click', function (event) {
+                const changeButton = event.target.closest(
+                    '.supplier-importer__mapping-clear'
+                );
+
+                if (!changeButton) {
+                    return;
+                }
+
+                event.preventDefault();
+                openTree();
+            });
+
+            results.addEventListener('click', function (event) {
+                const toggle = event.target.closest(
+                    '.supplier-importer__tree-toggle'
+                );
+
+                if (toggle) {
+                    const treeItem = toggle.closest(
+                        '.supplier-importer__tree-item'
+                    );
+
+                    const children = treeItem.querySelector(
+                        ':scope > .supplier-importer__tree-children'
+                    );
+
+                    if (!children) {
                         return;
                     }
 
-                    timeout = setTimeout(
-                        function () {
-                            searchCategories(
-                                search,
-                                results,
-                                selected,
-                                input
-                            );
-                        },
-                        300
+                    const isExpanded = !children.hidden;
+
+                    children.hidden = isExpanded;
+                    toggle.textContent = isExpanded ? '+' : '−';
+                    toggle.setAttribute(
+                        'aria-expanded',
+                        String(!isExpanded)
                     );
+
+                    return;
                 }
-            );
+
+                const categoryButton = event.target.closest(
+                    '.supplier-importer__tree-category'
+                );
+
+                if (!categoryButton) {
+                    return;
+                }
+
+                const id = Number(categoryButton.dataset.id);
+                const name = categoryButton.dataset.name;
+
+                if (!id) {
+                    return;
+                }
+
+                input.value = name;
+
+                selected.dataset.targetId = String(id);
+                selected.hidden = false;
+
+                selected.innerHTML = `
+                <span>
+                    Выбрано:
+                    <strong>${escapeHtml(name)}</strong>
+                </span>
+
+                <button
+                    type="button"
+                    class="supplier-importer__mapping-clear"
+                >
+                    Изменить
+                </button>
+            `;
+
+                results.hidden = true;
+                results.innerHTML = '';
+            });
+        });
+
+        // Закрываем открытые деревья при клике за пределами строки.
+        mappingBlock.addEventListener('click', function (event) {
+            items.forEach(function (item) {
+                if (item.contains(event.target)) {
+                    return;
+                }
+
+                const results = item.querySelector(
+                    '.supplier-importer__mapping-results'
+                );
+
+                if (results) {
+                    results.hidden = true;
+                }
+            });
         });
     }
 

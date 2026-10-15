@@ -46,6 +46,11 @@ class Ajax_Mapping
             'wp_ajax_supplier_mapping_save_attribute_labels',
             [$this, 'save_attribute_labels']
         );
+
+        add_action(
+            'wp_ajax_supplier_mapping_get_category_tree',
+            [$this, 'get_category_tree']
+        );
     }
 
     public function search_categories()
@@ -652,6 +657,46 @@ class Ajax_Mapping
                 ],
                 400
             );
+        }
+    }
+
+    public function get_category_tree()
+    {
+        try {
+            $this->check_permissions();
+            $this->check_nonce();
+
+            $terms = get_terms([
+                'taxonomy'   => 'product_cat',
+                'hide_empty' => false,
+                'orderby'    => 'name',
+                'order'      => 'ASC',
+            ]);
+
+            if (is_wp_error($terms)) {
+                throw new \RuntimeException(
+                    $terms->get_error_message()
+                );
+            }
+
+            $items = [];
+
+            foreach ($terms as $term) {
+                $items[] = [
+                    'id'        => (int) $term->term_id,
+                    'name'      => $term->name,
+                    'parent_id' => (int) $term->parent,
+                    'count'     => (int) $term->count,
+                ];
+            }
+
+            wp_send_json_success([
+                'items' => $items,
+            ]);
+        } catch (\Throwable $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage(),
+            ], 400);
         }
     }
 }
