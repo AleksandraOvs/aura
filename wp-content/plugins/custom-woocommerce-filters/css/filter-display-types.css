@@ -109,7 +109,6 @@
     display: block;
     width: 100%;
     height: 100%;
-    border: 1px solid #cacaca;
     border-radius: 50%;
     box-sizing: border-box;
 }
