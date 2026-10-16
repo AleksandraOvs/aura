@@ -1,0 +1,126 @@
+/* Color */
+
+.sidebar-list.cwc-filter-list.cwc-filter-list--color li a {
+    background: none;
+    position: relative;
+    width: 40px;
+    height: 40px;
+    padding: 5px;
+}
+
+.sidebar-list.cwc-filter-list.cwc-filter-list--color li a span.cwc-option-label {
+    font-size: 9px;
+    color: var(--theme-color-primary);
+    display: flex;
+    line-height: 1;
+    position: absolute;
+    top: 0;
+    width: 100%;
+    opacity: 0;
+    transform: none;
+    transition: all .5s linear;
+    z-index: 20;
+    right: 0;
+    filter: drop-shadow(-1px 0 1px rgba(0, 0, 0, .2));
+    border-radius: 3px;
+    height: 100%;
+    right: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar-list.cwc-filter-list.cwc-filter-list--color li a:hover span.cwc-option-label {
+    opacity: 1;
+}
+
+.sidebar-list.cwc-filter-list.cwc-filter-list--color {
+    gap: 0;
+}
+
+.sidebar-list.cwc-filter-list--color li a.filter-item.active span::after {
+    content: none;
+}
+
+.sidebar-list.cwc-filter-list.cwc-filter-list--intervals li a {
+    padding: 0;
+    background: transparent;
+}
+
+.sidebar-list.cwc-filter-list.cwc-filter-list--intervals li:not(:last-child) {
+    margin-bottom: .5em;
+}
+
+/* Дополнительные стили типов отображения. Наследуют основную верстку .filter и .filter-item. */
+.cwc-filter-list .cwc-filter-option {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.cwc-option-control {
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    box-sizing: border-box;
+    border: 1px solid #9a9a9a;
+    background: #fff;
+}
+
+.cwc-option-control--checkbox {
+    border-radius: 3px;
+}
+
+.cwc-option-control--radio {
+    border-radius: 50%;
+}
+
+.cwc-filter-list--checkbox .cwc-filter-option.active .cwc-option-control--checkbox {
+    border-color: var(--theme-color-accent, #614881);
+    background: var(--theme-color-accent, #614881);
+}
+
+.cwc-filter-list--checkbox .cwc-filter-option.active .cwc-option-control--checkbox::after {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 5px;
+    height: 9px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.cwc-filter-list--radio .cwc-filter-option.active .cwc-option-control--radio {
+    border-color: var(--theme-color-accent, #614881);
+}
+
+.cwc-filter-list--radio .cwc-filter-option.active .cwc-option-control--radio::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: var(--theme-color-accent, #614881);
+}
+
+.cwc-color-swatch {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 1px solid #cacaca;
+    border-radius: 50%;
+    box-sizing: border-box;
+}
+
+.cwc-filter-list--color .cwc-filter-option.active .cwc-color-swatch {
+    outline: 2px solid var(--theme-color-accent, #614881);
+    outline-offset: 2px;
+}
+
+.cwc-filter-list--color .cwc-filter-option.active .cwc-option-label,
+.cwc-filter-list--radio .cwc-filter-option.active .cwc-option-label,
+.cwc-filter-list--checkbox .cwc-filter-option.active .cwc-option-label {
+    color: var(--theme-color-accent, #614881);
+}

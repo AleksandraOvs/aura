@@ -45,6 +45,18 @@
         $(wrapper).find('.sidebar-list').each(function () {
 
             let taxonomy = $(this).data('taxonomy');
+
+            const displayType = $(this).data('display-type');
+            if (displayType === 'intervals') {
+                const $activeInterval = $(this).find('.cwc-interval-option.active').first();
+                if ($activeInterval.length) {
+                    filters['cwc_range_' + taxonomy + '_min'] = parseFloat($activeInterval.data('range-min'));
+                    filters['cwc_range_' + taxonomy + '_max'] = parseFloat($activeInterval.data('range-max'));
+                }
+                return;
+            }
+
+
             let values = [];
 
             $(this).find('a.active').each(function () {
@@ -560,6 +572,9 @@
                     );
                 });
 
+            if (typeof window.cwcSyncNumericRangeSliders === 'function') {
+                window.cwcSyncNumericRangeSliders(wrapper);
+            }
 
             /*
              * Загружаем первые 18

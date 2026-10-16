@@ -9,6 +9,10 @@ Author: PurpleWeb
 if (!defined('ABSPATH')) exit;
 
 require_once plugin_dir_path(__FILE__) . 'admin-settings.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-cwc-filter-admin.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-cwc-filter-range-query.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-cwc-filter-renderer.php';
+
 
 if (!function_exists('cwc_get_enabled_filter_attributes')) {
     function cwc_get_enabled_filter_attributes($category_id = 0)
@@ -77,6 +81,22 @@ add_action('wp_enqueue_scripts', function () {
         plugin_dir_url(__FILE__) . 'css/style.css'
     );
 
+    wp_enqueue_style(
+        'cwc-filter-display-types',
+        plugin_dir_url(__FILE__) . 'css/filter-display-types.css',
+        ['cwc-style'],
+        filemtime(plugin_dir_path(__FILE__) . 'css/filter-display-types.css')
+    );
+
+    wp_enqueue_style(
+        'cwc-filter-display-ranges',
+        plugin_dir_url(__FILE__) . 'css/filter-display-ranges.css',
+        ['cwc-style'],
+        filemtime(plugin_dir_path(__FILE__) . 'css/filter-display-ranges.css')
+    );
+
+
+
     wp_enqueue_script(
         'cwc-scripts',
         plugin_dir_url(__FILE__) . 'js/scripts.js',
@@ -96,6 +116,22 @@ add_action('wp_enqueue_scripts', function () {
     wp_localize_script('cwc-ajax-filters', 'cwc_ajax_object', [
         'ajax_url' => admin_url('admin-ajax.php')
     ]);
+
+    wp_enqueue_script(
+        'cwc-filter-display-types',
+        plugin_dir_url(__FILE__) . 'js/filter-display-types.js',
+        ['jquery', 'cwc-ajax-filters'],
+        filemtime(plugin_dir_path(__FILE__) . 'js/filter-display-types.js'),
+        true
+    );
+
+    wp_enqueue_script(
+        'cwc-filter-display-ranges',
+        plugin_dir_url(__FILE__) . 'js/filter-display-ranges.js',
+        ['jquery', 'cwc-ajax-filters'],
+        filemtime(plugin_dir_path(__FILE__) . 'js/filter-display-ranges.js'),
+        true
+    );
 });
 
 /* ---------------------------------------------------
@@ -310,58 +346,7 @@ function cwc_get_category_filter_terms($taxonomy, $category_id = 0)
  * --------------------------------------------------- */
 function cwc_render_attribute_filter($taxonomy, $title, $category_id = 0)
 {
-    // Получаем термины без загрузки ID всех товаров в PHP.
-    $terms = cwc_get_category_filter_terms(
-        $taxonomy,
-        $category_id
-    );
-
-    if (empty($terms)) {
-        return '';
-    }
-
-    usort($terms, function ($a, $b) {
-        $a_num = is_numeric($a->name);
-        $b_num = is_numeric($b->name);
-
-        if ($a_num && $b_num) {
-            return (float) $a->name <=> (float) $b->name;
-        }
-
-        return strnatcasecmp($a->name, $b->name);
-    });
-
-    ob_start();
-?>
-    <div class="filter">
-        <div class="filter-item__title">
-            <?php echo esc_html(cwc_clean_title($title)); ?>
-
-            <div class="filter-item-title__toggle">
-                <span></span>
-                <span></span>
-            </div>
-        </div>
-
-        <div class="filter-item__content">
-            <ul class="sidebar-list"
-                data-taxonomy="<?php echo esc_attr($taxonomy); ?>">
-                <?php foreach ($terms as $term) : ?>
-                    <li>
-                        <a
-                            href="#"
-                            class="filter-item"
-                            data-slug="<?php echo esc_attr($term->slug); ?>">
-                            <?php echo esc_html($term->name); ?>
-                        </a>
-                    </li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
-    </div>
-<?php
-
-    return ob_get_clean();
+    return CWC_Filter_Renderer::render($taxonomy, $title, $category_id);
 }
 
 
@@ -414,6 +399,47 @@ function cwc_shop_filters_shortcode()
 
     $enabled_attributes = cwc_get_enabled_filter_attributes(
         $current_cat_id
+    );
+
+    // Получаем порядок атрибутов, сохранённый в настройках плагина.
+    $filter_order = get_option('cwc_filter_display_order', []);
+
+    if (!is_array($filter_order)) {
+        $filter_order = [];
+    }
+
+    // Позиция каждой таксономии в сохранённом порядке.
+    $order_positions = [];
+
+    foreach ($filter_order as $position => $taxonomy) {
+        if (is_string($taxonomy) && !isset($order_positions[$taxonomy])) {
+            $order_positions[$taxonomy] = $position;
+        }
+    }
+
+    // Сохраняем исходный порядок на случай новых атрибутов,
+    // которых ещё нет в сохранённых настройках.
+    $enabled_attributes = array_values($enabled_attributes);
+    $original_positions = [];
+
+    foreach ($enabled_attributes as $position => $taxonomy) {
+        $original_positions[$taxonomy] = $position;
+    }
+
+    // Сортируем только доступные фильтры текущей категории.
+    usort(
+        $enabled_attributes,
+        static function ($a, $b) use ($order_positions, $original_positions) {
+            $position_a = $order_positions[$a] ?? PHP_INT_MAX;
+            $position_b = $order_positions[$b] ?? PHP_INT_MAX;
+
+            if ($position_a !== $position_b) {
+                return $position_a <=> $position_b;
+            }
+
+            return ($original_positions[$a] ?? 0)
+                <=> ($original_positions[$b] ?? 0);
+        }
     );
 
     foreach ($enabled_attributes as $taxonomy) {
@@ -597,6 +623,8 @@ function cwc_filter_products_callback()
             'operator' => 'IN',
         ];
     }
+
+    $tax_query = CWC_Filter_Range_Query::apply($tax_query, $_POST);
 
     /*
      * -----------------------------------------------

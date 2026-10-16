@@ -1,0 +1,73 @@
+.cwc-numeric-range {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 4px 0 8px;
+}
+
+.cwc-range-slider {
+    grid-column: 1 / -1;
+    margin: 12px 8px 16px;
+}
+
+.cwc-range-slider.ui-slider {
+    height: 4px;
+    border: 0;
+    border-radius: 4px;
+    background: #dedede;
+}
+
+.cwc-range-slider .ui-slider-range {
+    background: var(--theme-color-accent, #614881);
+}
+
+.cwc-range-slider .ui-slider-handle {
+    top: -6px;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--theme-color-accent, #614881);
+    border-radius: 50%;
+    background: #fff;
+    cursor: grab;
+    outline: none;
+}
+
+.cwc-range-slider .ui-slider-handle:focus-visible {
+    box-shadow: 0 0 0 3px rgb(97 72 129 / 20%);
+}
+
+.cwc-range-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    font-size: 13px;
+}
+
+.cwc-range-field input[type="number"] {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: 8px 10px;
+}
+
+.cwc-filter-list--intervals .cwc-interval-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cwc-filter-list--intervals .cwc-interval-option::before {
+    content: "";
+    display: inline-block;
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    box-sizing: border-box;
+}
+
+.cwc-filter-list--intervals .cwc-interval-option.active::before {
+    border-width: 4px;
+}
