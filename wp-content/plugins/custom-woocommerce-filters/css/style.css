@@ -751,7 +751,7 @@
   width: 100%;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: .5em;
+  padding-bottom: 1em;
   cursor: pointer;
   background: var(--light-grey);
   line-height: 1;
