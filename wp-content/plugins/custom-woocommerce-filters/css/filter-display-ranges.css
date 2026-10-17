@@ -47,11 +47,16 @@
     gap: 5px;
 }
 
+.cwc-range-field span {
+    font-size: 12px;
+}
+
 .cwc-range-field input[type="number"] {
     box-sizing: border-box;
     width: 100%;
     min-width: 0;
     padding: 8px 10px;
+    font-size: 12px;
     -moz-appearance: textfield;
 }
 
