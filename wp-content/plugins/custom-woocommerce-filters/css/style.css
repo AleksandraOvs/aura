@@ -711,6 +711,7 @@
 /* Firefox */
 .price-input input[type="number"] {
   -moz-appearance: textfield;
+  text-align: right;
 }
 
 .price-input {
@@ -901,13 +902,6 @@
   padding: 5px 10px;
   border-radius: 3px;
   gap: 5px;
-}
-
-.cwc-range-field input[type="number"] {
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-  padding: 8px 10px;
 }
 
 @media (max-width: 1200px) {
