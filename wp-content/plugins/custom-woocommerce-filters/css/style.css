@@ -445,6 +445,7 @@
   transition: all .5s linear;
 }
 
+/* 
 .sidebar-list li a.filter-item.active span:after {
   content: '';
   width: 12px;
@@ -453,7 +454,7 @@
   display: block;
   background-size: contain;
   background-position: center;
-}
+} */
 
 
 /* Chrome, Edge, Safari */
