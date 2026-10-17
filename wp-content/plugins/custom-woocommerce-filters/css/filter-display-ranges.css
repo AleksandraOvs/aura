@@ -26,7 +26,7 @@
     top: -6px;
     width: 15px;
     height: 15px;
-    border: 2px solid var(--theme-color-accent, #614881);
+    border: none;
     border-radius: 50%;
     background: var(--theme-color-accent);
     cursor: grab;
