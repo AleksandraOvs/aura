@@ -1,13 +1,12 @@
 .cwc-numeric-range {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    row-gap: 20px;
     padding: 4px 0 8px;
 }
 
 .cwc-range-slider {
     grid-column: 1 / -1;
-    margin: 12px 8px 16px;
 }
 
 .cwc-range-slider.ui-slider {
@@ -27,7 +26,7 @@
     height: 16px;
     border: 2px solid var(--theme-color-accent, #614881);
     border-radius: 50%;
-    background: #fff;
+    background: var(--theme-color-accent);
     cursor: grab;
     outline: none;
 }

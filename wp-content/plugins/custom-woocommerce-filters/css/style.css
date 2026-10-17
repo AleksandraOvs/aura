@@ -750,7 +750,7 @@
   width: 100%;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 1em;
+  padding-bottom: .5em;
   cursor: pointer;
   background: var(--light-grey);
   line-height: 1;
