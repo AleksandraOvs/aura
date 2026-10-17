@@ -98,3 +98,8 @@
     flex-direction: column;
     align-items: flex-start;
 }
+
+.filter.cwc-filter--checkbox .filter-item__content {
+    height: 260px;
+    overflow-y: scroll;
+}
