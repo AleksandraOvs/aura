@@ -37,11 +37,14 @@
 }
 
 .cwc-range-field {
+    position: relative;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    border: 1px solid #cacaca;
+    padding: 5px 10px;
+    border-radius: 3px;
     gap: 5px;
-    min-width: 0;
-    font-size: 13px;
 }
 
 .cwc-range-field input[type="number"] {
@@ -49,6 +52,7 @@
     width: 100%;
     min-width: 0;
     padding: 8px 10px;
+    -moz-appearance: textfield;
 }
 
 .cwc-filter-list--intervals .cwc-interval-option {
