@@ -99,7 +99,7 @@
     align-items: flex-start;
 }
 
-.filter.cwc-filter--checkbox .filter-item__content {
+.filter.cwc-filter--checkbox .filter-item__content.opened {
     height: 260px;
     overflow-y: scroll;
 }
