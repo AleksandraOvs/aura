@@ -91,6 +91,10 @@
 
 .sidebar-list.cwc-filter-list.cwc-filter-list--checkbox li:not(:last-child) {
     margin-bottom: .5em;
+}
+
+.sidebar-list.cwc-filter-list.cwc-filter-list--checkbox {
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
 }
