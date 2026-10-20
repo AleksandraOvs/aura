@@ -43,7 +43,7 @@
 .wishlist-counter {
     position: absolute;
     top: -5px;
-    right: -10px;
+    right: -2px;
     width: 16px;
     height: 16px;
     background: var(--theme-color-accent);
