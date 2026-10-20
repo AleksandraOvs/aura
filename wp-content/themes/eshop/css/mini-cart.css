@@ -296,6 +296,12 @@ div#minicart-popup .close svg {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    left: 0;
+    padding: 1em 2em;
+    background: rgba(30, 30, 30, .7);
 }
 
 .minicart-btn-group a {
