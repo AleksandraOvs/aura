@@ -431,6 +431,11 @@ a.button.wc-forward:hover {
     margin-left: 0;
 }
 
+li.product .product-card__stock {
+    justify-content: center;
+    margin-top: .5em;
+}
+
 .woocommerce ul.products li.product img,
 .woocommerce-page ul.products li.product img {
     width: 100%;
