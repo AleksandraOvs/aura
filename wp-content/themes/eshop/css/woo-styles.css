@@ -739,7 +739,7 @@ li.product .product-card__stock {
 .order-benefits__item img {
     height: max-content;
     max-width: 30px;
-    transform: translateY(2px);
+    /* transform: translateY(2px); */
 }
 
 .order-benefits__item {
