@@ -356,4 +356,12 @@ div#minicart-popup .close svg {
     #minicart-popup {
         min-width: 100%;
     }
+
+    #minicart-popup {
+        padding: 4em .5em 2em 1em;
+    }
+
+    .widget_shopping_cart_content {
+        padding-right: .5em;
+    }
 }
