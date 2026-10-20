@@ -310,7 +310,14 @@ div#minicart-popup .close svg {
     width: max-content;
     border-radius: 5px;
     text-align: center;
+    border: 1px solid var(--theme-color-accent);
     color: var(--theme-color-primary);
+}
+
+.woocommerce-mini-cart__footer .minicart-btn-group a.button:hover {
+    background: transparent;
+    color: var(--white);
+    border-color: var(--white);
 }
 
 @media (max-width: 768px) {
