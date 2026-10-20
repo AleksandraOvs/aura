@@ -922,7 +922,6 @@
     top: 0;
     left: 0;
     z-index: 500;
-    padding-top: 3em;
     transform: translatey(-100%);
     transition: all .5s var(--transition);
   }
