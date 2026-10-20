@@ -656,6 +656,10 @@ a.button.wc-forward:hover {
     margin: 0 auto;
 }
 
+.product-card__actions .product-compare {
+    flex-grow: 1;
+}
+
 
 .product-inner__content__col__buy .product-quantity {
     width: 100%;
