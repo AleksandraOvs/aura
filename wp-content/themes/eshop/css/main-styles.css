@@ -1642,6 +1642,8 @@ section.partners h2 {
     background: var(--white);
     padding: 2em;
     padding-top: 2em;
+    padding-bottom: 2em;
+    padding-top: calc(2em + 46px);
     padding-bottom: 1em;
 }
 
