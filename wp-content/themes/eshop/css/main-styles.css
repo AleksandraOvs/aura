@@ -67,7 +67,11 @@ body {
     overflow-x: hidden;
 }
 
-body.fixed {
+body._fixed {
+    overflow: hidden;
+}
+
+body._fixed {
     overflow: hidden;
 }
 

@@ -45,7 +45,7 @@
 #minicart-popup {
     position: fixed;
     display: block;
-    background: rgba(0, 0, 0, .75);
+    background: var(--theme-color-primary);
     width: 35%;
     height: 100%;
     backdrop-filter: blur(10px);
