@@ -69,10 +69,19 @@ li.product h2.woocommerce-loop-product__title {
     display: flex;
     height: 40px;
     align-items: stretch;
+    text-align: Center;
+    color: #959494;
+    font-size: 12px;
     width: calc(100% - 40px - 1em);
+    justify-content: center;
     /* border: 1px solid var(--theme-color-primary);
     border-radius: 5px; */
 }
+
+.product-card__actions .product-quantity {
+    justify-content: flex-start;
+}
+
 
 .product-quantity .quantity {
     width: calc(100% - 80px);

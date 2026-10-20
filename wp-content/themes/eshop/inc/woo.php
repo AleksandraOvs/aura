@@ -130,9 +130,9 @@ add_filter(
     }
 );
 
-/**
- * QUANTITY
- */
+/*
+
+QUANTITY */
 
 function aura_product_quantity($product, $args = [])
 {
@@ -142,6 +142,17 @@ function aura_product_quantity($product, $args = [])
 
     // Не выводим количество, если товара нет в наличии или цена <= 0
     if (!$product->is_in_stock() || $product->get_price() <= 0) {
+        return;
+    }
+
+    // Проверяем остаток товара
+    if (
+        $product->managing_stock() &&
+        $product->get_stock_quantity() === 1
+    ) {
+        echo '<div class="product-quantity">';
+        echo '<span class="quantity-notice">Осталась 1 единица товара</span>';
+        echo '</div>';
         return;
     }
 
@@ -159,6 +170,28 @@ function aura_product_quantity($product, $args = [])
     $max_value = $product->is_sold_individually()
         ? 1
         : $product->get_max_purchase_quantity();
+
+    // Ограничиваем максимальное количество остатком на складе
+    if ($product->managing_stock()) {
+        $stock_quantity = $product->get_stock_quantity();
+
+        if ($stock_quantity !== null) {
+            $max_value = min($max_value, $stock_quantity);
+        }
+    }
+
+    // Не позволяем минимальному количеству превышать остаток
+    if ($max_value > 0) {
+        $min_value = min($min_value, $max_value);
+    }
+
+    // Количество по умолчанию не должно превышать остаток
+    if ($max_value > 0) {
+        $args['input_value'] = min(
+            max(1, (int) $args['input_value']),
+            $max_value
+        );
+    }
 ?>
 
     <div class="product-quantity">
@@ -166,7 +199,8 @@ function aura_product_quantity($product, $args = [])
         <button
             type="button"
             class="quantity-minus"
-            aria-label="Уменьшить количество">
+            aria-label="Уменьшить количество"
+            <?php disabled($max_value <= 1); ?>>
             −
         </button>
 
@@ -186,13 +220,16 @@ function aura_product_quantity($product, $args = [])
         <button
             type="button"
             class="quantity-plus"
-            aria-label="Увеличить количество">
+            aria-label="Увеличить количество"
+            <?php disabled($max_value <= 1); ?>>
             +
         </button>
 
     </div>
 
     <?php
+
+
 }
 
 /* УДАЛЕНИЕ БЛОКА "ВАС МОЖЕТ ЗАИНТЕРЕСОВАТЬ" НА СТРАНИЦЕ КОРЗИНА */
