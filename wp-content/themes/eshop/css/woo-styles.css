@@ -369,7 +369,8 @@ li.product h2.woocommerce-loop-product__title {
 
 /*NOTIFICATIONS */
 
-.woocommerce-message {
+.woocommerce-message,
+.woocommerce-error {
     border: 1px solid var(--theme-color-primary);
     position: fixed;
     z-index: 100;
