@@ -598,6 +598,10 @@ li.product .product-card__stock {
     align-items: center;
 }
 
+.single-product__inner__content .product-inner__content__col__buy .cart.product-buy-form {
+    margin-bottom: 0;
+}
+
 /* .single-product__inner__content {
     display: flex;
     gap: 1em;
