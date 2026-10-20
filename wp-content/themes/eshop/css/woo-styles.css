@@ -1094,6 +1094,15 @@ h2.woocommerce-loop-product__title {
         font-size: 18px;
     } */
 
+    .order-benefits__item img {
+        height: max-content;
+        width: 24px;
+        transform: translateY(2px);
+        height: 24px;
+        object-fit: contain;
+        object-position: center;
+    }
+
     .order-benefits {
         gap: .5em;
     }
