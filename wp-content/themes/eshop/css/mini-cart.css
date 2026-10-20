@@ -77,14 +77,14 @@
     gap: 5px;
 }
 
-.woocommerce-mini-cart-item::before {
+/* .woocommerce-mini-cart-item::before {
     width: 100%;
     height: .5px;
     left: 0;
     bottom: 0;
     background: #f0f0f0;
     position: absolute;
-}
+} */
 
 .woocommerce-mini-cart-item {
     position: relative;
