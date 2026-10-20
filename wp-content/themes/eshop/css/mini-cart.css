@@ -103,8 +103,8 @@ div#minicart-popup .close {
     cursor: pointer;
     position: absolute;
     opacity: 1;
-    top: 100px;
-    right: 20px;
+    top: 2em;
+    right: 1em;
     padding: 0;
     background: transparent;
     border: none;
