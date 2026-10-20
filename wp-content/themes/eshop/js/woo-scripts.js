@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
    =============================== */
 
     document.addEventListener('click', e => {
-        document.querySelectorAll('.woocommerce-message').forEach(msg => {
+        document.querySelectorAll('.woocommerce-message, .woocommerce-error').forEach(msg => {
             if (!msg.contains(e.target)) {
                 msg.classList.add('fade-out');
                 setTimeout(() => msg.remove(), 700);
