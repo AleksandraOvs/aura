@@ -77,34 +77,7 @@ if (post_password_required()) {
                     </div>
 
 
-                    <div class="product-quantity">
-
-                        <button
-                            type="button"
-                            class="quantity-minus"
-                            aria-label="Уменьшить количество">
-                            −
-                        </button>
-
-                        <?php
-                        woocommerce_quantity_input(
-                            [
-                                'min_value'   => $product->get_min_purchase_quantity(),
-                                'max_value'   => $product->get_max_purchase_quantity(),
-                                'input_value' => $product->get_min_purchase_quantity(),
-                            ],
-                            $product
-                        );
-                        ?>
-
-                        <button
-                            type="button"
-                            class="quantity-plus"
-                            aria-label="Увеличить количество">
-                            +
-                        </button>
-
-                    </div>
+                    <?php aura_product_quantity($product); ?>
 
 
                     <?php if ($product->is_type('simple')) : ?>

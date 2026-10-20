@@ -140,6 +140,11 @@ function aura_product_quantity($product, $args = [])
         return;
     }
 
+    // Не выводим количество, если товара нет в наличии или цена <= 0
+    if (!$product->is_in_stock() || $product->get_price() <= 0) {
+        return;
+    }
+
     $defaults = [
         'input_name'  => 'quantity',
         'input_value' => $product->get_min_purchase_quantity(),
@@ -154,7 +159,6 @@ function aura_product_quantity($product, $args = [])
     $max_value = $product->is_sold_individually()
         ? 1
         : $product->get_max_purchase_quantity();
-
 ?>
 
     <div class="product-quantity">
@@ -169,10 +173,10 @@ function aura_product_quantity($product, $args = [])
         <?php
         woocommerce_quantity_input(
             [
-                'input_name'  => $args['input_name'],
-                'input_value' => $args['input_value'],
-                'min_value'   => $min_value,
-                'max_value'   => $max_value,
+                'input_name'   => $args['input_name'],
+                'input_value'  => $args['input_value'],
+                'min_value'    => $min_value,
+                'max_value'    => $max_value,
                 'product_name' => $product->get_name(),
             ],
             $product
@@ -191,7 +195,7 @@ function aura_product_quantity($product, $args = [])
     <?php
 }
 
-/* УДАЛИЛ БЛОК "ВАС МОЖЕТ ЗАИНТЕРЕСОВАТЬ" НА СТРАНИЦЕ КОРЗИНА */
+/* УДАЛЕНИЕ БЛОКА "ВАС МОЖЕТ ЗАИНТЕРЕСОВАТЬ" НА СТРАНИЦЕ КОРЗИНА */
 add_action('wp', function () {
     if (is_cart()) {
         remove_action(

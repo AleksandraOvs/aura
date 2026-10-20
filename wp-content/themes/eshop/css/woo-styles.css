@@ -632,7 +632,6 @@ a.button.wc-forward:hover {
 }
 
 .woocommerce div.product-inner__content__col__buy form.product-buy-form {
-    margin: 2em 0 0;
     width: 90%;
 }
 
@@ -657,9 +656,11 @@ a.button.wc-forward:hover {
     margin: 0 auto;
 }
 
+
 .product-inner__content__col__buy .product-quantity {
     width: 100%;
     max-width: 200px;
+    margin-bottom: 2em;
 }
 
 /* .woocommerce div.product-inner__content__col__buy form.product-buy-form,
