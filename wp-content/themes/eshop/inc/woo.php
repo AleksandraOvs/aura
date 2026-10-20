@@ -188,7 +188,7 @@ function aura_product_quantity($product, $args = [])
 
     </div>
 
-<?php
+    <?php
 }
 
 /* УДАЛИЛ БЛОК "ВАС МОЖЕТ ЗАИНТЕРЕСОВАТЬ" НА СТРАНИЦЕ КОРЗИНА */
@@ -467,3 +467,58 @@ add_action('wp_enqueue_scripts', function () {
         ]
     );
 });
+
+/**
+ * Выводит информацию об остатках товара WooCommerce.
+ */
+function render_product_stock($product = null)
+{
+    if (!$product) {
+        global $product;
+    }
+
+    if (!$product instanceof WC_Product) {
+        return;
+    }
+
+    echo '<div class="product-card__stock">';
+
+    $price = $product->get_price();
+    $stock_quantity = $product->get_stock_quantity();
+
+    // Если цена не указана
+    if ($price === '' || $price === null) {
+    ?>
+        <span style="color: #959494;">Нет в наличии</span>
+    <?php
+    } elseif ($stock_quantity !== null && $stock_quantity <= 0) {
+    ?>
+        <span style="color: #959494;">Нет в наличии</span>
+    <?php
+    } elseif ($product->managing_stock() && $stock_quantity !== null) {
+    ?>
+        <svg width="19" height="16" viewBox="0 0 19 16"
+            fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+                d="M6.21 15.54L0 9.33L2.83 6.5L6.21 9.89L16.09 0L18.92 2.83L6.21 15.54Z"
+                fill="#53B423" />
+        </svg>
+
+        <span>
+            На складе <?php echo esc_html($stock_quantity); ?> шт.
+        </span>
+    <?php
+    } else {
+    ?>
+        <span>
+            <?php
+            echo esc_html(
+                $product->is_in_stock() ? 'В наличии' : 'Нет в наличии'
+            );
+            ?>
+        </span>
+<?php
+    }
+
+    echo '</div>';
+}

@@ -37,36 +37,36 @@ $compare_img = '<svg width="20" height="16" viewBox="0 0 20 16" fill="none" xmln
 
     <?php //aura_product_tags(); 
     ?>
+    <?php if ($product->get_price() !== '') : ?>
+        <div class="product-card__actions">
 
-    <div class="product-card__actions">
+            <?php aura_product_quantity($product); ?>
 
-        <?php aura_product_quantity($product); ?>
+            <?php echo do_shortcode('[aura_compare_button]'); ?>
 
-        <?php echo do_shortcode('[aura_compare_button]'); ?>
-
-    </div>
-    <div class="product-card__bottom">
-
-        <?php
-        if ($product->is_type('variable')) {
-            echo '<span class="product-card__details">Подробнее</span>';
-        } else {
-            woocommerce_template_loop_price();
-        }
-        ?>
-
-        <div class="product-card__cart">
-            <?php woocommerce_template_loop_add_to_cart(); ?>
         </div>
 
-    </div>
 
-    <div class="product-card__stock">
-        <svg width="19" height="16" viewBox="0 0 19 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M6.21 15.54L0 9.33L2.83 6.5L6.21 9.89L16.09 0L18.92 2.83L6.21 15.54Z" fill="#53B423" />
-        </svg>
+        <div class="product-card__bottom">
 
-        <span>На складе <?php echo esc_html($product->get_stock_quantity()); ?> шт.</span>
-    </div>
+            <?php
+            if ($product->is_type('variable')) {
+                echo '<span class="product-card__details">Подробнее</span>';
+            } else {
+                woocommerce_template_loop_price();
+            }
+            ?>
+
+            <div class="product-card__cart">
+                <?php woocommerce_template_loop_add_to_cart(); ?>
+            </div>
+
+        </div>
+
+    <?php endif; ?>
+
+
+    <?php render_product_stock($product); ?>
+
 
 </li>
