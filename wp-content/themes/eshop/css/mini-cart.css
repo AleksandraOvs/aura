@@ -270,6 +270,7 @@ div#minicart-popup .close svg {
     height: 100%;
     overflow-y: scroll;
     padding-right: 1.5em;
+    padding-bottom: 3em;
 }
 
 .woocommerce-mini-cart__footer {
