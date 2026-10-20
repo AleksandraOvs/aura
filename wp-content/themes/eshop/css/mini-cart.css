@@ -269,6 +269,7 @@ div#minicart-popup .close svg {
     flex-direction: column;
     justify-content: space-between;
     height: 100%;
+    overflow-y: scroll;
 }
 
 .woocommerce-mini-cart__footer {
