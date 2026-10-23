@@ -1,0 +1,177 @@
+.pwvr-form {
+    display: grid;
+    gap: 20px;
+    max-width: 640px;
+}
+
+.pwvr-form__label {
+    display: grid;
+    gap: 8px;
+}
+
+.pwvr-form textarea {
+    width: 100%;
+    height: 133px;
+    resize: vertical;
+    overflow-y: scroll;
+    border: 1px solid var(--theme-color-grey);
+    padding: .5em;
+    font-style: italic;
+}
+
+.pwvr-form__rating {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    border: 0;
+    padding: 0;
+}
+
+.pwvr-review h3 {
+    font-size: 18px;
+}
+
+.pwvr-form__rating label {
+    cursor: pointer;
+}
+
+.product-reviews__list {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+}
+
+.product-reviews__list {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+}
+
+.pwvr-form__submit:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.product-reviews__list .review {
+    background: #f5f5f5;
+    padding: .5em;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: row;
+    gap: .5em;
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+.product-review__content {
+    order: 1;
+}
+
+.product-review__rating {
+    order: 2;
+}
+
+.product-review__meta {
+    order: 3;
+}
+
+/* Контейнер рейтинга */
+.comment-form-rating .stars a {
+    color: transparent;
+    -webkit-text-stroke: 1px var(--theme-color-accent);
+    text-decoration: none;
+}
+
+.product-review__rating {
+    color: var(--theme-color-accent);
+    letter-spacing: 2px;
+    font-size: 20px;
+}
+
+/* Контур звёзд */
+.product-review__rating {
+    -webkit-text-stroke: 0.5px var(--theme-color-accent);
+}
+
+.pwvr-form__message {
+    margin: 0;
+}
+
+.pwvr-form__success {
+    margin: 0;
+}
+
+.pwvr-form__honeypot {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/*PRODUCT PAGE REVIEWS STYLES*/
+
+.product-reviews__title {
+    font-size: 28px;
+    margin-top: 0;
+    margin-bottom: 1em;
+    font-weight: 500;
+}
+
+.pwvr-review {
+    margin-top: 2em;
+    width: 100%;
+    padding: 1em;
+    border: 1px solid #dfdfdf;
+    border-radius: 5px;
+}
+
+/*stars rating*/
+
+.pwvr-rating {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 4px;
+}
+
+.pwvr-rating input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.pwvr-rating label {
+    color: #ccc;
+    font-size: 30px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+/* Подсветка выбранной звезды и всех предыдущих */
+.pwvr-rating label:has(~ input:checked),
+.pwvr-rating input:checked+label {
+    color: #f5b301;
+}
+
+/* Подсветка при наведении */
+.pwvr-rating label:hover,
+.pwvr-rating label:hover~label {
+    color: #f5b301;
+}
+
+/* Клавиатурная навигация */
+.pwvr-rating input:focus-visible+label {
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+    border-radius: 2px;
+}
+
+.pwvr-rating label.is-active {
+    color: #f5b301;
+}

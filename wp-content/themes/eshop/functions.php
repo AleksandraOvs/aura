@@ -44,6 +44,7 @@ function e_shop_enqueue_styles()
     wp_enqueue_style('my-account-styles', get_template_directory_uri() . '/css/myaccount.css');
     wp_enqueue_style('cart-styles', get_template_directory_uri() . '/css/cart.css');
     wp_enqueue_style('delivery-styles', get_template_directory_uri() . '/css/delivery.css');
+    wp_enqueue_style('reviews-styles', get_template_directory_uri() . '/css/reviews.css');
 
     wp_enqueue_style('popups-styles', get_template_directory_uri() . '/css/popups.css');
     if (is_product()) {
@@ -78,7 +79,7 @@ function e_shop_enqueue_styles()
 
 
     //CHECKOUT
-    wp_enqueue_script('chtckout-script', get_stylesheet_directory_uri() . '/js/checkout.js', array(), _S_VERSION, true);
+    wp_enqueue_script('checkout-script', get_stylesheet_directory_uri() . '/js/checkout.js', array(), _S_VERSION, true);
     wp_enqueue_style('checkout-styles', get_template_directory_uri() . '/css/checkout.css');
 
     //PROJECTS

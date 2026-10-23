@@ -558,8 +558,44 @@ function render_product_stock($product = null)
             );
             ?>
         </span>
-<?php
+    <?php
     }
 
     echo '</div>';
+}
+
+/**
+ * Кастомный вывод отзыва WooCommerce без аватара.
+ */
+function pwvr_render_product_review($comment, $args, $depth)
+{
+    ?>
+    <div id="review-<?php comment_ID(); ?>" <?php comment_class('product-review'); ?>>
+
+        <div class="product-review__meta">
+            <span class="product-review__author">
+                <?php echo esc_html(get_comment_author($comment)); ?>
+            </span>
+
+            <time class="product-review__date" datetime="<?php echo esc_attr(get_comment_date('c', $comment)); ?>">
+                <?php echo esc_html(get_comment_date('', $comment)); ?>
+            </time>
+        </div>
+
+        <?php
+        $rating = (int) get_comment_meta($comment->comment_ID, 'rating', true);
+
+        if ($rating > 0) :
+        ?>
+            <div class="product-review__rating" aria-label="<?php echo esc_attr($rating . ' из 5'); ?>">
+                <?php echo esc_html(str_repeat('★', $rating) . str_repeat('☆', 5 - $rating)); ?>
+            </div>
+        <?php endif; ?>
+
+        <div class="product-review__content">
+            <?php comment_text($comment); ?>
+        </div>
+
+    </div>
+<?php
 }

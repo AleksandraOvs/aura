@@ -7,7 +7,7 @@
 }
 
 
-.woocommerce:where(body:not(.woocommerce-block-theme-has-button-styles)) #respond input#submit,
+/* .woocommerce:where(body:not(.woocommerce-block-theme-has-button-styles)) #respond input#submit,
 .woocommerce:where(body:not(.woocommerce-block-theme-has-button-styles)) a.button,
 .woocommerce:where(body:not(.woocommerce-block-theme-has-button-styles)) button.button,
 .woocommerce:where(body:not(.woocommerce-block-theme-has-button-styles)) input.button,
@@ -36,7 +36,7 @@
 :where(body:not(.woocommerce-block-theme-has-button-styles)):where(:not(.edit-post-visual-editor)) .woocommerce input.button.alt:hover {
     background-color: var(--theme-color-primary);
     color: #fff;
-}
+} */
 
 .woocommerce #payment #place_order,
 .woocommerce-page #payment #place_order {
@@ -244,6 +244,7 @@ li.product h2.woocommerce-loop-product__title {
 .woocommerce ul.products li.product .button {
     display: block;
     margin-top: 0;
+    padding: 10px;
 }
 
 .product-card__bottom {

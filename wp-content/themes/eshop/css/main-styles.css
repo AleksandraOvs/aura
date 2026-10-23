@@ -647,6 +647,7 @@ header.scroll .header__top {
     display: flex;
     gap: .5em;
     align-items: center;
+    font-weight: 500;
 }
 
 .header__bottom__actions__links__list {
@@ -1845,6 +1846,13 @@ section.partners h2 {
     display: flex;
     flex-direction: column;
     gap: 5vh;
+}
+
+.contacts__inner__right .contacts-form div .wpcf7-form-control.wpcf7-submit.button.button-black {
+    width: max-content;
+    background: var(--theme-color-black);
+    border-radius: 5px;
+    color: #fff;
 }
 
 .wpcf7-form p span {

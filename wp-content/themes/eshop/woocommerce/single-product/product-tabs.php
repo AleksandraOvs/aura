@@ -161,9 +161,19 @@ $guarantee_content = get_field('guarantee_text', 'option');
 
                 <?php endif; ?>
             </div>
-            <!-- Отзывы (премодерация, зарегистрированные пользователи)-->
-            <div class="product-tabs__pane " data-tab="reviews">
-                Здесь будут отзывы
+            <!-- Отзывы -->
+            <div class="product-tabs__pane" data-tab="reviews">
+
+                <?php
+                // Вывод опубликованных отзывов WooCommerce.
+                comments_template();
+                ?>
+
+                <?php
+                // Форма добавления отзыва.
+                echo do_shortcode('[pwvr_review_form]');
+                ?>
+
             </div>
 
             <!-- Инструкция (файлы/текст для отдельного товара) -->

@@ -1,50 +1,32 @@
-jQuery(function ($) {
+document.addEventListener('DOMContentLoaded', () => {
+    const authTabs = document.querySelector('#customer_login');
 
-    /**
-     * Показываем нужную вкладку
-     */
-    function showCheckoutTab(tab) {
+    if (!authTabs) return;
 
-        $('.checkout-steps [data-checkout-tab]')
-            .removeClass('active');
+    const tabs = authTabs.querySelectorAll('.auth-tabs__title');
+    const panels = authTabs.querySelectorAll('.auth-tabs__panel');
 
-        $('.checkout-steps [data-checkout-tab="' + tab + '"]')
-            .addClass('active');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const target = tab.dataset.tab;
 
-        $('.checkout-tab-panel')
-            .removeClass('active');
+            // Снимаем активный класс со всех табов
+            tabs.forEach(item => item.classList.remove('is-active'));
 
-        $('.checkout-tab-panel[data-checkout-panel="' + tab + '"]')
-            .addClass('active');
-    }
+            // Снимаем активный класс со всех панелей
+            panels.forEach(panel => panel.classList.remove('is-active'));
 
+            // Активируем выбранный таб
+            tab.classList.add('is-active');
 
-    /**
-     * Переключение вкладок
-     */
-    $(document).on(
-        'click',
-        '.checkout-steps [data-checkout-tab]',
-        function () {
+            // Активируем соответствующую панель
+            const activePanel = authTabs.querySelector(
+                `.auth-tabs__panel[data-panel="${target}"]`
+            );
 
-            const tab = $(this).data('checkout-tab');
-
-            showCheckoutTab(tab);
-
-        }
-    );
-
-
-    /**
-     * При загрузке страницы определяем
-     * активную вкладку из PHP-класса active.
-     */
-    const activeTab = $('.checkout-steps [data-checkout-tab].active')
-        .data('checkout-tab');
-
-
-    if (activeTab) {
-        showCheckoutTab(activeTab);
-    }
-
+            if (activePanel) {
+                activePanel.classList.add('is-active');
+            }
+        });
+    });
 });
