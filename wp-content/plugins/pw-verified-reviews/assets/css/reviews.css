@@ -65,6 +65,7 @@
 
 .product-review__content {
     order: 1;
+    width: 100%;
 }
 
 .product-review__rating {
