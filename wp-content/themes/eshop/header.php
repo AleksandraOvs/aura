@@ -229,23 +229,23 @@
 </svg>
 ';
                             ?>
-                            <a href="/">
-                                <div class="account">
-                                    <a href="<?php echo esc_url(wc_get_page_permalink('myaccount')); ?>">
 
 
-                                        <?php
-                                        if (is_user_logged_in()) {
-                                            echo  $img_login;
-                                            echo esc_html(wp_get_current_user()->user_login);
-                                        } else {
-                                            echo $img_nologin . 'Войти';
-                                        }
-                                        ?>
+                            <a href="<?php echo esc_url(wc_get_page_permalink('myaccount')); ?>">
 
-                                    </a>
-                                </div>
+
+                                <?php
+                                if (is_user_logged_in()) {
+                                    echo  $img_login;
+                                    echo esc_html(wp_get_current_user()->user_login);
+                                } else {
+                                    echo $img_nologin . 'Войти';
+                                }
+                                ?>
+
                             </a>
+
+
                         </div>
 
                         <ul class="header__bottom__actions__links__list">

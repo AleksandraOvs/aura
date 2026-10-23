@@ -2250,12 +2250,8 @@ footer.footer * .menu {
 
     .header__bottom__actions .account a {
         display: flex;
-        width: 34px;
-        height: 34px;
         justify-content: center;
         align-items: center;
-        border-radius: 100%;
-        background: #303030;
     }
 
     .header__bottom__catalog-link {
