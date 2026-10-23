@@ -381,6 +381,10 @@ li.product h2.woocommerce-loop-product__title {
     margin-top: 1em;
 }
 
+.woocommerce-form__label.woocommerce-form__label-for-checkbox span {
+    line-height: 120%;
+}
+
 /*NOTIFICATIONS */
 
 .woocommerce-message,
