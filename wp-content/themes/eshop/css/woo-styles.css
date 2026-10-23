@@ -389,6 +389,22 @@ li.product h2.woocommerce-loop-product__title {
     transform: translatey(3px) scale(1.2);
 }
 
+.woocommerce form .form-row::after,
+.woocommerce form .form-row::before,
+.woocommerce-page .auth-tabs__panel form .form-row::after,
+.woocommerce-page .auth-tabs__panel form .form-row::before {
+    content: none;
+    display: table;
+}
+
+.woocommerce-page .auth-tabs__panel form .form-row .button {
+    margin-right: 0;
+}
+
+.woocommerce-page .auth-tabs__panel form .form-row label {
+    margin: 0;
+}
+
 /*NOTIFICATIONS */
 
 .woocommerce-message,
