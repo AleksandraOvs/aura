@@ -87,6 +87,11 @@ if (! $product) {
 
     </div>
 
+    <?php
+    // Форма отзыва или сообщение о возможности его оставить.
+    echo do_shortcode('[pwvr_review_form]');
+    ?>
+
     <div class="clear"></div>
 
-</div>
+</div><!-- #reviews -->

@@ -169,11 +169,6 @@ $guarantee_content = get_field('guarantee_text', 'option');
                 comments_template();
                 ?>
 
-                <?php
-                // Форма добавления отзыва.
-                echo do_shortcode('[pwvr_review_form]');
-                ?>
-
             </div>
 
             <!-- Инструкция (файлы/текст для отдельного товара) -->
