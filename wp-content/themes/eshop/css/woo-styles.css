@@ -112,6 +112,10 @@ li.product h2.woocommerce-loop-product__title {
     border-radius: 5px 0 0 5px;
 }
 
+.product-description {
+    margin-bottom: 2em;
+}
+
 .product-quantity button {
     width: 40px;
     height: 40px;
