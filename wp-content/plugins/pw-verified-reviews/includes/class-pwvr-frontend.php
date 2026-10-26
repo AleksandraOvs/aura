@@ -61,7 +61,6 @@ class PWVR_Frontend
 
         ob_start();
 ?>
-        <h3>Оставите отзыв об этом товаре?</h3>
         <form class="pwvr-form">
             <input type="hidden" name="product_id"
                 value="<?php echo esc_attr($product_id); ?>">
