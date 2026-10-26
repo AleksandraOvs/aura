@@ -406,6 +406,36 @@ button.woocommerce-button.button.woocommerce-form-register__submit {
     padding: .5em 1em;
 }
 
+.woocommerce-form.woocommerce-form-login .form-row {
+    display: flex;
+    flex-direction: column-reverse;
+}
+
+.login .form-row .woocommerce-button.button.woocommerce-form-login__submit {
+    max-width: 100%;
+    width: 100%;
+    margin-top: 2em;
+}
+
+.woocommerce .woocommerce-form-login .woocommerce-form-login__rememberme {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    justify-content: center;
+}
+
+.woocommerce-privacy-policy-text {
+    font-size: 12px;
+    margin-bottom: 1em;
+}
+
+.register .form-row.submit-form button {
+    width: 100%;
+    max-width: 100%;
+    display: block;
+    margin-top: 1em;
+}
+
 @media (max-width: 768px) {
     .my-order__item-right {
         flex-wrap: wrap;
@@ -427,6 +457,11 @@ button.woocommerce-button.button.woocommerce-form-register__submit {
     .my-order__item:not(:last-child) {
         padding-bottom: 1em;
         border-bottom: 1px solid #bcbcbc;
+    }
+
+    #customer_login {
+        width: 100%;
+        max-width: 100%;
     }
 }
 
@@ -450,4 +485,21 @@ button.woocommerce-button.button.woocommerce-form-register__submit {
     .my-order__item-right__item._total {
         width: 100%;
     }
+
+    .auth-tabs__title {
+        font-size: 18px;
+    }
+
+    .woocommerce form.login,
+    .woocommerce form.register {
+        padding: 0;
+        margin: 0;
+        margin-top: 0px;
+        text-align: left;
+        border-radius: 0 0 5px 5px;
+        margin-top: 1em;
+    }
+
+
+
 }
