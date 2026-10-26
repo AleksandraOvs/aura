@@ -165,8 +165,8 @@ $guarantee_content = get_field('guarantee_text', 'option');
             <div class="product-tabs__pane" data-tab="reviews">
 
                 <?php
-                // Вывод опубликованных отзывов WooCommerce.
-                comments_template();
+                // Вывод отзывов товара.
+                wc_get_template('single-product-reviews.php');
                 ?>
 
                 <?php
