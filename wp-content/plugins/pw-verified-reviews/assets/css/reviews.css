@@ -1,7 +1,7 @@
 .pwvr-form {
     display: grid;
     gap: 20px;
-    max-width: 640px;
+    max-width: 100%;
 }
 
 .pwvr-form__label {
