@@ -38,7 +38,7 @@ $about_button_link = get_field('about_button_link');
 
                         <a
                             href="<?= esc_url($about_button_link ?: '#'); ?>"
-                            class="button">
+                            class="button" data-popup="consultation-popup">
                             <?= esc_html($about_button_text); ?>
                         </a>
 
