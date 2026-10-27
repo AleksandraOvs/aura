@@ -1,0 +1,1531 @@
+<?php
+
+namespace Cleantalk\Antispam\IntegrationsByClass;
+
+use Cleantalk\Antispam\Cleantalk;
+use Cleantalk\Antispam\CleantalkRequest;
+use Cleantalk\Antispam\IntegrationMetrics\IMetricDTO;
+use Cleantalk\Antispam\IntegrationMetrics\IMetricService;
+use Cleantalk\ApbctWP\Sanitize;
+use Cleantalk\ApbctWP\Variables\Cookie;
+use Cleantalk\ApbctWP\Variables\Get;
+use Cleantalk\ApbctWP\Variables\Post;
+use Cleantalk\ApbctWP\WcSpamOrdersFunctions;
+use Cleantalk\ApbctWP\Variables\Request;
+use Cleantalk\ApbctWP\Variables\Server;
+
+/**
+ * Set of WooCommerce actions for integration
+ * 1) add to cart
+ * 1.1) guest add to cart (ajax)
+ * 1.2) auth add to cart (ajax)
+ * 1.3) guest add to cart (rest)
+ * 1.4) auth add to cart (rest)
+ * 2) checkout
+ * 2.1) guest checkout (ajax)
+ * 2.2) auth checkout (ajax)
+ * 2.3) guest checkout (rest)
+ * 2.4) auth checkout (rest)
+ * 3) registration
+ * 3.1) guest registration (ajax)
+ * 3.2) guest registration (rest)
+ * 4) collect data from checkout
+ * 4.1) guest checkout (ajax)
+ * 4.2) auth checkout (rest)
+ * 5) send feedback
+ * 6) add payment method (logged-in customers only, checked as an order)
+ */
+class Woocommerce extends IntegrationByClassBase
+{
+    /**
+     * Prefix of the transient keeping the details of a blocked order.
+     */
+    const BLOCKED_ORDER_TRANSIENT = 'apbct_blocked_order_';
+
+    private $event_token = null;
+
+    /**
+     * @var bool
+     */
+    private $hide_rejection_message;
+
+    /**
+     * @psalm-suppress PossiblyUnusedMethod
+     */
+    public function __construct()
+    {
+        $this->imetric_dto_version = '1.0.0';
+    }
+
+    /**
+     * Key of the transient holding the details of the order blocked in this request.
+     * @var string
+     */
+    private $blocked_order_key = '';
+
+    /**
+     * Text shown when Add payment method is blocked.
+     * @var string
+     */
+    private $add_payment_method_block_message = '';
+
+    /**
+     * @return void
+     * @psalm-suppress PossiblyUnusedMethod
+     */
+    public function doPublicWork()
+    {
+        global $apbct;
+
+        // honeypot
+        add_filter('woocommerce_checkout_fields', [$this, 'addHoneypotField']);
+
+        // The blocked visitor gets a thank you page with no order behind it - fill in the details.
+        // Only the redirect of a blocked order carries the key, so the rest of the pages are left alone.
+        if ( Get::getString('key') !== '' ) {
+            // Classic themes render the confirmation with the checkout/thankyou.php template
+            add_action('woocommerce_after_template_part', [$this, 'renderBlockedOrderOverview'], 10, 4);
+            // Block themes render it with the woocommerce/order-confirmation-* blocks instead
+            add_filter('render_block', [$this, 'appendBlockedOrderOverviewToBlock'], 10, 2);
+        }
+
+        // add to cart hooks if cart works with non-ajax requests
+        $this->addCartActions();
+
+        // checkout
+        if ( $apbct->settings['forms__wc_checkout_test'] == 1 ) {
+            $this->addActions();
+        }
+
+        // Add payment method follows "Protect logged in Users", not the checkout option.
+        $this->addPaymentMethodActions();
+
+        // registration
+        if ( !$apbct->settings['forms__wc_register_from_order'] && (Request::get('wc-ajax') === 'checkout' || Request::get('wc-ajax') === 'complete_order') ) {
+            remove_filter('woocommerce_registration_errors', 'ct_registration_errors', 1);
+        } else {
+            add_filter('woocommerce_registration_errors', 'ct_registration_errors', 1, 3);
+        }
+
+        // collect data for spam orders
+        add_filter('woocommerce_register_shop_order_post_statuses', [$this, 'addOrdersSpamStatus']);
+        add_filter('wc_order_statuses', [$this, 'addOrdersSpamStatusSelect']);
+        add_action('parse_query', [$this, 'addOrdersSpamStatusHideFromList']);
+        add_filter('bulk_actions-edit-shop_order', [$this, 'addSpamActionToBulk']);
+        add_filter('handle_bulk_actions-edit-shop_order', [$this, 'addSpamActionToBulkHandle'], 10, 3);
+    }
+
+    public function doAjaxWork()
+    {
+        global $apbct;
+
+        //add to cart AJAX actions
+        $this->addCartActions();
+
+        // checkout
+        if ( $apbct->settings['forms__wc_checkout_test'] == 1 ) {
+            $this->addActions();
+        }
+
+        // Restore Spam Order
+        add_action('wp_ajax_apbct_restore_spam_order', array(WcSpamOrdersFunctions::class, 'restoreOrderAction'));
+
+        // Details
+        add_action('wp_ajax_apbct_details_spam_order', array(WcSpamOrdersFunctions::class, 'detailsOrderAction'));
+
+        // Uni CPO integration, remove service fields from order items
+        add_action('woocommerce_checkout_create_order_line_item', [$this, 'removeServiceFieldsFromOrderItems'], 100, 4);
+    }
+
+    public function doAdminWork()
+    {
+        add_action('current_screen', [$this, 'addOrdersListStatusViews']);
+        add_action('admin_menu', [$this, 'addLegacySpamOrdersMenuPage']);
+    }
+
+    /**
+     * Legacy fallback: register a dedicated admin page for the stored spam orders.
+     *
+     * addOrdersListStatusViews() integrates the 'Spam' view into the native orders screen,
+     * but that only works when wc_get_page_screen_id() reports the HPOS orders screen.
+     * Legacy (posts table) installations render orders on the shared post-type screen instead,
+     * so the blocked orders would become unreachable without a standalone page.
+     *
+     * @return void
+     * @psalm-suppress PossiblyUnusedMethod
+     */
+    public function addLegacySpamOrdersMenuPage()
+    {
+        if ( function_exists('wc_get_page_screen_id') && wc_get_page_screen_id('shop_order') !== 'shop_order' ) {
+            // HPOS handles the integration inline, no separate page is needed.
+            return;
+        }
+
+        add_submenu_page(
+            'woocommerce',
+            __('WooCommerce spam orders', 'cleantalk-spam-protect'),
+            __('WooCommerce spam orders', 'cleantalk-spam-protect'),
+            'manage_options',
+            'apbct_wc_spam_orders',
+            [$this, 'renderSpamOrdersPage']
+        );
+    }
+
+    public function addActions()
+    {
+        global $_cleantalk_hooked_actions, $apbct;
+
+        $this->hide_rejection_message = $apbct->settings['forms__wc_hide_rejection_message'] && $apbct->settings['data__wc_store_blocked_orders'];
+
+        add_action('wp_ajax_nopriv_woocommerce_checkout', 'ct_ajax_hook', 1);
+        add_action('wp_ajax_woocommerce_checkout', 'ct_ajax_hook', 1);
+        $_cleantalk_hooked_actions[] = 'woocommerce_checkout';
+        $_cleantalk_hooked_actions[] = 'wcfm_ajax_controller';
+        add_action('woocommerce_after_checkout_validation', [$this, 'checkoutCheck'], 1, 2);
+        add_action('woocommerce_store_api_checkout_order_processed', [$this, 'checkoutCheckFromRest'], 1, 1);
+        add_action('woocommerce_checkout_update_order_meta', [$this, 'addRequestIdToOrderMeta']);
+        add_action('woocommerce_store_api_checkout_update_customer_from_request', [$this, 'storeApiCheckoutUpdateCustomerFromRequest'], 10, 2);
+    }
+
+    /**
+     * Intercept WooCommerce Add payment method.
+     *
+     * The account form has no email field, so the general form checker skips it.
+     * The customer is already logged in; the check uses that account email and
+     * is sent with comment_type "order". It runs only when protection of
+     * logged-in users is enabled.
+     *
+     * Stripe confirms the card before the account form is posted. Legacy
+     * setup intents use wc-ajax. The UPE form uses admin-ajax action
+     * wc_stripe_create_and_confirm_setup_intent, and that call attaches the
+     * card at Stripe. Those calls are checked too, otherwise the card is saved
+     * even when the later account form is blocked.
+     *
+     * @return void
+     */
+    public function addPaymentMethodActions()
+    {
+        add_filter('woocommerce_add_payment_method_form_is_valid', [$this, 'filterAddPaymentMethodFormIsValid']);
+        add_action('wc_ajax_wc_stripe_create_setup_intent', [$this, 'blockStripeAddPaymentMethodAjax'], 1);
+        add_action('wc_ajax_wc_stripe_init_setup_intent', [$this, 'blockStripeAddPaymentMethodAjax'], 1);
+        // UPE confirms the card here, before the account form is posted.
+        add_action(
+            'wp_ajax_wc_stripe_create_and_confirm_setup_intent',
+            [$this, 'blockStripeCreateAndConfirmSetupIntentAjax'],
+            1
+        );
+    }
+
+    /**
+     * @param bool $is_valid
+     *
+     * @return bool
+     * @psalm-suppress PossiblyUnusedMethod, PossiblyUnusedReturnValue, UndefinedFunction
+     */
+    public function filterAddPaymentMethodFormIsValid($is_valid)
+    {
+        if ( ! $is_valid ) {
+            return false;
+        }
+
+        if ( $this->isAddPaymentMethodAllowed() ) {
+            return true;
+        }
+
+        if ( function_exists('wc_add_notice') && $this->add_payment_method_block_message !== '' ) {
+            \wc_add_notice($this->add_payment_method_block_message, 'error');
+        }
+
+        return false;
+    }
+
+    /**
+     * Stop Stripe setup-intent calls that belong to the Add payment method page.
+     *
+     * @return void
+     * @psalm-suppress PossiblyUnusedMethod, UndefinedFunction
+     */
+    public function blockStripeAddPaymentMethodAjax()
+    {
+        if ( ! $this->isAddPaymentMethodPageRequest() ) {
+            return;
+        }
+
+        if ( $this->isAddPaymentMethodAllowed() ) {
+            return;
+        }
+
+        $this->sendStripeAddPaymentMethodJsonError();
+    }
+
+    /**
+     * Stop the UPE call that creates and confirms a setup intent.
+     *
+     * That action is used only by the Add payment method form. Checkout does
+     * not post it. The card is attached at Stripe inside this request, so the
+     * later account-form block is too late.
+     *
+     * @return void
+     * @psalm-suppress PossiblyUnusedMethod
+     */
+    public function blockStripeCreateAndConfirmSetupIntentAjax()
+    {
+        if ( $this->isAddPaymentMethodAllowed() ) {
+            return;
+        }
+
+        $this->sendStripeAddPaymentMethodJsonError();
+    }
+
+    /**
+     * @return void
+     * @psalm-suppress UndefinedFunction
+     */
+    private function sendStripeAddPaymentMethodJsonError()
+    {
+        if ( function_exists('wp_send_json_error') ) {
+            \wp_send_json_error(
+                array(
+                    'error' => array(
+                        'message' => $this->add_payment_method_block_message,
+                    ),
+                )
+            );
+        }
+    }
+
+    /**
+     * Whether this request may add a payment method.
+     *
+     * @return bool
+     * @psalm-suppress PossiblyUnusedMethod
+     */
+    public function isAddPaymentMethodAllowed()
+    {
+        global $apbct;
+
+        if ( empty($apbct->settings['data__protect_logged_in']) ) {
+            do_action('apbct_skipped_request', __FILE__ . ' -> ' . __FUNCTION__ . '():' . __LINE__, $_POST);
+
+            return true;
+        }
+
+        if ( ! is_user_logged_in() ) {
+            do_action('apbct_skipped_request', __FILE__ . ' -> ' . __FUNCTION__ . '():' . __LINE__, $_POST);
+
+            return true;
+        }
+
+        $user = wp_get_current_user();
+        $sender_email = isset($user->user_email) ? $user->user_email : '';
+        $sender_nickname = isset($user->display_name) ? $user->display_name : '';
+
+        $message = array();
+        $payment_method = Post::getString('payment_method');
+        if ( $payment_method === '' ) {
+            $payment_method = Post::getString('payment_method_type');
+        }
+        if ( $payment_method !== '' ) {
+            $message['payment_method'] = $payment_method;
+        }
+
+        IMetricService::seek(
+            $this,
+            __FUNCTION__
+        );
+
+        $base_call_result = apbct_base_call(
+            array(
+                'message'         => $message,
+                'sender_email'    => $sender_email,
+                'sender_nickname' => $sender_nickname,
+                'post_info'       => array(
+                    'comment_type' => 'order',
+                    'post_url'     => Server::get('HTTP_REFERER'),
+                ),
+                'sender_info'     => array(
+                    'sender_url' => null,
+                    IMetricDTO::$SENDER_INFO_KEY => IMetricService::finalizeDTO($this),
+                ),
+            )
+        );
+
+        if ( ! isset($base_call_result['ct_result']) ) {
+            return true;
+        }
+
+        $ct_result = $base_call_result['ct_result'];
+        ct_hash($ct_result->id);
+
+        // An empty response means the call was skipped. Only an explicit denial blocks.
+        if ( ! isset($ct_result->allow) || (int) $ct_result->allow !== 0 ) {
+            return true;
+        }
+
+        $this->add_payment_method_block_message = $this->getAddPaymentMethodBlockMessage($ct_result);
+
+        return false;
+    }
+
+    /**
+     * The Stripe wc-ajax call is not the account form itself. The page that opened it is.
+     *
+     * @return bool
+     */
+    private function isAddPaymentMethodPageRequest()
+    {
+        return apbct_is_in_referer('add-payment-method') || apbct_is_in_uri('add-payment-method');
+    }
+
+    /**
+     * @param object $ct_result
+     *
+     * @return string
+     */
+    private function getAddPaymentMethodBlockMessage($ct_result)
+    {
+
+        if (! empty($ct_result->comment) ) {
+            return (string) $ct_result->comment;
+        }
+
+        return __('Unable to add payment method to your account.', 'cleantalk-spam-protect');
+    }
+
+    public function addHoneypotField($fields)
+    {
+        if (apbct_exclusions_check__url()) {
+            return $fields;
+        }
+
+        global $apbct;
+
+        if ( $apbct->settings['data__honeypot_field'] ) {
+            $fields['billing']['wc_apbct_email_id'] = array(
+                'id'            => 'wc_apbct_email_id',
+                'type'          => 'text',
+                'label'         => '',
+                'placeholder'   => '',
+                'required'      => false,
+                'class'         => array('form-row-wide', 'wc_apbct_email_id'),
+                'clear'         => true,
+                'autocomplete'  => 'off'
+            );
+        }
+
+        return $fields;
+    }
+
+    public static function getCompletedOrders()
+    {
+        global $wpdb;
+
+        $wc_orders_sql = '';
+        if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')), true)) {
+            $wc_orders_sql = " AND NOT EXISTS (SELECT posts.* FROM {$wpdb->posts} AS posts"
+                . " INNER JOIN {$wpdb->postmeta} AS postmeta"
+                . " WHERE posts.post_type = 'shop_order'"
+                . " AND posts.post_status = 'wc-completed'"
+                . " AND posts.ID = postmeta.post_id"
+                . " AND postmeta.meta_key = '_customer_user'"
+                . " AND postmeta.meta_value = {$wpdb->users}.ID)";
+        }
+
+        return $wc_orders_sql;
+    }
+
+    public function checkoutCheck($_data, $errors)
+    {
+        global $apbct, $cleantalk_executed;
+
+        IMetricService::seek(
+            $this,
+            __FUNCTION__
+        );
+
+        if ( count($errors->errors) ) {
+            return;
+        }
+
+        if ( $apbct->settings['data__protect_logged_in'] == 0 && is_user_logged_in() ) {
+            do_action('apbct_skipped_request', __FILE__ . ' -> ' . __FUNCTION__ . '():' . __LINE__, $_POST);
+
+            return;
+        }
+
+        /**
+         * Filter for POST
+         */
+        $input_array = apply_filters('apbct__filter_post', $_POST);
+
+        //Getting request params
+        $ct_temp_msg_data = ct_get_fields_any($input_array);
+
+        $sender_email    = isset($ct_temp_msg_data['email']) ? $ct_temp_msg_data['email'] : '';
+        $sender_emails_array = isset($ct_temp_msg_data['emails_array']) ? $ct_temp_msg_data['emails_array'] : null;
+        $sender_nickname = isset($ct_temp_msg_data['nickname']) ? $ct_temp_msg_data['nickname'] : '';
+        $subject         = isset($ct_temp_msg_data['subject']) ? $ct_temp_msg_data['subject'] : '';
+        $message         = isset($ct_temp_msg_data['message']) ? $ct_temp_msg_data['message'] : array();
+
+        if ( $subject != '' ) {
+            $message = array_merge(array('subject' => $subject), $message);
+        }
+
+        $post_info = array();
+        $post_info['comment_type'] = 'order';
+        $post_info['post_url']     = Server::get('HTTP_REFERER');
+
+        $base_call_data = array(
+            'message'         => $message,
+            'sender_email'    => $sender_email,
+            'sender_nickname' => $sender_nickname,
+            'post_info'       => $post_info,
+            'sender_info'     => array(
+                    'sender_url' => null,
+                    'sender_emails_array' => $sender_emails_array,
+                    IMetricDTO::$SENDER_INFO_KEY => IMetricService::finalizeDTO($this)
+            )
+        );
+
+        $base_call_result = apbct_base_call($base_call_data);
+
+        if ( $apbct->settings['forms__wc_register_from_order'] ) {
+            $cleantalk_executed = false;
+        }
+
+        if ( isset($base_call_result['ct_result']) ) {
+            $ct_result = $base_call_result['ct_result'];
+
+            // Get request_id and save to static $hash
+            ct_hash($ct_result->id);
+
+            if ( $ct_result->allow == 0 ) {
+                $this->handleBlockedOrder();
+
+                if ( !$this->hide_rejection_message ) {
+                    // Legacy behavior: show the rejection reason directly to the customer.
+                    wp_send_json(array(
+                        'result'   => 'failure',
+                        'messages' => "<ul class=\"woocommerce-error\"><li>" . $ct_result->comment . "</li></ul>",
+                        'refresh'  => 'false',
+                        'reload'   => 'false'
+                    ));
+                }
+
+                wp_send_json(array(
+                    'result'   => 'success',
+                    'redirect' => $this->getBlockedOrderRedirectUrl(),
+                ));
+            }
+        }
+    }
+
+    /**
+     * @param $order
+     * @return void
+     * @psalm-suppress UndefinedClass
+     */
+    public function checkoutCheckFromRest($order)
+    {
+        global $apbct, $cleantalk_executed;
+
+        if ( is_null($order) || ! ($order instanceof \WC_Order) ) {
+            return;
+        }
+
+        IMetricService::seek(
+            $this,
+            __FUNCTION__
+        );
+
+        $sender_email    = $order->get_billing_email();
+        $sender_nickname = $order->get_billing_first_name() . ' ' . $order->get_billing_last_name();
+        $message         = $order->get_customer_note();
+
+        $post_info = array();
+        $post_info['comment_type'] = 'order';
+        $post_info['post_url']     = Server::get('HTTP_REFERER');
+
+        $base_call_data = array(
+            'message'         => $message,
+            'sender_email'    => $sender_email,
+            'sender_nickname' => $sender_nickname,
+            'post_info'       => $post_info,
+            'sender_info'     => array('sender_url' => null, IMetricDTO::$SENDER_INFO_KEY => IMetricService::finalizeDTO($this)),
+            'event_token'     => $this->event_token,
+        );
+
+        $base_call_result = apbct_base_call($base_call_data);
+
+        if ( $apbct->settings['forms__wc_register_from_order'] ) {
+            $cleantalk_executed = false;
+        }
+
+        if ( isset($base_call_result['ct_result']) ) {
+            $ct_result = $base_call_result['ct_result'];
+
+            // Get request_id and save to static $hash
+            ct_hash($ct_result->id);
+
+            if ( $ct_result->allow == 0 ) {
+                // The details must be stored before the response carrying their key is built
+                $this->handleBlockedOrder($order);
+
+                // The response must be captured before the order gets deleted below - deletion
+                // clears the in-memory order ID and data, which would break the imitated response.
+                $store_api_response = $this->getStoreApiPassedResponse($order);
+
+                if ( $order->get_status() === 'pending' || $order->get_status() === 'checkout-draft' ) {
+                    if ( function_exists('wc_release_stock_for_order') ) {
+                        wc_release_stock_for_order($order);
+                    }
+
+                    try {
+                        $order->delete(true);
+                    } catch (\Exception $e) {
+                        error_log('Error deleting order: ' . $e->getMessage());
+                    }
+                }
+
+                if ( !$this->hide_rejection_message ) {
+                    // Legacy behavior: show the rejection reason directly to the customer.
+                    $response = array(
+                        'code'    => 'woocommerce_store_api_checkout_order_processed',
+                        'message' => $ct_result->comment,
+                        'data'    => array(
+                            'status' => 403
+                        )
+                    );
+
+                    if ( ! headers_sent() ) {
+                        http_response_code(403);
+                    }
+                    die(json_encode($response));
+                }
+
+                if ( ! headers_sent() ) {
+                    header('Content-Type: application/json; charset=utf-8');
+                }
+                die(json_encode($store_api_response));
+            }
+        }
+    }
+
+    /**
+     * Common actions for an order blocked as spam.
+     *
+     * @return void
+     * @psalm-suppress UndefinedFunction
+     */
+    private function handleBlockedOrder($order = null)
+    {
+        global $apbct;
+
+        // The option controls the storage only, the rest of the handling is always done
+        if ( $apbct->settings['data__wc_store_blocked_orders'] ) {
+            $this->storeBlockedOrder();
+        }
+
+        $this->rememberBlockedOrderOverview($order);
+
+        if ( function_exists('wc') && ! is_null(wc()->cart) ) {
+            wc()->cart->empty_cart();
+        }
+    }
+
+    /**
+     * Store the details of the blocked order to show them on the thank you page.
+     *
+     * The blocked order never becomes a WooCommerce one, so the thank you page has nothing to
+     * render and gives the spammer a hint that the order went wrong. The details are kept in a
+     * transient addressed by the key of the redirect URL and printed by renderBlockedOrderOverview().
+     *
+     * @param \WC_Order|null $order Order created by the Store API checkout, absent for the classic one
+     *
+     * @return void
+     * @psalm-suppress UndefinedClass, UndefinedFunction
+     */
+    private function rememberBlockedOrderOverview($order = null)
+    {
+        $overview = array(
+            'date'           => date_i18n(get_option('date_format')),
+            'total'          => $this->getBlockedOrderTotal($order),
+            'payment_method' => $this->getBlockedOrderPaymentMethod($order),
+        );
+
+        $this->blocked_order_key = 'wc_order_' . wp_generate_password(13, false);
+
+        set_transient(self::BLOCKED_ORDER_TRANSIENT . $this->blocked_order_key, $overview, HOUR_IN_SECONDS);
+    }
+
+    /**
+     * @param \WC_Order|null $order
+     *
+     * @return string Formatted total, the cart one when there is no order
+     * @psalm-suppress UndefinedClass, UndefinedFunction
+     */
+    private function getBlockedOrderTotal($order = null)
+    {
+        if ( $order instanceof \WC_Order ) {
+            return $order->get_formatted_order_total();
+        }
+
+        return ( function_exists('wc') && ! is_null(wc()->cart) ) ? wc()->cart->get_total() : '';
+    }
+
+    /**
+     * @param \WC_Order|null $order
+     *
+     * @return string Title of the chosen gateway, empty when it can not be resolved
+     * @psalm-suppress UndefinedClass, UndefinedFunction
+     */
+    private function getBlockedOrderPaymentMethod($order = null)
+    {
+        if ( $order instanceof \WC_Order ) {
+            return $order->get_payment_method_title();
+        }
+
+        $chosen_method = Post::getString('payment_method');
+
+        if ( $chosen_method === '' || ! function_exists('WC') ) {
+            return '';
+        }
+
+        $gateways = WC()->payment_gateways() ? WC()->payment_gateways()->payment_gateways() : array();
+
+        return isset($gateways[$chosen_method]) ? $gateways[$chosen_method]->get_title() : '';
+    }
+
+    /**
+     * Print the order details on the thank you page shown to the blocked visitor.
+     *
+     * WooCommerce renders the details itself when an order stands behind the page. There is none
+     * for a blocked order, so the same markup is printed right after the template that says
+     * the order has been received.
+     *
+     * @param string $template_name
+     * @param string $template_path
+     * @param string $located
+     * @param array $args
+     *
+     * @return void
+     * @psalm-suppress PossiblyUnusedMethod, UndefinedFunction, PossiblyUnusedParam
+     */
+    public function renderBlockedOrderOverview($template_name, $template_path, $located, $args)
+    {
+        if ( $template_name !== 'checkout/thankyou.php' || ! empty($args['order']) ) {
+            return;
+        }
+
+        echo $this->getBlockedOrderOverviewHtml(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+    }
+
+    /**
+     * Print the order details on the block based order confirmation page.
+     *
+     * Block themes route the 'order-received' endpoint to the 'order-confirmation' template
+     * built of the woocommerce/order-confirmation-* blocks, so checkout/thankyou.php is never
+     * loaded and renderBlockedOrderOverview() never fires. The details are appended to the
+     * status block instead, which is the one WooCommerce keeps rendering without an order.
+     *
+     * @param string $block_content
+     * @param array $block
+     *
+     * @return string
+     * @psalm-suppress PossiblyUnusedMethod, PossiblyUnusedReturnValue
+     */
+    public function appendBlockedOrderOverviewToBlock($block_content, $block)
+    {
+        if ( ! isset($block['blockName']) || $block['blockName'] !== 'woocommerce/order-confirmation-status' ) {
+            return $block_content;
+        }
+
+        return $block_content . $this->getBlockedOrderOverviewHtml();
+    }
+
+    /**
+     * Markup of the stored order details, empty when there is nothing to show.
+     *
+     * @return string
+     */
+    private function getBlockedOrderOverviewHtml()
+    {
+        $blocked_order_key = Get::getString('key');
+
+        if ( $blocked_order_key === '' ) {
+            return '';
+        }
+
+        $overview = get_transient(self::BLOCKED_ORDER_TRANSIENT . $blocked_order_key);
+
+        if ( ! is_array($overview) || empty($overview['date']) ) {
+            return '';
+        }
+
+        $rows = array(
+            'date'  => array(__('Date:', 'cleantalk-spam-protect'), $overview['date']),
+            'total' => array(__('Total:', 'cleantalk-spam-protect'), isset($overview['total']) ? $overview['total'] : ''),
+        );
+
+        if ( ! empty($overview['payment_method']) ) {
+            $rows['method'] = array(
+                __('Payment method:', 'cleantalk-spam-protect'),
+                $overview['payment_method']
+            );
+        }
+
+        $html = '<ul class="woocommerce-order-overview woocommerce-thankyou-order-details order_details">';
+
+        foreach ( $rows as $key => $row ) {
+            $html .= sprintf(
+                '<li class="woocommerce-order-overview__%1$s %1$s">%2$s <strong>%3$s</strong></li>',
+                esc_attr($key),
+                esc_html($row[0]),
+                wp_kses_post($row[1])
+            );
+        }
+
+        return $html . '</ul>';
+    }
+
+    /**
+     * URL of the page shown to the visitor whose order was blocked.
+     *
+     * @return string
+     * @psalm-suppress UndefinedFunction
+     */
+    private function getBlockedOrderRedirectUrl()
+    {
+        $url = wc_get_endpoint_url('order-received', '', wc_get_checkout_url());
+
+        // The key makes the page look like the usual one and points at the stored details
+        return $this->blocked_order_key === ''
+            ? $url
+            : add_query_arg('key', $this->blocked_order_key, $url);
+    }
+
+    /**
+     * Response for the Store API checkout route imitating a passed checkout.
+     *
+     * @param \WC_Order $order
+     *
+     * @return array
+     * @psalm-suppress UndefinedClass, UndefinedFunction
+     */
+    private function getStoreApiPassedResponse($order)
+    {
+        return array(
+            'order_id'         => $order->get_id(),
+            'status'           => $order->get_status(),
+            'order_key'        => $order->get_order_key(),
+            'customer_note'    => $order->get_customer_note(),
+            'customer_id'      => $order->get_customer_id(),
+            'billing_address'  => $order->get_address('billing'),
+            'shipping_address' => $order->get_address('shipping'),
+            'payment_method'   => $order->get_payment_method(),
+            'payment_result'   => array(
+                'payment_status'  => 'success',
+                'payment_details' => array(),
+                'redirect_url'    => $this->getBlockedOrderRedirectUrl(),
+            ),
+        );
+    }
+
+    /**
+     * @return void
+     * @psalm-suppress UndefinedFunction
+     */
+    public function storeBlockedOrder()
+    {
+        global $wpdb;
+
+        $current_timestamp = time();
+        $query = 'INSERT INTO ' . APBCT_TBL_WC_SPAM_ORDERS . ' (order_details, customer_details, order_date) 
+            VALUES (%s, %s, %s) 
+            ON DUPLICATE KEY UPDATE order_details = %s, customer_details = %s, order_date = %s;';
+
+        // store blocked order from ajax checkout
+        if (!empty($_POST)) {
+            $prepared_query = $wpdb->prepare($query, [
+                json_encode(wc()->session->cart),
+                json_encode($_POST),
+                $current_timestamp,
+                json_encode(wc()->session->cart),
+                json_encode($_POST),
+                $current_timestamp,
+            ]);
+
+            $wpdb->query($prepared_query);
+
+            return;
+        }
+
+        // store blocked order from rest checkout
+        $customer_data = [];
+        if (isset(wc()->customer)) {
+            $customer = wc()->customer;
+            $customer_data['billing_first_name'] = $customer->get_billing_first_name();
+            $customer_data['billing_last_name'] = $customer->get_billing_last_name();
+            $customer_data['billing_company'] = $customer->get_billing_company();
+            $customer_data['billing_address_1'] = $customer->get_billing_address_1();
+            $customer_data['billing_address_2'] = $customer->get_billing_address_2();
+            $customer_data['billing_city'] = $customer->get_billing_city();
+            $customer_data['billing_state'] = $customer->get_billing_state();
+            $customer_data['billing_postcode'] = $customer->get_billing_postcode();
+            $customer_data['billing_country'] = $customer->get_billing_country();
+            $customer_data['billing_email'] = $customer->get_billing_email();
+            $customer_data['billing_phone'] = $customer->get_billing_phone();
+            $customer_data['shipping_first_name'] = $customer->get_shipping_first_name();
+            $customer_data['shipping_last_name'] = $customer->get_shipping_last_name();
+            $customer_data['shipping_company'] = $customer->get_shipping_company();
+            $customer_data['shipping_address_1'] = $customer->get_shipping_address_1();
+            $customer_data['shipping_address_2'] = $customer->get_shipping_address_2();
+            $customer_data['shipping_city'] = $customer->get_shipping_city();
+            $customer_data['shipping_state'] = $customer->get_shipping_state();
+            $customer_data['shipping_postcode'] = $customer->get_shipping_postcode();
+            $customer_data['shipping_country'] = $customer->get_shipping_country();
+        }
+
+        $prepared_query = $wpdb->prepare($query, [
+            json_encode(wc()->session->cart),
+            json_encode($customer_data),
+            $current_timestamp,
+            json_encode(wc()->session->cart),
+            json_encode($customer_data),
+            $current_timestamp,
+        ]);
+
+        $wpdb->query($prepared_query);
+    }
+
+    public function addRequestIdToOrderMeta($order_id)
+    {
+        $request_id = ct_hash();
+
+        if (!empty($request_id)) {
+            update_post_meta($order_id, 'cleantalk_order_request_id', sanitize_key($request_id));
+        }
+    }
+
+    /**
+     * @return bool
+     * @psalm-suppress UndefinedFunction, PossiblyUnusedReturnValue
+     */
+    public function addToCartUnloggedUser()
+    {
+        global $apbct;
+
+        IMetricService::seek(
+            $this,
+            __FUNCTION__
+        );
+
+        $data = Post::get('data');
+        if (is_array($data) && isset($data['ct_bot_detector_event_token'])) {
+            $event_token = $data['ct_bot_detector_event_token'];
+        } elseif ( Get::get('ct_bot_detector_event_token') ) {
+            $event_token = Get::get('ct_bot_detector_event_token');
+        } else {
+            $event_token = null;
+        }
+
+        $message = apply_filters('apbct__filter_post', $_POST);
+
+        $post_info = array();
+        $post_info['comment_type'] = 'order__add_to_cart';
+        $post_info['post_url']     = Sanitize::cleanUrl(Server::get('HTTP_REFERER'));
+
+        if ( ! $apbct->stats['no_cookie_data_taken'] ) {
+            apbct_form__get_no_cookie_data();
+        }
+
+        $base_call_result = apbct_base_call(
+            array(
+                'message'     => $message,
+                'post_info'   => $post_info,
+                'js_on'       => apbct_js_test(Sanitize::cleanTextField(Cookie::get('ct_checkjs')), true),
+                'sender_info' => array('sender_url' => null, IMetricDTO::$SENDER_INFO_KEY => IMetricService::finalizeDTO($this)),
+                'exception_action' => false,
+                'event_token' => $event_token,
+            )
+        );
+
+        if ( isset($base_call_result['ct_result']) ) {
+            $ct_result = $base_call_result['ct_result'];
+
+            if ( $ct_result->allow == 0 && function_exists('wc_add_notice') ) {
+                wc_add_notice($ct_result->comment, 'error');
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param $add_to_cart_data
+     * @param $request
+     * @return bool
+     * @psalm-suppress PossiblyUnusedReturnValue, UndefinedClass
+     */
+    public function storeApiAddToCartData($add_to_cart_data, $request)
+    {
+        global $apbct;
+
+        IMetricService::seek(
+            $this,
+            __FUNCTION__
+        );
+        if ( ! $apbct->stats['no_cookie_data_taken'] && $request->get_param('ct_no_cookie_hidden_field') ) {
+            apbct_form__get_no_cookie_data(
+                ['ct_no_cookie_hidden_field' => $request->get_param('ct_no_cookie_hidden_field')],
+                false
+            );
+        }
+
+        $event_token = $request->get_param('ct_bot_detector_event_token');
+
+        if ($event_token && $event_token !== 'undefined' && $event_token !== 'null') {
+            $token = @json_decode($event_token, true);
+            if (is_array($token) && isset($token['value'])) {
+                $event_token = $token['value'];
+            }
+        }
+
+        $message = apply_filters('apbct__filter_post', $_POST);
+        $post_info = array();
+        $post_info['comment_type'] = 'order__add_to_cart';
+        $post_info['post_url']     = Sanitize::cleanUrl(Server::get('HTTP_REFERER'));
+
+        $base_call_result = apbct_base_call(
+            array(
+                'message'     => $message,
+                'post_info'   => $post_info,
+                'js_on'       => apbct_js_test(Sanitize::cleanTextField(Cookie::get('ct_checkjs')), true),
+                'sender_info' => array('sender_url' => null, IMetricDTO::$SENDER_INFO_KEY => IMetricService::finalizeDTO($this)),
+                'exception_action' => false,
+                'event_token' => $event_token,
+            )
+        );
+
+        if ( isset($base_call_result['ct_result']) ) {
+            $ct_result = $base_call_result['ct_result'];
+
+            if ( $ct_result->allow == 0 && function_exists('wc_add_notice') ) {
+                if ( class_exists('\Automattic\WooCommerce\StoreApi\Exceptions\RouteException') ) {
+                    /** @psalm-suppress InvalidThrow */
+                    throw new \Automattic\WooCommerce\StoreApi\Exceptions\RouteException(
+                        'woocommerce_rest_cart_item_exists',
+                        $ct_result->comment,
+                        400
+                    );
+                }
+            }
+        }
+
+        return $add_to_cart_data;
+    }
+
+    /**
+     * @param $customer
+     * @param $request
+     * @return void
+     * @psalm-suppress PossiblyUnusedParam
+     */
+    public function storeApiCheckoutUpdateCustomerFromRequest($customer, $request)
+    {
+        global $apbct;
+
+        if ( ! $apbct->stats['no_cookie_data_taken'] ) {
+            apbct_form__get_no_cookie_data(
+                ['ct_no_cookie_hidden_field' => $request->get_param('ct_no_cookie_hidden_field')],
+                false
+            );
+        }
+
+        $event_token = $request->get_param('event_token');
+        if ($event_token && $event_token !== 'undefined' && $event_token !== 'null') {
+            $token = @json_decode($event_token, true);
+            if (is_array($token) && isset($token['value'])) {
+                $event_token = $token['value'];
+            }
+        }
+
+        $this->event_token = $event_token;
+    }
+
+    /**
+     * @param $order
+     * @return void
+     * @throws \Automattic\WooCommerce\StoreApi\Exceptions\RouteException
+     * @psalm-suppress UndefinedClass, UnusedParam, InvalidThrow
+     */
+    public static function storeApiCheckoutOrderProcessed($order)
+    {
+        global $ct_registration_error_comment;
+
+        if (class_exists('\Automattic\WooCommerce\StoreApi\Exceptions\RouteException')) {
+            throw new \Automattic\WooCommerce\StoreApi\Exceptions\RouteException(
+                'woocommerce_store_api_checkout_order_processed',
+                $ct_registration_error_comment,
+                403
+            );
+        }
+    }
+
+    /**
+     * Register the new 'spam' status
+     */
+    public function addOrdersSpamStatus($order_statuses)
+    {
+        $order_statuses['wc-spamorder'] = array(
+            'label' => 'Spam',
+            'public' => false,
+            'exclude_from_search' => false,
+            'show_in_admin_all_list' => true,
+            'show_in_admin_status_list' => true,
+            'label_count' => _n_noop(
+                'Spam <span class="count">(%s)</span>',
+                'Spam <span class="count">(%s)</span>',
+                'cleantalk-spam-protect'
+            ),
+        );
+
+        return $order_statuses;
+    }
+
+    /**
+     * Enable orders filtering by 'spam' status
+     */
+    public function addOrdersSpamStatusSelect($order_statuses)
+    {
+        $order_statuses['wc-spamorder'] = 'Spam';
+        return $order_statuses;
+    }
+
+    /**
+     * Don't show orders marked 'spam' in the common order list
+     */
+    public function addOrdersSpamStatusHideFromList($query)
+    {
+        global $pagenow;
+
+        $query_vars = &$query->query_vars;
+
+        if ( $pagenow == 'edit.php'
+            && isset($query_vars['post_type'])
+            && $query_vars['post_type'] == 'shop_order'
+            && isset($query_vars['post_status'])
+            && is_array($query_vars['post_status'])
+            && ( $key = array_search('wc-spamorder', $query_vars['post_status']) ) !== false
+        ) {
+            unset($query_vars['post_status'][$key]);
+        }
+    }
+
+    /**
+     * Enable the always visible status links on the HPOS orders list
+     *
+     * @param \WP_Screen $current_screen
+     *
+     * @return void
+     * @psalm-suppress PossiblyUnusedMethod
+     */
+    public function addOrdersListStatusViews($current_screen)
+    {
+        // Keep in sync with the capability required by the row actions and AJAX handlers
+        // (WcSpamOrdersListTable::row_actions_handler(), AJAXService::checkNonceRestrictingNonAdmins()),
+        // otherwise a user could see the 'Spam' view but get a 403 trying to use it.
+        if ( ! current_user_can('manage_options') || ! isset($current_screen->id) || ! function_exists('wc_get_page_screen_id') ) {
+            return;
+        }
+
+        $orders_screen_id = wc_get_page_screen_id('shop_order');
+
+        // The legacy storage renders the orders on the posts list screen, the links there lead to another URL
+        if ( empty($orders_screen_id) || $orders_screen_id === 'shop_order' || $current_screen->id !== $orders_screen_id ) {
+            return;
+        }
+
+        add_filter('views_' . $orders_screen_id, [$this, 'addOrdersListStatusLinks']);
+
+        // WooCommerce replaces the whole list with a notice while the store has no orders of its own.
+        // The status links go away with it, so the 'Spam' view becomes unreachable - keep the list on screen.
+        add_filter(
+            'woocommerce_shop_order_list_table_should_render_blank_state',
+            [$this, 'keepOrdersListWhenSpamOrdersExist']
+        );
+
+        // The blocked orders are stored apart from the WooCommerce ones, so the 'Spam' view is rendered by the plugin
+        if ( Get::getString('status') === 'wc-spamorder' ) {
+            $this->replaceOrdersListRenderer($orders_screen_id);
+        }
+    }
+
+    /**
+     * Keep the orders list on screen when the store has no orders of its own but spam ones exist.
+     *
+     * A brand new store has nothing in the WooCommerce tables, so the list is replaced with the
+     * "When you receive a new order, it will appear here." notice. The blocked orders live in a table
+     * of the plugin and are not counted there, so the shop owner loses the only way to reach them.
+     *
+     * @param bool|null $should_render_blank_state Null keeps the WooCommerce own decision
+     *
+     * @return bool|null
+     * @psalm-suppress PossiblyUnusedMethod, PossiblyUnusedReturnValue
+     */
+    public function keepOrdersListWhenSpamOrdersExist($should_render_blank_state)
+    {
+        if ( WcSpamOrdersFunctions::getSpamOrdersCount() > 0 ) {
+            return false;
+        }
+
+        return $should_render_blank_state;
+    }
+
+    /**
+     * Hand the orders page over to the spam orders table.
+     *
+     * The page content is printed by the WooCommerce page controller hooked to the page hook,
+     * so that callback is taken off and replaced. If it can not be found (the WooCommerce
+     * internals have changed), nothing is replaced to avoid rendering two tables at once.
+     *
+     * @param string $page_hook
+     *
+     * @return void
+     */
+    private function replaceOrdersListRenderer($page_hook)
+    {
+        global $wp_filter;
+
+        if ( ! isset($wp_filter[$page_hook]) || ! isset($wp_filter[$page_hook]->callbacks) ) {
+            return;
+        }
+
+        $removed = false;
+
+        foreach ( $wp_filter[$page_hook]->callbacks as $priority => $callbacks ) {
+            foreach ( $callbacks as $callback ) {
+                if ( ! is_array($callback['function']) || ! isset($callback['function'][0]) || ! is_object($callback['function'][0]) ) {
+                    continue;
+                }
+
+                if ( strpos(get_class($callback['function'][0]), 'Admin\\Orders\\PageController') === false ) {
+                    continue;
+                }
+
+                $removed = remove_action($page_hook, $callback['function'], $priority) || $removed;
+            }
+        }
+
+        if ( $removed ) {
+            add_action($page_hook, [$this, 'renderSpamOrdersPage']);
+        }
+    }
+
+    /**
+     * The spam orders table shown in place of the WooCommerce orders list,
+     * keeping the page markup and the status links of the original page.
+     *
+     * @return void
+     * @psalm-suppress PossiblyUnusedMethod
+     */
+    public function renderSpamOrdersPage()
+    {
+        // This is also the callback for the legacy 'apbct_wc_spam_orders' fallback page (addLegacySpamOrdersMenuPage()).
+        // getOrdersListViews() builds HPOS-style links (page=wc-orders), so it's only valid to embed on the HPOS screen -
+        // on legacy installations pass null so the list table builds its own standalone views.
+        $embedded_views = function_exists('wc_get_page_screen_id') && wc_get_page_screen_id('shop_order') !== 'shop_order'
+            ? $this->getOrdersListViews()
+            : null;
+
+        $list_table = new \Cleantalk\ApbctWP\WcSpamOrdersListTable($embedded_views);
+        ?>
+        <div class="wrap">
+            <h1 class="wp-heading-inline"><?php esc_html_e('Spam orders', 'cleantalk-spam-protect'); ?></h1>
+            <hr class="wp-header-end">
+            <?php $list_table->renderPageNotices(); ?>
+            <form action="" method="POST">
+                <?php $list_table->display(); ?>
+            </form>
+        </div>
+        <?php
+    }
+
+    /**
+     * Status links of the orders list rebuilt the same way the WooCommerce list table does it:
+     * 'All' plus the statuses having orders. The links added by addOrdersListStatusLinks()
+     * are applied later, by the list table itself.
+     *
+     * @return array
+     */
+    private function getOrdersListViews()
+    {
+        if ( ! function_exists('wc_get_order_statuses') || ! function_exists('wc_orders_count') ) {
+            return array();
+        }
+
+        $views     = array();
+        $all_count = 0;
+
+        foreach ( wc_get_order_statuses() as $status => $label ) {
+            $count = wc_orders_count($status, 'shop_order');
+
+            $status_object = get_post_status_object($status);
+            if ( $status_object && ! empty($status_object->show_in_admin_all_list) ) {
+                $all_count += $count;
+            }
+
+            if ( $count > 0 ) {
+                $views[$status] = $this->getOrdersListStatusLink($status, $label, false);
+            }
+        }
+
+        return array_merge(
+            array('all' => $this->getOrdersListStatusLink('', __('All', 'cleantalk-spam-protect'), false, $all_count)),
+            $views
+        );
+    }
+
+    /**
+     * The orders list shows the statuses having orders only, so the spam workflow statuses
+     * are unreachable until an order gets marked as spam. Both of them are added back:
+     * 'Spam' itself and 'On hold' the unmarked orders are moved to.
+     *
+     * @param array $views
+     *
+     * @return array
+     * @psalm-suppress PossiblyUnusedMethod, PossiblyUnusedReturnValue
+     */
+    public function addOrdersListStatusLinks($views)
+    {
+        if ( ! is_array($views) || ! function_exists('wc_get_order_statuses') ) {
+            return $views;
+        }
+
+        $order_statuses = wc_get_order_statuses();
+        $current_status = Get::getString('status');
+
+        foreach ( array('wc-on-hold', 'wc-spamorder') as $status ) {
+            if ( isset($views[$status]) || ! isset($order_statuses[$status]) ) {
+                continue;
+            }
+
+            $views[$status] = $this->getOrdersListStatusLink(
+                $status,
+                $order_statuses[$status],
+                $current_status === $status
+            );
+        }
+
+        return $views;
+    }
+
+    /**
+     * @param string $status Empty for the 'All' link
+     * @param string $label
+     * @param bool $is_current
+     * @param int|null $count Known count, counted by the status when not given
+     *
+     * @return string
+     */
+    private function getOrdersListStatusLink($status, $label, $is_current, $count = null)
+    {
+        if ( is_null($count) ) {
+            $count = $this->getOrdersListStatusCount($status);
+        }
+
+        $url = admin_url('admin.php?page=wc-orders');
+        if ( ! empty($status) ) {
+            $url = add_query_arg('status', $status, $url);
+        }
+
+        return sprintf(
+            '<a href="%s"%s>%s <span class="count">(%s)</span></a>',
+            esc_url($url),
+            $is_current ? ' class="current"' : '',
+            esc_html($label),
+            number_format_i18n($count)
+        );
+    }
+
+    /**
+     * @param string $status
+     *
+     * @return int
+     */
+    private function getOrdersListStatusCount($status)
+    {
+        // The blocked orders never become WooCommerce ones, they are counted in the plugin table
+        if ( $status === 'wc-spamorder' ) {
+            return WcSpamOrdersFunctions::getSpamOrdersCount();
+        }
+
+        return function_exists('wc_orders_count') ? wc_orders_count($status, 'shop_order') : 0;
+    }
+
+    /**
+     * Add bulk actions: 'Mark as spam' and 'Unmark as spam'
+     */
+    public function addSpamActionToBulk($actions)
+    {
+        if ( get_query_var('post_status') === 'wc-spamorder' ) {
+            $actions['unspamorder'] = __('Unmark as spam', 'cleantalk-spam-protect');
+        } else {
+            $actions['spamorder'] = __('Mark as spam', 'cleantalk-spam-protect');
+        }
+
+        return $actions;
+    }
+
+    /**
+     * The bulk actions 'Mark as spam' and 'Unmark as spam' handler
+     * @param $redirect
+     * @param $action
+     * @param $ids
+     *
+     * @return mixed|string
+     * @psalm-suppress UndefinedClass, PossiblyUnusedReturnValue
+     */
+    public function addSpamActionToBulkHandle($redirect, $action, $ids)
+    {
+        if ( $action !== 'spamorder' &&  $action !== 'unspamorder' ) {
+            return $redirect;
+        }
+
+        // spam orders
+        $spam_ids = array();
+
+        foreach ($ids as $order_id) {
+            $order = new \WC_Order((int)$order_id);
+            if ( $action === 'unspamorder' ) {
+                $order->update_status('wc-on-hold');
+            } else {
+                $spam_ids[] = $order_id;
+                $order->update_status('wc-spamorder');
+            }
+        }
+
+        // Send feedback to API
+        if (!empty($spam_ids)) {
+            $this->ordersSendFeedback($spam_ids);
+        }
+
+        return add_query_arg(
+            array(
+                'bulk_action' => 'marked_' . $action,
+                'changed' => count($ids),
+            ),
+            $redirect
+        );
+    }
+
+    /**
+     * @param array $spam_ids
+     * @param string $orders_status
+     */
+    public function ordersSendFeedback(array $spam_ids, $orders_status = '0')
+    {
+        if (empty($spam_ids)) {
+            return;
+        }
+
+        global $apbct;
+        $request_ids = array();
+        foreach ($spam_ids as $spam_id) {
+            $request_id = get_post_meta($spam_id, 'cleantalk_order_request_id', true);
+            if ($request_id) {
+                $request_ids[] = $request_id . ':' . $orders_status;
+            }
+        }
+
+        if (!empty($request_ids)) {
+            $feedback = implode(';', $request_ids);
+
+            try {
+                $ct_request = new CleantalkRequest(array(
+                    // General
+                    'auth_key' => $apbct->api_key,
+                    // Additional
+                    'feedback' => $feedback,
+                ));
+
+                $ct = new Cleantalk();
+
+                // Server URL handling
+                $config             = ct_get_server();
+                $ct->server_url     = APBCT_MODERATE_URL;
+                $ct->work_url       = isset($config['ct_work_url']) && preg_match('/http:\/\/.+/', $config['ct_work_url']) ? $config['ct_work_url'] : null;
+                $ct->server_ttl     = isset($config['ct_server_ttl']) ? $config['ct_server_ttl'] : null;
+                $ct->server_changed = isset($config['ct_server_changed']) ? $config['ct_server_changed'] : null;
+
+                $ct->sendFeedback($ct_request);
+            } catch (\Exception $e) {
+            }
+        }
+    }
+
+    /**
+     * Remove service fields from order items
+     * @param $item
+     * @param $cart_item_key
+     * @param $values
+     * @param $order
+     * @return void
+     * @psalm-suppress PossiblyUnusedParam
+     */
+    public function removeServiceFieldsFromOrderItems($item, $cart_item_key, $values, $order)
+    {
+        if (isset($values['_cpo_data'])) {
+            if (isset($values['_cpo_data']['ct_bot_detector_event_token'])) {
+                $item->delete_meta_data('_ct_bot_detector_event_token');
+            }
+            if (isset($values['_cpo_data']['ct_no_cookie_hidden_field'])) {
+                $item->delete_meta_data('_ct_no_cookie_hidden_field');
+            }
+            if (isset($values['_cpo_data']['apbct_visible_fields'])) {
+                $item->delete_meta_data('_apbct_visible_fields');
+            }
+        }
+    }
+
+    /**
+     * Add actions for add to cart. Works on AJAX calls OR on REST API calls.
+     * @return void
+     */
+    private function addCartActions()
+    {
+        global $apbct;
+
+        if ( ! apbct_is_user_logged_in() && $apbct->settings['forms__wc_add_to_cart'] ) {
+            add_filter('woocommerce_add_to_cart_validation', [$this, 'addToCartUnloggedUser'], 10, 6);
+            add_filter('woocommerce_store_api_add_to_cart_data', [$this, 'storeApiAddToCartData'], 10, 2);
+        }
+    }
+
+    /**
+     * @return bool
+     * @inheritDoc
+     */
+    public function isSkipIntegration()
+    {
+        if (
+                (isset($_GET['wc-ajax']) && $_GET['wc-ajax'] === 'update_order_review') ||
+                apbct_is_in_referer('wc-ajax=update_order_review') ||
+                apbct_is_in_uri('wc-ajax=iwd_opc_update_order_review') ||
+                apbct_is_in_uri('wc-ajax=apply_coupon')
+        ) {
+            $skip_rules_base = array(
+                    'get' => $_GET,
+                    'post' => $_POST,
+                    'ref' => Server::get('HTTP_REFERER'),
+                    'uri' => Server::get('REQUEST_URI'),
+            );
+            do_action('apbct_skipped_request', __FILE__ . ' -> ' . __FUNCTION__ . '():' . __LINE__, $skip_rules_base);
+
+            return true;
+        }
+
+        return false;
+    }
+}

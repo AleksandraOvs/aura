@@ -1,0 +1,49 @@
+<?php
+
+namespace Cleantalk\ApbctWP\Localize;
+
+use Cleantalk\ApbctWP\Constant;
+use Cleantalk\ApbctWP\ContactsEncoder\ContactsEncoder;
+use Cleantalk\ApbctWP\Escape;
+
+class CtPublicFunctionsLocalize
+{
+    const NAME = 'ctPublicFunctions';
+    const HANDLE = 'ct_public_functions';
+
+    public static function getData()
+    {
+        global $apbct;
+
+        $data = array(
+            '_ajax_nonce'                          => $apbct->ajax_service->getPublicNonce(),
+            '_rest_nonce'                          => wp_create_nonce('wp_rest'),
+            '_ajax_url'                            => admin_url('admin-ajax.php', 'relative'),
+            '_rest_url'                            => Escape::escUrl(apbct_get_rest_url()),
+            'data__cookies_type'                   => $apbct->data['cookies_type'],
+            'data__ajax_type'                      => $apbct->data['ajax_type'],
+            'bot_detector_enabled'                 => apbct__is_bot_detector_enabled(),
+            'data__frontend_data_log_enabled'      => Constant::is(Constant::APBCT_SERVICE__DO_NOT_COLLECT_FRONTEND_DATA_LOGS) ? 0 : 1,
+            'data__bot_detector_enabled'           => apbct__is_bot_detector_enabled() ? 1 : 0,
+            'cookiePrefix'                         => apbct__get_cookie_prefix(),
+            'wprocket_detected'                    => apbct_is_plugin_active('wp-rocket/wp-rocket.php'),
+        );
+        $data = array_merge($data, ContactsEncoder::getLocalizationText());
+
+        return $data;
+    }
+
+    public static function getCode()
+    {
+        return apbct_get_inline_script_tag(
+            'var ' . self::NAME . ' = ' . json_encode(self::getData()),
+            array(
+                'data-no-defer' => '1',
+                'data-ezscrex' => 'false',
+                'data-cfasync' => 'false',
+                'data-pagespeed-no-defer' => true,
+                'data-cookieconsent' => 'ignore',
+            )
+        );
+    }
+}
