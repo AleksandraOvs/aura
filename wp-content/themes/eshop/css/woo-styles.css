@@ -666,7 +666,7 @@ li.product .product-card__stock {
 } */
 
 .product-inner__content__col .product-card__stock {
-    justify-content: flex-start;
+    justify-content: center;
     margin-top: 0;
 }
 
