@@ -721,7 +721,6 @@ li.product .product-card__stock {
 
 .product-info>div {
     text-align: center;
-    font-size: 18px;
 }
 
 .product-info {
@@ -836,7 +835,6 @@ li.product .product-card__stock {
 
 .order-benefits__item span {
     width: calc(100% - 24px - .5em);
-    font-size: 18px;
 }
 
 h2.woocommerce-loop-product__title {
