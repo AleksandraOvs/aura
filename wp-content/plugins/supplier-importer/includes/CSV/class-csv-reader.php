@@ -7,8 +7,9 @@ if (!defined('ABSPATH')) {
 }
 
 use RuntimeException;
+use Supplier_Importer\Import\Row_Reader;
 
-class Csv_Reader
+class Csv_Reader implements Row_Reader
 {
     /**
      * Путь к CSV-файлу.
@@ -86,7 +87,12 @@ class Csv_Reader
      */
     public function open()
     {
-        if (!file_exists($this->file)) {
+        $this->close();
+
+        $this->headers = [];
+        $this->row_number = 0;
+
+        if (!is_file($this->file)) {
             throw new RuntimeException(
                 'CSV-файл не найден: ' . $this->file
             );
@@ -98,15 +104,23 @@ class Csv_Reader
             );
         }
 
-        $this->handle = fopen($this->file, 'rb');
+        $handle = fopen($this->file, 'rb');
 
-        if ($this->handle === false) {
+        if ($handle === false) {
             throw new RuntimeException(
                 'Не удалось открыть CSV-файл.'
             );
         }
 
-        $this->read_headers();
+        $this->handle = $handle;
+
+        try {
+            $this->read_headers();
+        } catch (\Throwable $e) {
+            $this->close();
+
+            throw $e;
+        }
     }
 
     /**

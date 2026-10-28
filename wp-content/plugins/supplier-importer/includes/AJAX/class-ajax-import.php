@@ -50,70 +50,59 @@ class Ajax_Import
 
             if (
                 !empty($file['error'])
-                && $file['error'] !== UPLOAD_ERR_OK
+                && (int) $file['error'] !== UPLOAD_ERR_OK
             ) {
                 throw new InvalidArgumentException(
                     'Ошибка загрузки CSV-файла.'
                 );
             }
 
-            $file_path = $this->save_uploaded_file(
-                $file
-            );
+            $file_path = $this->save_uploaded_file($file);
 
             /*
-         * Открываем CSV и определяем поставщика.
+         * Открываем CSV, определяем поставщика
+         * и анализируем структуру файла.
          */
-            $reader = new Csv_Reader(
-                $file_path
-            );
+            $reader = new Csv_Reader($file_path);
 
-            $reader->open();
+            try {
+                $reader->open();
 
-            $headers = $reader->get_headers();
+                $headers = $reader->get_headers();
 
-            $supplier_manager =
-                Plugin::get_supplier_manager();
+                $supplier_manager = Plugin::get_supplier_manager();
 
-            $supplier = $supplier_manager->detect(
-                $headers
-            );
+                $supplier = $supplier_manager->detect($headers);
 
-            if (!$supplier) {
-                $reader->close();
+                if (!$supplier) {
+                    throw new InvalidArgumentException(
+                        'Не удалось определить поставщика по структуре CSV.'
+                    );
+                }
 
-                throw new InvalidArgumentException(
-                    'Не удалось определить поставщика по структуре CSV.'
+                $analyzer = new Csv_Analyzer();
+
+                $analysis = $analyzer->analyze(
+                    $reader,
+                    $supplier->get_csv_analysis_config()
                 );
+            } finally {
+                $reader->close();
             }
 
             /*
-         * Анализируем CSV.
+         * Повторно открываем CSV и считаем записи,
+         * поскольку анализатор мог дочитать файл до конца.
          */
-            $analyzer = new Csv_Analyzer();
+            $reader = new Csv_Reader($file_path);
 
-            $analysis = $analyzer->analyze(
-                $reader,
-                $supplier->get_csv_analysis_config()
-            );
+            try {
+                $reader->open();
 
-            $reader->close();
-
-            /*
-         * Открываем CSV заново,
-         * потому что после анализа reader дочитан до конца.
-         */
-            $reader = new Csv_Reader(
-                $file_path
-            );
-
-            $reader->open();
-
-            $total = $this->count_rows(
-                $reader
-            );
-
-            $reader->close();
+                $total = $this->count_rows($reader);
+            } finally {
+                $reader->close();
+            }
 
             if ($total === 0) {
                 throw new InvalidArgumentException(
@@ -130,9 +119,7 @@ class Ajax_Import
                 $total
             );
 
-            $import_id = $this->repository->create(
-                $session
-            );
+            $import_id = $this->repository->create($session);
 
             Logger::info(
                 'Импорт создан через AJAX.',
@@ -152,10 +139,8 @@ class Ajax_Import
                     'name' => $supplier->get_name(),
                 ],
 
-                'total' => $total,
-
-                'status' => $session->get_status(),
-
+                'total'    => $total,
+                'status'   => $session->get_status(),
                 'analysis' => $analysis,
             ]);
         } catch (\Throwable $e) {

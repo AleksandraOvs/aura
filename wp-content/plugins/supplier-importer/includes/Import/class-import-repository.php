@@ -105,17 +105,18 @@ class Import_Repository
                 'id' => $import_id,
             ],
             [
-                '%s',
-                '%s',
-                '%s',
-                '%d',
-                '%d',
-                '%d',
-                '%d',
-                '%d',
-                '%d',
-                '%s',
-                '%s',
+                '%s', // supplier
+                '%s', // file
+                '%s', // status
+                '%d', // total
+                '%d', // processed
+                '%d', // created
+                '%d', // updated
+                '%d', // skipped
+                '%d', // errors
+                '%d', // offset
+                '%s', // started_at
+                '%s', // finished_at
             ],
             [
                 '%d',

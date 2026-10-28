@@ -599,7 +599,7 @@ li.product .product-card__stock {
     display: flex;
     gap: 1em;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: stretch;
 }
 
 .product-inner__images {
@@ -828,11 +828,10 @@ h2.woocommerce-loop-product__title {
 
 .swiper.aura-product-gallery__main .swiper-wrapper,
 .swiper.aura-product-gallery__main .swiper-wrapper .swiper-slide {
-    max-height: 100%;
+    height: 100% !important;
 }
 
 .woocommerce-product-gallery__image a img {
-    aspect-ratio: 1/1;
     object-fit: cover;
     object-position: center;
 }
@@ -841,6 +840,8 @@ h2.woocommerce-loop-product__title {
     display: flex;
     flex-direction: row-reverse;
     gap: .5em;
+    margin-bottom: 0 !important;
+    height: 100%;
 }
 
 

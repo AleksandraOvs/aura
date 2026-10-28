@@ -6,15 +6,13 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-use Supplier_Importer\CSV\Csv_Reader;
-
 class Import_Chunk
 {
     private const CHUNK_SIZE = 1;
 
     private $reader;
 
-    public function __construct(Csv_Reader $reader)
+    public function __construct(Row_Reader $reader)
     {
         $this->reader = $reader;
     }
@@ -25,23 +23,25 @@ class Import_Chunk
 
         $this->reader->open();
 
-        $this->skip_rows($offset);
+        try {
+            $this->skip_rows($offset);
 
-        $rows = [];
+            $rows = [];
 
-        for ($i = 0; $i < self::CHUNK_SIZE; $i++) {
-            $row = $this->reader->read();
+            for ($i = 0; $i < self::CHUNK_SIZE; $i++) {
+                $row = $this->reader->read();
 
-            if ($row === null) {
-                break;
+                if ($row === null) {
+                    break;
+                }
+
+                $rows[] = $row;
             }
 
-            $rows[] = $row;
+            return $rows;
+        } finally {
+            $this->reader->close();
         }
-
-        $this->reader->close();
-
-        return $rows;
     }
 
     private function skip_rows($offset)

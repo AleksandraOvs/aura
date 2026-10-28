@@ -83,17 +83,9 @@ class Installer
     source_value VARCHAR(255) NOT NULL,
     target_id BIGINT UNSIGNED NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-        ON UPDATE CURRENT_TIMESTAMP,
-
-    PRIMARY KEY (id),
-
-    UNIQUE KEY supplier_type_source (
-        supplier,
-        type,
-        source_value
-    ),
-
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY  (id),
+    UNIQUE KEY supplier_type_source (supplier, type, source_value),
     KEY supplier (supplier),
     KEY type (type),
     KEY target_id (target_id)

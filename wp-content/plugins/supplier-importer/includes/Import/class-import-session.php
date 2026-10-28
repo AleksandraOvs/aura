@@ -214,7 +214,7 @@ class Import_Session
             $data['supplier'] ?? '',
             $data['file'] ?? '',
             $data['total'] ?? 0,
-            $data['id'] ?? 0
+            $data['import_id'] ?? $data['id'] ?? 0
         );
 
         $session->set_offset(

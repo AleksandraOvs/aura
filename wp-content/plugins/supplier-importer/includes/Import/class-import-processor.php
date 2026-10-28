@@ -2,7 +2,7 @@
 
 namespace Supplier_Importer\Import;
 
-use Supplier_Importer\CSV\Csv_Reader;
+//use Supplier_Importer\CSV\Csv_Reader;
 use Supplier_Importer\Core\Logger;
 use Supplier_Importer\Suppliers\Supplier;
 
@@ -17,7 +17,7 @@ class Import_Processor
 
     public function __construct(
         Import_Session $session,
-        Csv_Reader $reader,
+        Row_Reader $reader,
         Supplier $supplier
     ) {
         $this->session = $session;
@@ -59,11 +59,10 @@ class Import_Processor
         }
 
         /*
-         * Храним товар вместе с исходной строкой CSV.
-         *
-         * Это позволяет при ошибке импорта точно определить,
-         * из какой строки CSV был создан этот товар.
-         */
+ * Храним товар вместе с исходной записью фида.
+ * Это позволяет сохранить исходные данные и номер записи
+ * при ошибке маппинга или импорта товара.
+ */
         $products = [];
 
         foreach ($rows as $row) {
@@ -175,7 +174,7 @@ class Import_Processor
                     );
 
                     /*
-                     * Сохраняем ошибку с ТОЧНОЙ строкой CSV.
+                     * Сохраняем ошибку вместе с исходной записью фида.
                      */
                     $this->save_product_error(
                         $row,
@@ -308,7 +307,7 @@ class Import_Processor
     }
 
     /**
-     * Пытается найти SKU в исходной строке CSV.
+     * Пытается найти SKU в исходной записи фида.
      */
     private function get_sku_from_row($data)
     {

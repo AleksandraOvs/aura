@@ -73,20 +73,13 @@ class Ajax_Process
                 $session->get_file()
             );
 
-            try {
-                $reader->open();
+            $processor = new Import_Processor(
+                $session,
+                $reader,
+                $supplier
+            );
 
-                $processor = new Import_Processor(
-                    $session,
-                    $reader,
-                    $supplier
-                );
-
-                $result = $processor->process();
-            } finally {
-                $reader->close();
-            }
-
+            $result = $processor->process();
             Logger::info(
                 'Чанк импорта обработан через AJAX.',
                 [
