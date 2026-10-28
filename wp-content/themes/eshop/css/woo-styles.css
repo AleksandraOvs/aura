@@ -640,7 +640,7 @@ li.product .product-card__stock {
 .single-product__inner__content {
     width: calc(60% - 1em);
     display: flex;
-    gap: 1em;
+    gap: 3em;
 }
 
 .single-product__inner__content>div {
