@@ -618,6 +618,7 @@ li.product .product-card__stock {
     border-radius: 3px;
     top: unset;
     right: unset;
+    z-index: 10;
 }
 
 .product-inner__images__buttons {
