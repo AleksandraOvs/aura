@@ -517,8 +517,8 @@ li.product .product-card__stock {
 }
 
 .shop-inner__left {
-    width: 234px;
-    max-width: 23%;
+    min-width: 23%;
+    max-width: 260px;
 }
 
 .shop-inner__products {
