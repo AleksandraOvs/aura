@@ -73,6 +73,10 @@
     background: var(--theme-color-accent);
 }
 
+.woocommerce-privacy-policy-text {
+    display: none;
+}
+
 /**форма входа/регистрации **/
 #customer_login {
     min-height: 390px;

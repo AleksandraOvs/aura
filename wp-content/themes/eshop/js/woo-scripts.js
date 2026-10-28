@@ -77,6 +77,57 @@ document.body.addEventListener('added_to_cart', function (e) {
 });
 
 /* ===============================
+      SINGLE PRODUCT FAQ
+   =============================== */
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.aura-product-gallery').forEach((gallery) => {
+        const mainElement = gallery.querySelector('.aura-product-gallery__main');
+        const thumbsElement = gallery.querySelector('.aura-product-gallery__thumbs');
+
+        if (!mainElement || typeof Swiper === 'undefined') {
+            return;
+        }
+
+        let thumbsSwiper = null;
+
+        if (thumbsElement) {
+            thumbsSwiper = new Swiper(thumbsElement, {
+                direction: 'vertical',
+                slidesPerView: 4,
+                spaceBetween: 10,
+                watchSlidesProgress: true,
+                breakpoints: {
+                    480: {
+                        slidesPerView: 5,
+                        spaceBetween: 10,
+                    },
+                    768: {
+                        slidesPerView: 4,
+                        spaceBetween: 12,
+                    },
+                },
+            });
+        }
+
+        new Swiper(mainElement, {
+            slidesPerView: 1,
+            spaceBetween: 10,
+            autoHeight: true,
+            navigation: {
+                nextEl: gallery.querySelector('.aura-product-gallery__next'),
+                prevEl: gallery.querySelector('.aura-product-gallery__prev'),
+            },
+            thumbs: thumbsSwiper
+                ? {
+                    swiper: thumbsSwiper,
+                }
+                : undefined,
+        });
+    });
+});
+
+/* ===============================
     TOGGLE PASSWORD CHANGE
  =============================== */
 

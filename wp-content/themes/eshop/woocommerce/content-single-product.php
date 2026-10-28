@@ -43,33 +43,8 @@ if (post_password_required()) {
 
 
 
-                <div class="product-inner__content__col__info _info-col">
-
-                    <?php render_product_stock($product); ?>
-
-                    <div class="product-sku">
-                        Код товара:
-                        <?php echo esc_html($product->get_sku() ?: '—'); ?>
-                    </div>
-
-                    <?php
-                    $brands = wp_get_post_terms(
-                        $product->get_id(),
-                        'product_brand'
-                    );
-
-                    $brand_name = '—';
-
-                    if (!is_wp_error($brands) && !empty($brands)) {
-                        $brand_name = $brands[0]->name;
-                    }
-                    ?>
-
-                    <div class="product-brand">
-                        Бренд: <?php echo esc_html($brand_name); ?>
-                    </div>
-
-                </div>
+                <!-- <div class="product-inner__content__col__info _info-col"> -->
+                <!-- </div> -->
 
                 <div class="product-inner__content__col__buy">
                     <div class="product-card__price">
@@ -117,6 +92,30 @@ if (post_password_required()) {
                         data-product-url="<?php echo esc_url($product->get_permalink()); ?>">
                         Купить в один клик
                     </button>
+
+                    <?php render_product_stock($product); ?>
+
+                    <div class="product-sku">
+                        Код товара:
+                        <?php echo esc_html($product->get_sku() ?: '—'); ?>
+                    </div>
+
+                    <?php
+                    $brands = wp_get_post_terms(
+                        $product->get_id(),
+                        'product_brand'
+                    );
+
+                    $brand_name = '—';
+
+                    if (!is_wp_error($brands) && !empty($brands)) {
+                        $brand_name = $brands[0]->name;
+                    }
+                    ?>
+
+                    <div class="product-brand">
+                        Бренд: <?php echo esc_html($brand_name); ?>
+                    </div>
                 </div>
 
 
