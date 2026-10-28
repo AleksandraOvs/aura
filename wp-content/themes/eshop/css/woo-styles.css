@@ -597,7 +597,7 @@ li.product .product-card__stock {
 /*SINGLE PRODUCT PAGE */
 .single-product__inner {
     display: flex;
-    gap: 1em;
+    gap: 3em;
     justify-content: space-between;
     align-items: stretch;
 }
@@ -687,7 +687,7 @@ li.product .product-card__stock {
     display: flex;
     gap: 1em;
     flex-wrap: wrap;
-    padding: 1em;
+    padding: 3em 1em;
     border: 1px solid rgba(101, 100, 100, .5);
     border-radius: 5px;
     justify-content: center;
@@ -1018,10 +1018,6 @@ h2.woocommerce-loop-product__title {
 
     .product-inner__content__col__buy {
         margin-right: 0;
-    }
-
-    .product-inner__content__col__buy {
-        padding: 1em;
     }
 
     .product-inner__content__col__buy,
