@@ -45,76 +45,79 @@ if (post_password_required()) {
 
                 <!-- <div class="product-inner__content__col__info _info-col"> -->
                 <!-- </div> -->
+                <div class="product-inner__content__col">
+                    <div class="product-inner__content__col__buy">
+                        <div class="product-card__price">
+                            <?php echo $product->get_price_html(); ?>
+                        </div>
 
-                <div class="product-inner__content__col__buy">
-                    <div class="product-card__price">
-                        <?php echo $product->get_price_html(); ?>
+
+                        <?php aura_product_quantity($product); ?>
+
+
+                        <?php if ($product->is_type('simple')) : ?>
+
+                            <form
+                                class="cart product-buy-form"
+                                action="<?php echo esc_url($product->get_permalink()); ?>"
+                                method="post"
+                                enctype="multipart/form-data">
+
+                                <input
+                                    type="hidden"
+                                    name="quantity"
+                                    value="<?php echo esc_attr($product->get_min_purchase_quantity()); ?>"
+                                    class="product-buy-quantity">
+
+                                <button
+                                    type="submit"
+                                    name="add-to-cart"
+                                    value="<?php echo esc_attr($product->get_id()); ?>"
+                                    class="button single_add_to_cart_button button">
+                                    Купить
+                                </button>
+
+                            </form>
+
+                        <?php endif; ?>
+
+                        <button
+                            type="button"
+                            class="button button-black buy-one-click"
+                            data-popup="buy-one-click-popup"
+                            data-product-id="<?php echo esc_attr($product->get_id()); ?>"
+                            data-product-name="<?php echo esc_attr($product->get_name()); ?>"
+                            data-product-sku="<?php echo esc_attr($product->get_sku() ?: '—'); ?>"
+                            data-product-price="<?php echo esc_attr(wp_strip_all_tags($product->get_price_html())); ?>"
+                            data-product-url="<?php echo esc_url($product->get_permalink()); ?>">
+                            Купить в один клик
+                        </button>
                     </div>
 
+                    <div class="product-info">
+                        <?php render_product_stock($product); ?>
 
-                    <?php aura_product_quantity($product); ?>
+                        <div class="product-sku">
+                            Код товара:
+                            <?php echo esc_html($product->get_sku() ?: '—'); ?>
+                        </div>
 
+                        <?php
+                        $brands = wp_get_post_terms(
+                            $product->get_id(),
+                            'product_brand'
+                        );
 
-                    <?php if ($product->is_type('simple')) : ?>
+                        $brand_name = '—';
 
-                        <form
-                            class="cart product-buy-form"
-                            action="<?php echo esc_url($product->get_permalink()); ?>"
-                            method="post"
-                            enctype="multipart/form-data">
+                        if (!is_wp_error($brands) && !empty($brands)) {
+                            $brand_name = $brands[0]->name;
+                        }
+                        ?>
 
-                            <input
-                                type="hidden"
-                                name="quantity"
-                                value="<?php echo esc_attr($product->get_min_purchase_quantity()); ?>"
-                                class="product-buy-quantity">
-
-                            <button
-                                type="submit"
-                                name="add-to-cart"
-                                value="<?php echo esc_attr($product->get_id()); ?>"
-                                class="button single_add_to_cart_button button">
-                                Купить
-                            </button>
-
-                        </form>
-
-                    <?php endif; ?>
-
-                    <button
-                        type="button"
-                        class="button button-black buy-one-click"
-                        data-popup="buy-one-click-popup"
-                        data-product-id="<?php echo esc_attr($product->get_id()); ?>"
-                        data-product-name="<?php echo esc_attr($product->get_name()); ?>"
-                        data-product-sku="<?php echo esc_attr($product->get_sku() ?: '—'); ?>"
-                        data-product-price="<?php echo esc_attr(wp_strip_all_tags($product->get_price_html())); ?>"
-                        data-product-url="<?php echo esc_url($product->get_permalink()); ?>">
-                        Купить в один клик
-                    </button>
-
-                    <?php render_product_stock($product); ?>
-
-                    <div class="product-sku">
-                        Код товара:
-                        <?php echo esc_html($product->get_sku() ?: '—'); ?>
-                    </div>
-
-                    <?php
-                    $brands = wp_get_post_terms(
-                        $product->get_id(),
-                        'product_brand'
-                    );
-
-                    $brand_name = '—';
-
-                    if (!is_wp_error($brands) && !empty($brands)) {
-                        $brand_name = $brands[0]->name;
-                    }
-                    ?>
-
-                    <div class="product-brand">
-                        Бренд: <?php echo esc_html($brand_name); ?>
+                        <div class="product-brand">
+                            Бренд: <?php echo esc_html($brand_name); ?>
+                        </div>
                     </div>
                 </div>
 

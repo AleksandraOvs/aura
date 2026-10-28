@@ -689,10 +689,14 @@ li.product .product-card__stock {
     padding: 1em;
     border: 1px solid rgba(101, 100, 100, .5);
     border-radius: 5px;
+    justify-content: center;
 }
 
 .woocommerce div.product-inner__content__col__buy form.product-buy-form {
-    width: 90%;
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    justify-content: center;
 }
 
 .product-inner__content__col__info._info-col {
@@ -700,9 +704,23 @@ li.product .product-card__stock {
     align-items: flex-start;
 }
 
-.product-inner__content__col__buy,
+
 .product-inner__content__col__benefits {
     width: 50%;
+}
+
+.product-inner__content__col__buy {
+    width: 100%;
+}
+
+.product-info>div {
+    text-align: center;
+}
+
+.product-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .product-inner__content__col__buy .product-card__price span {
@@ -711,9 +729,9 @@ li.product .product-card__stock {
 }
 
 .product-inner__content__col__buy .product-card__price {
-    /*  align-items: center;
-    text-align: center;*/
+    text-align: center;
     margin: 0 auto;
+    width: 100%;
 }
 
 .product-card__actions .product-compare {
