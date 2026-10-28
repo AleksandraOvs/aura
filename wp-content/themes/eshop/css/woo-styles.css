@@ -602,6 +602,10 @@ li.product .product-card__stock {
     align-items: stretch;
 }
 
+.product-inner__content__col {
+    width: 50%;
+}
+
 .product-inner__images {
     width: 40%;
     position: relative;
