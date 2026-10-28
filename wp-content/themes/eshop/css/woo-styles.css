@@ -517,11 +517,11 @@ li.product .product-card__stock {
 }
 
 .shop-inner__left {
-    max-width: 30%;
+    max-width: 27%;
 }
 
 .shop-inner__products {
-    width: calc(70% - 2em);
+    width: calc(73% - 2em);
     flex: 1;
 }
 
