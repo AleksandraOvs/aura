@@ -3,6 +3,8 @@
 namespace Supplier_Importer\Admin;
 
 use Supplier_Importer\Import\Import_Repository;
+use Supplier_Importer\Suppliers\Supplier_Feed_Settings;
+use Supplier_Importer\Core\Plugin;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -25,6 +27,11 @@ class Admin
         add_action(
             'wp_ajax_supplier_importer_reset_statistics',
             [$this, 'reset_statistics']
+        );
+
+        add_action(
+            'admin_post_supplier_importer_save_feed_settings',
+            [$this, 'save_feed_settings']
         );
     }
 
@@ -92,7 +99,7 @@ class Admin
             ? sanitize_key($_GET['tab'])
             : 'import';
 
-        if (!in_array($current_tab, ['import', 'statistics'], true)) {
+        if (!in_array($current_tab, ['import', 'statistics', 'feeds'], true)) {
             $current_tab = 'import';
         }
 
@@ -121,11 +128,23 @@ class Admin
                     class="nav-tab <?php echo $current_tab === 'statistics' ? 'nav-tab-active' : ''; ?>">
                     Статистика
                 </a>
+
+                <a
+                    href="<?php echo esc_url(
+                                admin_url('admin.php?page=supplier-importer&tab=feeds')
+                            ); ?>"
+                    class="nav-tab <?php echo $current_tab === 'feeds' ? 'nav-tab-active' : ''; ?>">
+                    Настройки фидов
+                </a>
             </nav>
 
             <?php if ($current_tab === 'statistics') : ?>
 
                 <?php $this->render_statistics(); ?>
+
+            <?php elseif ($current_tab === 'feeds') : ?>
+
+                <?php $this->render_feed_settings(); ?>
 
             <?php else : ?>
 
@@ -455,7 +474,7 @@ class Admin
 
         </div>
 
-<?php
+        <?php
     }
 
     private function format_date($date)
@@ -524,6 +543,210 @@ class Admin
                 ],
                 500
             );
+        }
+    }
+
+    public function save_feed_settings()
+    {
+        if (!current_user_can('manage_woocommerce')) {
+            wp_die('Недостаточно прав.');
+        }
+
+        check_admin_referer(
+            'supplier_importer_save_feed_settings'
+        );
+
+        $supplier_id = isset($_POST['supplier_id'])
+            ? sanitize_key(wp_unslash($_POST['supplier_id']))
+            : '';
+
+        $manager = Plugin::get_supplier_manager();
+
+        if (!$manager || !$manager->has($supplier_id)) {
+            wp_die('Неизвестный поставщик.');
+        }
+
+        $data = [
+            'url' => isset($_POST['url'])
+                ? wp_unslash($_POST['url'])
+                : '',
+
+            'format' => isset($_POST['format'])
+                ? sanitize_text_field(wp_unslash($_POST['format']))
+                : 'csv',
+
+            'enabled' => isset($_POST['enabled']),
+
+            'schedule' => isset($_POST['schedule'])
+                ? sanitize_text_field(wp_unslash($_POST['schedule']))
+                : 'daily',
+
+            'time' => isset($_POST['time'])
+                ? sanitize_text_field(wp_unslash($_POST['time']))
+                : '03:00',
+        ];
+
+        $settings = new Supplier_Feed_Settings();
+
+        if (!$settings->save($supplier_id, $data)) {
+            wp_safe_redirect(
+                add_query_arg(
+                    [
+                        'page' => 'supplier-importer',
+                        'tab' => 'feeds',
+                        'feed_saved' => '0',
+                    ],
+                    admin_url('admin.php')
+                )
+            );
+            exit;
+        }
+
+        do_action(
+            'supplier_importer_feed_settings_saved',
+            $supplier_id
+        );
+
+        wp_safe_redirect(
+            add_query_arg(
+                [
+                    'page' => 'supplier-importer',
+                    'tab' => 'feeds',
+                    'feed_saved' => '1',
+                ],
+                admin_url('admin.php')
+            )
+        );
+        exit;
+    }
+
+    private function render_feed_settings()
+    {
+        $manager = Plugin::get_supplier_manager();
+
+        if (!$manager) {
+            echo '<p>Список поставщиков недоступен.</p>';
+            return;
+        }
+
+        $settings = new Supplier_Feed_Settings();
+
+        if (isset($_GET['feed_saved'])) {
+            if ($_GET['feed_saved'] === '1') {
+                echo '<div class="notice notice-success is-dismissible"><p>Настройки сохранены.</p></div>';
+            } else {
+                echo '<div class="notice notice-error"><p>Не удалось сохранить настройки. Проверьте введённые значения.</p></div>';
+            }
+        }
+
+        foreach ($manager->all() as $supplier) {
+            $id = $supplier->get_id();
+            $data = $settings->get($id);
+        ?>
+            <div class="supplier-importer__card">
+                <h2><?php echo esc_html($supplier->get_name()); ?></h2>
+
+                <form
+                    method="post"
+                    action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <input
+                        type="hidden"
+                        name="action"
+                        value="supplier_importer_save_feed_settings">
+
+                    <input
+                        type="hidden"
+                        name="supplier_id"
+                        value="<?php echo esc_attr($id); ?>">
+
+                    <?php wp_nonce_field('supplier_importer_save_feed_settings'); ?>
+
+                    <p>
+                        <label for="<?php echo esc_attr($id); ?>-url">
+                            URL фида
+                        </label><br>
+
+                        <input
+                            class="regular-text"
+                            type="url"
+                            id="<?php echo esc_attr($id); ?>-url"
+                            name="url"
+                            value="<?php echo esc_attr($data['url']); ?>"
+                            placeholder="https://example.com/feed.csv">
+                    </p>
+
+                    <p>
+                        <label for="<?php echo esc_attr($id); ?>-format">
+                            Формат
+                        </label><br>
+
+                        <select
+                            id="<?php echo esc_attr($id); ?>-format"
+                            name="format">
+                            <?php foreach (['csv', 'yml', 'xml'] as $format) : ?>
+                                <option
+                                    value="<?php echo esc_attr($format); ?>"
+                                    <?php selected($data['format'], $format); ?>>
+                                    <?php echo esc_html(strtoupper($format)); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </p>
+
+                    <p>
+                        <label>
+                            <input
+                                type="checkbox"
+                                name="enabled"
+                                value="1"
+                                <?php checked($data['enabled']); ?>>
+                            Включить автоматическую синхронизацию
+                        </label>
+                    </p>
+
+                    <p>
+                        <label for="<?php echo esc_attr($id); ?>-schedule">
+                            Периодичность
+                        </label><br>
+
+                        <select
+                            id="<?php echo esc_attr($id); ?>-schedule"
+                            name="schedule">
+                            <?php
+                            $schedules = [
+                                'hourly' => 'Каждый час',
+                                'twicedaily' => 'Два раза в день',
+                                'daily' => 'Ежедневно',
+                                'weekly' => 'Еженедельно',
+                            ];
+
+                            foreach ($schedules as $value => $label) :
+                            ?>
+                                <option
+                                    value="<?php echo esc_attr($value); ?>"
+                                    <?php selected($data['schedule'], $value); ?>>
+                                    <?php echo esc_html($label); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </p>
+
+                    <p>
+                        <label for="<?php echo esc_attr($id); ?>-time">
+                            Время запуска
+                        </label><br>
+
+                        <input
+                            type="time"
+                            id="<?php echo esc_attr($id); ?>-time"
+                            name="time"
+                            value="<?php echo esc_attr($data['time']); ?>">
+                    </p>
+
+                    <?php submit_button('Сохранить настройки'); ?>
+                </form>
+            </div>
+<?php
         }
     }
 }

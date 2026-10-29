@@ -54,6 +54,22 @@ class Product_Creator
                 'WooCommerce не активен.'
             );
         }
+        $sku = trim((string) $product_data->get_sku());
+
+        if ($sku !== '') {
+            $existing_product_id = wc_get_product_id_by_sku($sku);
+
+            if ($existing_product_id) {
+                throw new \RuntimeException(
+                    sprintf(
+                        'Нельзя создать товар: SKU "%s" '
+                            . 'уже используется товаром ID %d.',
+                        $sku,
+                        $existing_product_id
+                    )
+                );
+            }
+        }
 
         $sku = $product_data->get_sku();
 
@@ -241,9 +257,7 @@ class Product_Creator
         }
 
         /**
-         * На первом этапе создаём товар как черновик.
-         * Публикацию будем контролировать отдельно
-         * на уровне импорта.
+         * Новые товары сразу создаются опубликованными.
          */
         $product->set_status('publish');
     }

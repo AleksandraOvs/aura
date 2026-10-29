@@ -44,6 +44,28 @@ class Product_Updater
         WC_Product $product,
         Product_Data $product_data
     ) {
+
+        $sku = trim((string) $product_data->get_sku());
+
+        if ($sku !== '') {
+            $existing_product_id = wc_get_product_id_by_sku($sku);
+
+            if (
+                $existing_product_id
+                && (int) $existing_product_id !== (int) $product->get_id()
+            ) {
+                throw new \RuntimeException(
+                    sprintf(
+                        'Нельзя обновить товар ID %d: SKU "%s" '
+                            . 'уже используется другим товаром ID %d.',
+                        $product->get_id(),
+                        $sku,
+                        $existing_product_id
+                    )
+                );
+            }
+        }
+
         if (!$product instanceof WC_Product) {
             throw new InvalidArgumentException(
                 'Product_Updater ожидает объект WC_Product.'

@@ -6,7 +6,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-use WC_Product;
+//use WC_Product;
 
 class Product_Finder
 {
@@ -83,7 +83,7 @@ class Product_Finder
                 'pending',
                 'private',
             ],
-            'posts_per_page' => 1,
+            'posts_per_page' => 2,
             'fields'         => 'ids',
             'no_found_rows'  => true,
 
@@ -108,6 +108,18 @@ class Product_Finder
             return null;
         }
 
+        if (count($query->posts) > 1) {
+            throw new \RuntimeException(
+                sprintf(
+                    'Найдено несколько товаров поставщика "%s" '
+                        . 'с ID "%s". Импорт остановлен во избежание '
+                        . 'обновления неоднозначного товара.',
+                    $supplier,
+                    $supplier_id
+                )
+            );
+        }
+
         $product_id = (int) $query->posts[0];
 
         $product = wc_get_product($product_id);
@@ -119,12 +131,15 @@ class Product_Finder
         return $product;
     }
 
+
     /**
      * Найти товар по штрихкоду.
      *
      * @param string $barcode
      *
      * @return WC_Product|null
+     *
+     * @throws \RuntimeException Если штрихкод принадлежит нескольким товарам.
      */
     public function find_by_barcode($barcode)
     {
@@ -145,7 +160,7 @@ class Product_Finder
                 'pending',
                 'private',
             ],
-            'posts_per_page' => 1,
+            'posts_per_page' => 2,
             'fields'         => 'ids',
             'no_found_rows'  => true,
 
@@ -162,6 +177,17 @@ class Product_Finder
             return null;
         }
 
+        if (count($query->posts) > 1) {
+            throw new \RuntimeException(
+                sprintf(
+                    'Штрихкод "%s" указан у нескольких товаров. '
+                        . 'Импорт остановлен во избежание обновления '
+                        . 'неоднозначного товара.',
+                    $barcode
+                )
+            );
+        }
+
         $product_id = (int) $query->posts[0];
 
         $product = wc_get_product($product_id);
@@ -173,97 +199,240 @@ class Product_Finder
         return $product;
     }
 
+
+    /**
+     * Проверить, принадлежит ли товар поставщику
+     * и совпадает ли ID товара у поставщика.
+     *
+     * Если у существующего товара нет supplier_id,
+     * автоматическое обновление запрещается.
+     *
+     * @param WC_Product $product
+     * @param string     $supplier
+     * @param string     $supplier_id
+     *
+     * @return bool
+     */
+    private function belongs_to_supplier(
+        WC_Product $product,
+        $supplier,
+        $supplier_id
+    ) {
+        $product_supplier = (string) get_post_meta(
+            $product->get_id(),
+            self::SUPPLIER_META,
+            true
+        );
+
+        $existing_supplier_id = trim(
+            (string) get_post_meta(
+                $product->get_id(),
+                self::SUPPLIER_ID_META,
+                true
+            )
+        );
+
+        $supplier = trim((string) $supplier);
+        $supplier_id = trim((string) $supplier_id);
+
+        if (
+            $supplier === ''
+            || $product_supplier !== $supplier
+        ) {
+            return false;
+        }
+
+        if (
+            $supplier_id === ''
+            || $existing_supplier_id === ''
+        ) {
+            return false;
+        }
+
+        return $existing_supplier_id === $supplier_id;
+    }
+
     /**
      * Найти товар по данным поставщика.
      *
-     * Порядок поиска:
-     *
-     * 1. SKU
-     * 2. Поставщик + ID товара у поставщика
-     * 3. Штрихкод
+     * Сначала ищем по уникальному ID поставщика.
+     * Затем по SKU и штрихкоду с проверкой принадлежности товара.
      *
      * @param Product_Data $product_data
      *
      * @return WC_Product|null
+     *
+     * @throws \RuntimeException Если идентификатор принадлежит
+     *                            другому поставщику или владелец неизвестен.
      */
     public function find(Product_Data $product_data)
     {
-        $sku = $product_data->get_sku();
+        $supplier    = trim((string) $product_data->get_supplier());
+        $supplier_id = trim((string) $product_data->get_supplier_id());
+        $sku         = trim((string) $product_data->get_sku());
+        $barcode     = trim((string) $product_data->get('barcode'));
 
         \Supplier_Importer\Core\Logger::info(
-            'FINDER DEBUG: START SKU=' . $sku
+            'FINDER: START supplier=' . $supplier
+                . ', supplier_id=' . $supplier_id
+                . ', SKU=' . $sku
         );
 
         /*
-     * 1. Поиск по SKU.
+     * 1. Основной поиск:
+     * поставщик + ID товара у поставщика.
      */
-        $start = microtime(true);
-
-        if ($sku !== '') {
-            $product = $this->find_by_sku($sku);
-
-            \Supplier_Importer\Core\Logger::info(
-                'FINDER DEBUG: SKU search, SKU=' . $sku
-                    . ', found=' . ($product ? 'yes' : 'no')
-                    . ', time=' . round(microtime(true) - $start, 2) . ' sec'
-            );
-
-            if ($product) {
-                return $product;
-            }
-        }
-
-        /*
-     * 2. Поиск по поставщику + ID товара.
-     */
-        $supplier = $product_data->get_supplier();
-        $supplier_id = $product_data->get_supplier_id();
-
-        $start = microtime(true);
-
         if ($supplier !== '' && $supplier_id !== '') {
             $product = $this->find_by_supplier(
                 $supplier,
                 $supplier_id
             );
 
-            \Supplier_Importer\Core\Logger::info(
-                'FINDER DEBUG: supplier search, SKU=' . $sku
-                    . ', supplier=' . $supplier
-                    . ', supplier_id=' . $supplier_id
-                    . ', found=' . ($product ? 'yes' : 'no')
-                    . ', time=' . round(microtime(true) - $start, 2) . ' sec'
-            );
-
             if ($product) {
+                if ($sku !== '') {
+                    $sku_product = $this->find_by_sku($sku);
+
+                    if (
+                        $sku_product
+                        && $sku_product->get_id() !== $product->get_id()
+                    ) {
+                        throw new \RuntimeException(
+                            sprintf(
+                                'Нельзя обновить товар ID %d: SKU "%s" '
+                                    . 'уже принадлежит другому товару ID %d.',
+                                $product->get_id(),
+                                $sku,
+                                $sku_product->get_id()
+                            )
+                        );
+                    }
+                }
+
+                \Supplier_Importer\Core\Logger::info(
+                    'FINDER: FOUND BY SUPPLIER ID, product_id='
+                        . $product->get_id()
+                );
+
                 return $product;
             }
         }
 
         /*
-     * 3. Поиск по штрихкоду.
+     * 2. Поиск по SKU.
+     *
+     * Совпадение SKU само по себе недостаточно:
+     * проверяем, что товар принадлежит текущему поставщику.
      */
-        $barcode = $product_data->get('barcode');
+        if ($sku !== '') {
+            $product = $this->find_by_sku($sku);
 
-        $start = microtime(true);
+            if ($product) {
+                if (
+                    $this->belongs_to_supplier(
+                        $product,
+                        $supplier,
+                        $supplier_id
+                    )
+                ) {
+                    \Supplier_Importer\Core\Logger::info(
+                        'FINDER: FOUND BY SKU, product_id='
+                            . $product->get_id()
+                    );
 
+                    return $product;
+                }
+
+                $product_supplier = get_post_meta(
+                    $product->get_id(),
+                    self::SUPPLIER_META,
+                    true
+                );
+
+                \Supplier_Importer\Core\Logger::info(
+                    'FINDER: SKU COLLISION'
+                        . ', SKU=' . $sku
+                        . ', current_supplier=' . $supplier
+                        . ', existing_supplier='
+                        . ($product_supplier !== ''
+                            ? $product_supplier
+                            : 'unknown')
+                        . ', existing_product_id=' . $product->get_id()
+                );
+
+                throw new \RuntimeException(
+                    sprintf(
+                        'Нельзя импортировать товар поставщика "%s": '
+                            . 'SKU "%s" уже используется товаром ID %d. '
+                            . 'Товар не обновлён, так как его принадлежность '
+                            . 'текущему поставщику не подтверждена.',
+                        $supplier,
+                        $sku,
+                        $product->get_id()
+                    )
+                );
+            }
+        }
+
+        /*
+     * 3. Поиск по штрихкоду.
+     *
+     * Аналогично SKU, совпадение штрихкода не даёт права
+     * обновлять товар другого или неизвестного поставщика.
+     */
         if ($barcode !== '') {
             $product = $this->find_by_barcode($barcode);
 
-            \Supplier_Importer\Core\Logger::info(
-                'FINDER DEBUG: barcode search, SKU=' . $sku
-                    . ', barcode=' . $barcode
-                    . ', found=' . ($product ? 'yes' : 'no')
-                    . ', time=' . round(microtime(true) - $start, 2) . ' sec'
-            );
-
             if ($product) {
-                return $product;
+                if (
+                    $this->belongs_to_supplier(
+                        $product,
+                        $supplier,
+                        $supplier_id
+                    )
+                ) {
+                    \Supplier_Importer\Core\Logger::info(
+                        'FINDER: FOUND BY BARCODE, product_id='
+                            . $product->get_id()
+                    );
+
+                    return $product;
+                }
+
+                $product_supplier = get_post_meta(
+                    $product->get_id(),
+                    self::SUPPLIER_META,
+                    true
+                );
+
+                \Supplier_Importer\Core\Logger::info(
+                    'FINDER: BARCODE COLLISION'
+                        . ', barcode=' . $barcode
+                        . ', current_supplier=' . $supplier
+                        . ', existing_supplier='
+                        . ($product_supplier !== ''
+                            ? $product_supplier
+                            : 'unknown')
+                        . ', existing_product_id=' . $product->get_id()
+                );
+
+                throw new \RuntimeException(
+                    sprintf(
+                        'Нельзя импортировать товар поставщика "%s": '
+                            . 'штрихкод "%s" уже используется товаром ID %d. '
+                            . 'Товар не обновлён, так как его принадлежность '
+                            . 'текущему поставщику не подтверждена.',
+                        $supplier,
+                        $barcode,
+                        $product->get_id()
+                    )
+                );
             }
         }
 
         \Supplier_Importer\Core\Logger::info(
-            'FINDER DEBUG: NOT FOUND SKU=' . $sku
+            'FINDER: NOT FOUND, supplier=' . $supplier
+                . ', supplier_id=' . $supplier_id
+                . ', SKU=' . $sku
         );
 
         return null;

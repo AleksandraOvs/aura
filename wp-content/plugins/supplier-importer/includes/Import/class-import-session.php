@@ -233,12 +233,14 @@ class Import_Session
             $data['finished_at'] ?? null
         );
 
+        $progress = $data['progress'] ?? $data;
+
         $session->restore_progress([
-            'processed' => $data['processed'] ?? 0,
-            'created'   => $data['created'] ?? 0,
-            'updated'   => $data['updated'] ?? 0,
-            'skipped'   => $data['skipped'] ?? 0,
-            'errors'    => $data['errors'] ?? 0,
+            'processed' => $progress['processed'] ?? 0,
+            'created'   => $progress['created'] ?? 0,
+            'updated'   => $progress['updated'] ?? 0,
+            'skipped'   => $progress['skipped'] ?? 0,
+            'errors'    => $progress['errors'] ?? 0,
         ]);
 
         return $session;

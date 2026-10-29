@@ -15,6 +15,8 @@ use Supplier_Importer\AJAX\Ajax_Import;
 use Supplier_Importer\AJAX\Ajax_Process;
 use Supplier_Importer\Admin\Admin;
 use Supplier_Importer\AJAX\Ajax_Mapping;
+use Supplier_Importer\Suppliers\Supplier_Feed_Scheduler;
+use Supplier_Importer\Suppliers\Feed_Sync;
 //use Supplier_Importer\CSV\Csv_Reader;
 //use Supplier_Importer\Import\Import_Processor;
 //use Supplier_Importer\Import\Import_Repository;
@@ -50,11 +52,6 @@ class Plugin
             'plugins_loaded',
             [self::class, 'plugins_loaded']
         );
-
-        add_action(
-            'plugins_loaded',
-            [self::class, 'plugins_loaded']
-        );
     }
 
     public static function plugins_loaded()
@@ -63,6 +60,8 @@ class Plugin
         self::register_ajax();
 
         new Admin();
+        new Supplier_Feed_Scheduler();
+        new Feed_Sync();
 
         // Logger::info(
         //     'Плагин Supplier Importer успешно загружен.'

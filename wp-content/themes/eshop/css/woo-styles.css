@@ -608,7 +608,7 @@ li.product .product-card__stock {
 }
 
 .product-inner__images {
-    width: 40%;
+    width: 50%;
     position: relative;
 }
 
@@ -644,7 +644,7 @@ li.product .product-card__stock {
 }
 
 .single-product__inner__content {
-    width: calc(60% - 1em);
+    width: calc(50% - 1em);
     display: flex;
     gap: 3em;
 }
