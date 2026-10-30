@@ -516,10 +516,10 @@ li.product .product-card__stock {
     display: flex;
 }
 
-.shop-inner__left {
+/* .shop-inner__left {
     width: 23%;
     max-width: 260px;
-}
+} */
 
 .shop-inner__products {
     width: calc(77% - 2em);

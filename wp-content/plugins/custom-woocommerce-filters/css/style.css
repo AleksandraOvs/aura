@@ -4,15 +4,23 @@
   background: transparent;
   width: 0;
   overflow: hidden;
+
 }
 
 .filters-wrapper__header {
   display: none;
 }
 
+.sidebar-area-wrapper._filters {
+  width: 0;
+
+}
+
 .sidebar-area-wrapper._filters.opened {
   width: 100%;
+
   padding-right: 2em;
+  max-width: 260px;
 }
 
 .single-sidebar-wrap {
