@@ -2,23 +2,16 @@
   position: relative;
   padding: 0;
   background: transparent;
-  width: 0;
   overflow: hidden;
-
+  width: 0;
 }
 
 .filters-wrapper__header {
   display: none;
 }
 
-.sidebar-area-wrapper._filters {
-  width: 0;
-
-}
-
 .sidebar-area-wrapper._filters.opened {
   width: 100%;
-
   padding-right: 2em;
   max-width: 260px;
 }
@@ -923,19 +916,31 @@
 
 
 @media (max-width: 768px) {
-  .sidebar-area-wrapper {
+  .sidebar-area-wrapper._filters {
     position: fixed;
-    width: 100%;
-    height: 100vh;
+    padding: 0;
+    padding-right: 0;
+    background: transparent;
+    overflow: hidden;
+    opacity: 0;
     top: 0;
+    height: 0;
+    width: 100%;
+    max-width: 100%;
     left: 0;
-    z-index: 500;
+    z-index: 777;
     transform: translatey(-100%);
-    transition: all .5s var(--transition);
+    transition: transform .5s linear, opacity .7s linear;
   }
 
-  .sidebar-area-wrapper.opened {
+
+  .sidebar-area-wrapper._filters.opened {
+    opacity: 1;
+    padding: 0;
     transform: none;
+    max-width: 100%;
+    width: 100%;
+    height: 100%;
   }
 
   .cwc-products-count {
@@ -979,6 +984,10 @@
     width: 100%;
     justify-content: space-between;
   }
+
+  /* .sidebar-area-wrapper {
+    opacity: 0;
+  } */
 
   .filter-wrapper__close,
   .filter-wrapper__back {

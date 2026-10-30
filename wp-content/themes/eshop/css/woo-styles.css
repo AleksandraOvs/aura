@@ -1402,11 +1402,6 @@ h2.woocommerce-loop-product__title {
         max-width: 100%;
     }
 
-    .sidebar-area-wrapper._filters.opened {
-        width: 100%;
-        padding-right: 0;
-    }
-
 }
 
 @media (max-width: 576px) {
