@@ -77,7 +77,7 @@ document.body.addEventListener('added_to_cart', function (e) {
 });
 
 /* ===============================
-      SINGLE PRODUCT FAQ
+      SINGLE PRODUCT GALLERY
    =============================== */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -115,8 +115,8 @@ document.addEventListener('DOMContentLoaded', () => {
             spaceBetween: 10,
             autoHeight: true,
             navigation: {
-                nextEl: gallery.querySelector('.aura-product-gallery__next'),
-                prevEl: gallery.querySelector('.aura-product-gallery__prev'),
+                nextEl: gallery.querySelector('.slider-next'),
+                prevEl: gallery.querySelector('.slider-prev'),
             },
             thumbs: thumbsSwiper
                 ? {

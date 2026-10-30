@@ -51,8 +51,13 @@ $wrapper_classes = apply_filters(
 	class="<?php echo esc_attr(implode(' ', array_map('sanitize_html_class', $wrapper_classes))); ?> aura-product-gallery"
 	data-columns="<?php echo esc_attr($columns); ?>">
 	<?php if ($image_ids) : ?>
+		<button
+			class="slider-next"
+			type="button"
+			aria-label="<?php esc_attr_e('Next image', 'woocommerce'); ?>"></button>
 
 		<div class="swiper aura-product-gallery__main">
+
 			<div class="swiper-wrapper">
 
 				<?php foreach ($image_ids as $index => $image_id) : ?>
@@ -70,17 +75,12 @@ $wrapper_classes = apply_filters(
 				<?php endforeach; ?>
 
 			</div>
-
-			<button
-				class="aura-product-gallery__prev"
-				type="button"
-				aria-label="<?php esc_attr_e('Previous image', 'woocommerce'); ?>"></button>
-
-			<button
-				class="aura-product-gallery__next"
-				type="button"
-				aria-label="<?php esc_attr_e('Next image', 'woocommerce'); ?>"></button>
 		</div>
+
+		<button
+			class="slider-prev"
+			type="button"
+			aria-label="<?php esc_attr_e('Previous image', 'woocommerce'); ?>"></button>
 
 		<?php if (count($image_ids) > 1) : ?>
 			<div class="swiper aura-product-gallery__thumbs">
