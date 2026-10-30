@@ -652,15 +652,15 @@ li.product .product-card__stock {
 .single-product__inner__content {
     width: calc(50% - 1em);
     display: flex;
-    gap: 1em;
+    gap: 2em;
 }
 
-.single-product__inner__content>div {
+/* .single-product__inner__content>div {
     gap: 1em;
     display: flex;
     flex-direction: column;
     align-items: center;
-}
+} */
 
 .single-product__inner__content .product-inner__content__col__buy .cart.product-buy-form {
     margin-bottom: 0;
@@ -733,6 +733,7 @@ li.product .product-card__stock {
     display: flex;
     flex-direction: column;
     justify-content: center;
+    margin-top: 1em;
 }
 
 .product-inner__content__col__buy .product-card__price span {
