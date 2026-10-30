@@ -863,7 +863,7 @@ h2.woocommerce-loop-product__title {
 
 .woocommerce-product-gallery__image {
     width: 100%;
-    height: 100%;
+    aspect-ratio: 1/1;
 }
 
 .woocommerce-product-gallery__image a {
@@ -910,11 +910,12 @@ h2.woocommerce-loop-product__title {
 }
 
 .swiper.aura-product-gallery__main.swiper-initialized.swiper-horizontal {
-    width: calc(100% - 140px - .5em);
+    width: calc(100% - 140px - 6em);
     display: flex;
     gap: .5em;
     align-items: center;
     border-radius: 5px;
+    height: 100%;
 }
 
 .swiper.aura-product-gallery__main .swiper-wrapper {
@@ -1095,7 +1096,11 @@ h2.woocommerce-loop-product__title {
 
     .product-inner__content__col__buy,
     .product-inner__content__col__benefits {
-        width: calc(50% - 1em);
+        width: 100%;
+    }
+
+    .product-inner__content__col {
+        width: 100%;
     }
 }
 
@@ -1128,20 +1133,20 @@ h2.woocommerce-loop-product__title {
 }
 
 @media (max-width: 1200px) {
-    /* .product-inner__content__col._buy-col {
-        max-width: calc(60% - 1em);
-        width: calc(60% - 1em);
+    .woocommerce-product-gallery button {
+        display: none;
     }
 
-    .product-inner__content__col._benefits-col {
-        order: 3;
+    .swiper.aura-product-gallery__main.swiper-initialized.swiper-horizontal {
+        width: calc(100% - 60px - 2em);
     }
 
-    .product-inner__content__col._info-col {
-        order: 2;
-        max-width: 40%;
-        width: 40%;
-    } */
+    .product-inner__images__buttons {
+        position: absolute;
+        top: .5em;
+        right: .5em;
+    }
+
 }
 
 @media (max-width: 992px) {
@@ -1527,6 +1532,11 @@ h2.woocommerce-loop-product__title {
         font-size: 18px;
     }
 
+    .woocommerce-product-gallery.woocommerce-product-gallery--with-images {
+        display: flex;
+        flex-direction: column;
+    }
+
     .button.product_type_simple.add_to_cart_button.ajax_add_to_cart.added::after {
         top: unset;
         position: relative;
@@ -1541,7 +1551,31 @@ h2.woocommerce-loop-product__title {
     }
 
     .swiper.aura-product-gallery__main.swiper-initialized.swiper-horizontal {
+        aspect-ratio: unset;
+        width: 100%;
+    }
+
+    .swiper.aura-product-gallery__thumbs {
+        width: 100%;
+        overflow: hidden;
+    }
+
+    .swiper.aura-product-gallery__thumbs .swiper-wrapper div.swiper-slide {
+        max-height: unset;
         aspect-ratio: 1/1;
+    }
+
+    .swiper.aura-product-gallery__main .swiper-wrapper,
+    .swiper.aura-product-gallery__main .swiper-wrapper .swiper-slide {
+        aspect-ratio: unset;
+    }
+
+    .woocommerce-product-gallery.woocommerce-product-gallery--with-images {
+        align-items: stretch;
+    }
+
+    .product-inner__content__col__benefits._benefits-col h3 {
+        text-align: center;
     }
 }
 

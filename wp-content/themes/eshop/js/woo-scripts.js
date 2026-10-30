@@ -93,12 +93,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (thumbsElement) {
             thumbsSwiper = new Swiper(thumbsElement, {
-                direction: 'vertical',
+                direction: 'horizontal',
                 slidesPerView: 4,
                 spaceBetween: 10,
                 watchSlidesProgress: true,
                 breakpoints: {
                     480: {
+                        direction: 'vertical',
                         slidesPerView: 5,
                         spaceBetween: 10,
                     },
@@ -113,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
         new Swiper(mainElement, {
             slidesPerView: 1,
             spaceBetween: 10,
-            autoHeight: true,
+            //autoHeight: true,
             navigation: {
                 nextEl: gallery.querySelector('.slider-next'),
                 prevEl: gallery.querySelector('.slider-prev'),
