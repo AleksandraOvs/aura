@@ -896,10 +896,10 @@ h2.woocommerce-loop-product__title {
 .woocommerce-product-gallery.woocommerce-product-gallery--with-images {
     display: flex;
     flex-direction: row-reverse;
-    gap: .5em;
+    gap: 2em;
     margin-bottom: 0 !important;
     height: 100%;
-    align-items: center;
+    align-items: flex-start;
 }
 
 
@@ -940,6 +940,7 @@ h2.woocommerce-loop-product__title {
     background: #f5f5f5;
     border-radius: 5px;
     padding: 10px;
+    align-self: center;
 }
 
 .woocommerce-product-gallery button svg {
