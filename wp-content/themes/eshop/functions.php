@@ -208,17 +208,45 @@ add_action('customize_register', 'e_shop_custom_remove', 100);
 
 //разрешить загрузку свг только админам
 // Разрешить загрузку SVG и YML только администраторам.
+// function allow_file_upload_for_admins($mimes)
+// {
+//     if (current_user_can('administrator')) {
+//         $mimes['svg']  = 'image/svg+xml';
+//         $mimes['yml']  = 'text/yaml';
+//         $mimes['yaml'] = 'text/yaml';
+//     }
+
+//     return $mimes;
+// }
+// add_filter('upload_mimes', 'allow_file_upload_for_admins');
+
+// Разрешить загрузку SVG и YAML только администраторам.
 function allow_file_upload_for_admins($mimes)
 {
     if (current_user_can('administrator')) {
         $mimes['svg']  = 'image/svg+xml';
-        $mimes['yml']  = 'text/yaml';
-        $mimes['yaml'] = 'text/yaml';
+        $mimes['yml']  = 'text/plain';
+        $mimes['yaml'] = 'text/plain';
     }
 
     return $mimes;
 }
 add_filter('upload_mimes', 'allow_file_upload_for_admins');
+
+// Корректно определять MIME-тип YAML-файлов.
+function allow_yaml_filetype($data, $file, $filename, $mimes, $real_mime = '')
+{
+    if (
+        current_user_can('administrator') &&
+        preg_match('/\.(yml|yaml)$/i', $filename)
+    ) {
+        $data['ext']  = pathinfo($filename, PATHINFO_EXTENSION);
+        $data['type'] = 'text/plain';
+    }
+
+    return $data;
+}
+add_filter('wp_check_filetype_and_ext', 'allow_yaml_filetype', 10, 5);
 
 add_filter('template_include', 'var_template_include', 1000);
 function var_template_include($t)
