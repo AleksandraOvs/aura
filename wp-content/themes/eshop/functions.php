@@ -207,14 +207,18 @@ add_action('customize_register', 'e_shop_custom_remove', 100);
 // }
 
 //разрешить загрузку свг только админам
-function allow_svg_upload_for_admins($mimes)
+// Разрешить загрузку SVG и YML только администраторам.
+function allow_file_upload_for_admins($mimes)
 {
     if (current_user_can('administrator')) {
-        $mimes['svg'] = 'image/svg+xml';
+        $mimes['svg']  = 'image/svg+xml';
+        $mimes['yml']  = 'text/yaml';
+        $mimes['yaml'] = 'text/yaml';
     }
+
     return $mimes;
 }
-add_filter('upload_mimes', 'allow_svg_upload_for_admins');
+add_filter('upload_mimes', 'allow_file_upload_for_admins');
 
 add_filter('template_include', 'var_template_include', 1000);
 function var_template_include($t)
