@@ -129,13 +129,9 @@ class Feed_Product_Sync
                  * Товар встретился в текущем фиде.
                  */
                 if ($last_run === $run_id) {
-                    if (!$was_unpublished) {
-                        continue;
-                    }
-
-                    // Возвращаем публикацию только товарам,
-                    // которые ранее сняла именно наша синхронизация.
-                    if ($product->get_status() !== 'publish') {
+                    // Восстанавливаем публикацию только для товаров,
+                    // которые ранее сняла наша синхронизация.
+                    if ($was_unpublished) {
                         $product->set_status('publish');
                         $product->save();
 
@@ -149,67 +145,56 @@ class Feed_Product_Sync
                         }
 
                         $result['republished']++;
-                    }
 
-                    $this->product_meta->set_unpublished_by_sync(
-                        $product,
-                        false
-                    );
-
-                    if ($this->product_meta->was_unpublished_by_sync($product)) {
-                        throw new \RuntimeException(
-                            sprintf(
-                                'Не удалось удалить маркер снятия с публикации для товара ID %d.',
-                                $product_id
-                            )
-                        );
+                        if (!$this->product_meta->set_unpublished_by_sync($product, false)) {
+                            throw new \RuntimeException(
+                                sprintf(
+                                    'Не удалось удалить маркер снятия с публикации для товара ID %d.',
+                                    $product_id
+                                )
+                            );
+                        }
                     }
 
                     continue;
                 }
 
                 /*
-                 * Товар отсутствует в текущем фиде.
-                 * Снимаем с публикации только опубликованные товары.
-                 */
+ * Товар отсутствует в текущем фиде.
+ * Снимаем с публикации только опубликованные товары.
+ */
                 if ($product->get_status() !== 'publish') {
                     continue;
                 }
 
-                $product->set_status('draft');
-                $product->save();
-
-                if ($product->get_status() !== 'draft') {
+                /*
+ * Сначала сохраняем маркер синхронизации.
+ */
+                if (!$this->product_meta->set_unpublished_by_sync($product, true)) {
                     throw new \RuntimeException(
                         sprintf(
-                            'Не удалось снять с публикации товар ID %d.',
+                            'Не удалось сохранить маркер снятия с публикации для товара ID %d.',
                             $product_id
                         )
                     );
                 }
 
-                $this->product_meta->set_unpublished_by_sync(
-                    $product,
-                    true
-                );
+                /*
+ * Затем переводим товар в черновик.
+ */
+                $product->set_status('draft');
+                $product->save();
 
-                if (!$this->product_meta->was_unpublished_by_sync($product)) {
-                    // Не оставляем товар в черновиках без маркера синхронизации.
-                    $product->set_status('publish');
-                    $product->save();
-
-                    if ($product->get_status() !== 'publish') {
-                        throw new \RuntimeException(
-                            sprintf(
-                                'Не удалось сохранить маркер и восстановить публикацию товара ID %d.',
-                                $product_id
-                            )
-                        );
-                    }
+                if ($product->get_status() !== 'draft') {
+                    // Пытаемся удалить маркер, если статус не изменился.
+                    $this->product_meta->set_unpublished_by_sync(
+                        $product,
+                        false
+                    );
 
                     throw new \RuntimeException(
                         sprintf(
-                            'Не удалось сохранить маркер снятия с публикации для товара ID %d. Публикация восстановлена.',
+                            'Не удалось снять с публикации товар ID %d.',
                             $product_id
                         )
                     );

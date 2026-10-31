@@ -157,7 +157,7 @@
 
 .product-attributes {
     display: flex;
-    gap: 1em;
+    gap: 3em;
     flex-wrap: wrap;
 }
 

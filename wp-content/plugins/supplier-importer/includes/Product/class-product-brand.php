@@ -11,6 +11,7 @@ use WC_Product;
 
 class Product_Brand
 {
+
     /**
      * Назначить товару бренд из таксономии product_brand.
      *
@@ -25,6 +26,13 @@ class Product_Brand
         WC_Product $product,
         $brand_name
     ) {
+
+        if (!$product instanceof WC_Product) {
+            throw new InvalidArgumentException(
+                'Product_Brand ожидает объект WC_Product.'
+            );
+        }
+
         $brand_name = trim((string) $brand_name);
 
         if ($brand_name === '') {

@@ -19,7 +19,7 @@ class Import_Manager
     }
 
     /**
-     * Импортировать товары.
+     * Импортировать товары из массива.
      *
      * @param Product_Data[] $products
      *
@@ -43,7 +43,6 @@ class Import_Manager
         ];
 
         foreach ($products as $index => $product_data) {
-
             if (!$product_data instanceof Product_Data) {
                 $result['errors']++;
 
@@ -58,7 +57,6 @@ class Import_Manager
             }
 
             try {
-
                 $import_result = $this->product_importer->import(
                     $product_data
                 );
@@ -80,7 +78,6 @@ class Import_Manager
                     'sku'        => $product_data->get_sku(),
                 ];
             } catch (\Throwable $e) {
-
                 $result['errors']++;
 
                 $result['items'][] = [
@@ -98,13 +95,14 @@ class Import_Manager
     /**
      * Потоковый импорт товаров из Row_Reader.
      *
-     * Успешные результаты отдельных товаров не накапливаются в памяти.
-     * В items сохраняются только ошибки для последующего логирования.
+     * При критической ошибке чтения или закрытия возвращает
+     * накопленные счётчики и описание ошибки в fatal_error.
      *
-     * @param Row_Reader   $reader      Читатель записей.
-     * @param callable     $mapper      Преобразует запись в Product_Data.
-     * @param callable|null $on_success Вызывается после успешного импорта
-     *                                  товара для выполнения дополнительных действий.
+     * Ошибки отдельных товаров остаются в items.
+     *
+     * @param Row_Reader    $reader      Читатель записей.
+     * @param callable      $mapper      Преобразует запись в Product_Data.
+     * @param callable|null $on_success  Дополнительные действия после импорта.
      *
      * @return array
      */
@@ -114,12 +112,13 @@ class Import_Manager
         ?callable $on_success = null
     ) {
         $result = [
-            'total'   => 0,
-            'created' => 0,
-            'updated' => 0,
-            'skipped' => 0,
-            'errors'  => 0,
-            'items'   => [],
+            'total'       => 0,
+            'created'     => 0,
+            'updated'     => 0,
+            'skipped'     => 0,
+            'errors'      => 0,
+            'items'       => [],
+            'fatal_error' => '',
         ];
 
         $reader_opened = false;
@@ -128,7 +127,13 @@ class Import_Manager
             $reader->open();
             $reader_opened = true;
 
-            while (($record = $reader->read()) !== null) {
+            while (true) {
+                $record = $reader->read();
+
+                if ($record === null) {
+                    break;
+                }
+
                 $index = $result['total'];
                 $result['total']++;
 
@@ -162,14 +167,18 @@ class Import_Manager
 
                     $action = $import_result['action'];
 
-                    if (!in_array($action, ['created', 'updated', 'skipped'], true)) {
+                    if (
+                        !in_array(
+                            $action,
+                            ['created', 'updated', 'skipped'],
+                            true
+                        )
+                    ) {
                         throw new \UnexpectedValueException(
                             'Импортёр вернул неизвестное действие.'
                         );
                     }
 
-                    // Если передан callback, выполняем дополнительные действия
-                    // до увеличения счётчиков успешного импорта.
                     if ($on_success !== null) {
                         $on_success(
                             $import_result['product'],
@@ -178,7 +187,6 @@ class Import_Manager
                         );
                     }
 
-                    // Учитываем результат только после успешного выполнения callback.
                     if ($action === 'created') {
                         $result['created']++;
                     } elseif ($action === 'updated') {
@@ -197,19 +205,30 @@ class Import_Manager
                     ];
                 }
             }
+        } catch (\Throwable $e) {
+            $result['fatal_error'] = $e->getMessage();
+
+            \Supplier_Importer\Core\Logger::error(
+                'Критическая ошибка потокового импорта.',
+                [
+                    'message' => $e->getMessage(),
+                ]
+            );
         } finally {
             if ($reader_opened) {
                 try {
                     $reader->close();
                 } catch (\Throwable $e) {
-                    \Supplier_Importer\Core\Logger::info(
-                        sprintf(
-                            'IMPORT STREAM: ошибка закрытия читателя: %s',
-                            $e->getMessage()
-                        )
+                    \Supplier_Importer\Core\Logger::error(
+                        'Ошибка закрытия читателя потокового импорта.',
+                        [
+                            'message' => $e->getMessage(),
+                        ]
                     );
 
-                    throw $e;
+                    if ($result['fatal_error'] === '') {
+                        $result['fatal_error'] = $e->getMessage();
+                    }
                 }
             }
         }

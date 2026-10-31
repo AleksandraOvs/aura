@@ -6,13 +6,27 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+use InvalidArgumentException;
 use Supplier_Importer\Product\Product_Data;
 use Supplier_Importer\Import\Mapping_Repository;
 
 class Denkirs_Mapper
 {
+    private $mapping_repository;
+
+    public function __construct()
+    {
+        $this->mapping_repository = new Mapping_Repository();
+    }
+
     public function map($row)
     {
+        if (!is_array($row)) {
+            throw new InvalidArgumentException(
+                'Denkirs Mapper ожидает массив данных товара.'
+            );
+        }
+
         return Product_Data::from_array([
             'supplier' => 'denkirs',
 
@@ -83,12 +97,6 @@ class Denkirs_Mapper
 
     /**
      * Получает категорию с учётом mapping.
-     *
-     * Если для категории поставщика есть mapping,
-     * возвращается полный путь категории сайта.
-     *
-     * Если mapping отсутствует,
-     * используется исходная категория поставщика.
      */
     private function get_category($row)
     {
@@ -101,9 +109,7 @@ class Denkirs_Mapper
             return '';
         }
 
-        $repository = new Mapping_Repository();
-
-        $mapping = $repository->find(
+        $mapping = $this->mapping_repository->find(
             'denkirs',
             'category',
             $category,
@@ -127,12 +133,7 @@ class Denkirs_Mapper
     }
 
     /**
-     * Получает полный путь категории WooCommerce
-     * по её ID.
-     *
-     * Например:
-     *
-     * Свет для дома / Настенные бра
+     * Получает полный путь категории WooCommerce по её ID.
      */
     private function get_category_path($term_id)
     {
@@ -168,11 +169,9 @@ class Denkirs_Mapper
             return '';
         }
 
-        $parts = array_reverse($parts);
-
         return implode(
             ' / ',
-            $parts
+            array_reverse($parts)
         );
     }
 
@@ -184,7 +183,12 @@ class Denkirs_Mapper
         $images = [];
 
         foreach ($row as $key => $value) {
-            if (strpos($key, 'Картинка') !== 0) {
+            if (
+                strpos(
+                    (string) $key,
+                    'Картинка'
+                ) !== 0
+            ) {
                 continue;
             }
 
@@ -220,9 +224,7 @@ class Denkirs_Mapper
                 continue;
             }
 
-            $value = trim(
-                (string) $row[$source]
-            );
+            $value = trim((string) $row[$source]);
 
             if ($value === '') {
                 continue;
@@ -240,14 +242,15 @@ class Denkirs_Mapper
         return $attributes;
     }
 
+    /**
+     * Преобразует значение характеристики через mapping.
+     */
     private function get_mapped_attribute_value(
         $source,
         $value,
         $taxonomy
     ) {
-        $repository = new Mapping_Repository();
-
-        $mapping = $repository->find(
+        $mapping = $this->mapping_repository->find(
             'denkirs',
             'attribute_value',
             $value,
@@ -302,35 +305,37 @@ class Denkirs_Mapper
     }
 
     /**
-     * Соответствие полей поставщика
-     * таксономиям сайта.
+     * Соответствие полей поставщика таксономиям сайта.
      */
     private function get_attribute_mapping()
     {
         return [
-            'стиль'                   => 'style',
-            'форма'                   => 'forma',
-            'цвет арматуры'           => 'armature-color',
-            'материал арматуры'       => 'armature-material',
-            'цвет плафона'            => 'shade-color',
-            'материал плафона'        => 'shade-material',
-            'ширина/диаметр'          => 'shirina-diametr',
-            'длина'                   => 'dlina-mm',
-            'высота'                  => 'vysota-mm',
-            'тип лампы'               => 'tip-lampochki',
-            'мощность общая'          => 'obshhaya-moshhnost',
-            'напряжение'              => 'napryazhenie',
-            'тип цоколя'              => 'base',
-            'степень защиты ip'        => 'ip',
-            'цвет свечения'            => 'color-temperature',
-            'место установки'          => 'tip-krepleniya',
-            'страна происхождения'     => 'strana-proishozhdenia',
-            'коллекция'               => 'collection',
-            'Назначение помещения'     => 'room-purpose',
-            'форма плафона'            => 'shade-shape',
-            'лампы в комплекте'        => 'led',
-            'площадь освещения'        => 'light-area',
-            'световой поток'           => 'light-flux',
+            'стиль' => 'style',
+            'форма' => 'forma',
+            'цвет арматуры' => 'armature-color',
+            'материал арматуры' => 'armature-material',
+            'цвет плафона' => 'shade-color',
+            'материал плафона' => 'shade-material',
+            'ширина/диаметр' => 'shirina-diametr',
+            'длина' => 'dlina-mm',
+            'высота' => 'vysota-mm',
+            'тип лампы' => 'tip-lampochki',
+            'мощность общая' => 'obshhaya-moshhnost',
+            'напряжение' => 'napryazhenie',
+            'тип цоколя' => 'base',
+            'степень защиты ip' => 'ip',
+            'цвет свечения' => 'color-temperature',
+            'место установки' => 'tip-krepleniya',
+            'страна происхождения' => 'strana-proishozhdenia',
+            'коллекция' => 'collection',
+            'Назначение помещения' => 'room-purpose',
+            'форма плафона' => 'shade-shape',
+
+            // «Лампы в комплекте» не является характеристикой LED.
+            // Добавить сюда после создания отдельной таксономии.
+
+            'площадь освещения' => 'light-area',
+            'световой поток' => 'light-flux',
         ];
     }
 }

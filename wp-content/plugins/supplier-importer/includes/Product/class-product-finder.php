@@ -6,7 +6,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-//use WC_Product;
+use WC_Product;
 
 class Product_Finder
 {
@@ -303,6 +303,24 @@ class Product_Finder
                                 $product->get_id(),
                                 $sku,
                                 $sku_product->get_id()
+                            )
+                        );
+                    }
+                }
+                if ($barcode !== '') {
+                    $barcode_product = $this->find_by_barcode($barcode);
+
+                    if (
+                        $barcode_product
+                        && $barcode_product->get_id() !== $product->get_id()
+                    ) {
+                        throw new \RuntimeException(
+                            sprintf(
+                                'Нельзя обновить товар ID %d: штрихкод "%s" '
+                                    . 'уже принадлежит другому товару ID %d.',
+                                $product->get_id(),
+                                $barcode,
+                                $barcode_product->get_id()
                             )
                         );
                     }

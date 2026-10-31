@@ -96,7 +96,7 @@ class Admin
     public function render_page()
     {
         $current_tab = isset($_GET['tab'])
-            ? sanitize_key($_GET['tab'])
+            ? sanitize_key(wp_unslash($_GET['tab']))
             : 'import';
 
         if (!in_array($current_tab, ['import', 'statistics', 'feeds'], true)) {
@@ -159,12 +159,13 @@ class Admin
     private function render_import()
     {
     ?>
+        <!-- CSV -->
         <div class="supplier-importer__card">
 
             <h2>Загрузка CSV</h2>
 
             <p>
-                Выберите CSV-файл поставщика.
+                Выберите CSV-файл поставщика для импорта.
             </p>
 
             <form
@@ -203,6 +204,112 @@ class Admin
 
         </div>
 
+        <!-- YML -->
+        <div class="supplier-importer__card">
+
+            <h2>Загрузка YML</h2>
+
+            <p>
+                Загрузите YML-файл поставщика с компьютера.
+            </p>
+
+            <div class="notice notice-warning inline">
+                <p>
+                    Импорт выполняет полную синхронизацию каталога.
+                    Товары, отсутствующие в файле, будут сняты с публикации.
+                    Загружайте только полный актуальный файл поставщика.
+                </p>
+            </div>
+
+            <form
+                id="supplier-yml-upload-form"
+                enctype="multipart/form-data">
+
+                <div class="supplier-importer__field">
+
+                    <label for="supplier-yml-upload-file">
+                        YML-файл
+                    </label>
+
+                    <input
+                        type="file"
+                        id="supplier-yml-upload-file"
+                        name="file"
+                        accept=".yml,.yaml,application/xml,text/xml"
+                        required>
+
+                </div>
+
+                <div
+                    id="supplier-yml-upload-info"
+                    class="supplier-importer__info"
+                    hidden>
+                </div>
+
+                <button
+                    type="submit"
+                    class="button button-primary"
+                    id="supplier-yml-upload-start">
+                    Начать импорт YML
+                </button>
+
+            </form>
+
+        </div>
+
+        <!-- Ручной запуск фида -->
+        <div class="supplier-importer__card">
+
+            <h2>Запуск фида по URL</h2>
+
+            <p>
+                Запустите импорт по URL, сохранённому в настройках фида.
+            </p>
+
+            <form id="supplier-feed-run-form">
+
+                <div class="supplier-importer__field">
+
+                    <label for="supplier-feed-run-supplier">
+                        Поставщик
+                    </label>
+
+                    <select
+                        id="supplier-feed-run-supplier"
+                        name="supplier_id"
+                        required>
+
+                        <option value="maytoni">
+                            Maytoni
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <div
+                    id="supplier-feed-run-info"
+                    class="supplier-importer__info"
+                    hidden>
+                </div>
+
+                <button
+                    type="submit"
+                    class="button button-primary"
+                    id="supplier-feed-run-start">
+                    Запустить фид
+                </button>
+
+            </form>
+
+            <p class="description">
+                URL и параметры автоматической синхронизации
+                настраиваются во вкладке «Настройки фидов».
+            </p>
+
+        </div>
+
+        <!-- Существующие блоки CSV: не изменять -->
         <div
             id="supplier-import-mapping"
             class="supplier-importer__mapping"
@@ -254,6 +361,7 @@ class Admin
             <div id="supplier-import-errors-list"></div>
 
         </div>
+
     <?php
     }
 
@@ -586,9 +694,7 @@ class Admin
                 : '03:00',
         ];
 
-        $settings = new Supplier_Feed_Settings();
-
-        if (!$settings->save($supplier_id, $data)) {
+        if (!Supplier_Feed_Settings::save($supplier_id, $data)) {
             wp_safe_redirect(
                 add_query_arg(
                     [
@@ -624,6 +730,7 @@ class Admin
     {
         $manager = Plugin::get_supplier_manager();
 
+
         if (!$manager) {
             echo '<p>Список поставщиков недоступен.</p>';
             return;
@@ -632,7 +739,11 @@ class Admin
         $settings = new Supplier_Feed_Settings();
 
         if (isset($_GET['feed_saved'])) {
-            if ($_GET['feed_saved'] === '1') {
+            $feed_saved = sanitize_text_field(
+                wp_unslash($_GET['feed_saved'])
+            );
+
+            if ($feed_saved === '1') {
                 echo '<div class="notice notice-success is-dismissible"><p>Настройки сохранены.</p></div>';
             } else {
                 echo '<div class="notice notice-error"><p>Не удалось сохранить настройки. Проверьте введённые значения.</p></div>';
@@ -641,7 +752,7 @@ class Admin
 
         foreach ($manager->all() as $supplier) {
             $id = $supplier->get_id();
-            $data = $settings->get($id);
+            $data = Supplier_Feed_Settings::get($id);
         ?>
             <div class="supplier-importer__card">
                 <h2><?php echo esc_html($supplier->get_name()); ?></h2>

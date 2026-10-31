@@ -25,11 +25,12 @@ class Supplier_Feed_Settings
      */
     public static function get($supplier_id)
     {
+        $supplier_id = sanitize_key($supplier_id);
         $all = self::get_all();
 
         $defaults = [
             'url'      => '',
-            'format'   => 'csv',
+            'format'   => 'yml',
             'enabled'  => false,
             'schedule' => 'daily',
             'time'     => '03:00',
@@ -58,9 +59,16 @@ class Supplier_Feed_Settings
             ? esc_url_raw(trim($data['url']))
             : '';
 
+        if ($url !== '' && !wp_http_validate_url($url)) {
+            return false;
+        }
+
+        if (!empty($data['enabled']) && $url === '') {
+            return false;
+        }
         $format = isset($data['format'])
             ? sanitize_key($data['format'])
-            : 'csv';
+            : 'yml';
 
         $schedule = isset($data['schedule'])
             ? sanitize_key($data['schedule'])
@@ -91,7 +99,7 @@ class Supplier_Feed_Settings
         $all[$supplier_id] = [
             'url'      => $url,
             'format'   => $format,
-            'enabled'  => !empty($data['enabled']),
+            'enabled' => !empty($data['enabled']),
             'schedule' => $schedule,
             'time'     => $time,
         ];

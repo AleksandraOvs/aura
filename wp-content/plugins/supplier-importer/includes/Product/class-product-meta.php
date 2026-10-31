@@ -80,10 +80,6 @@ class Product_Meta
     }
 
     /**
-     * Сохранить ID поставщика.
-     *
-     * На данном этапе метод не вызывается автоматически.
-     *
      * @param WC_Product|int $product
      * @param string         $supplier_id
      */
@@ -98,11 +94,6 @@ class Product_Meta
         $supplier_id = trim((string) $supplier_id);
 
         if ($supplier_id === '') {
-            delete_post_meta(
-                $product_id,
-                self::SUPPLIER_ID_META
-            );
-
             return;
         }
 
@@ -130,11 +121,6 @@ class Product_Meta
         $supplier = trim((string) $supplier);
 
         if ($supplier === '') {
-            delete_post_meta(
-                $product_id,
-                self::SUPPLIER_META
-            );
-
             return;
         }
 
@@ -204,11 +190,6 @@ class Product_Meta
         $barcode = trim((string) $barcode);
 
         if ($barcode === '') {
-            delete_post_meta(
-                $product_id,
-                self::BARCODE_META
-            );
-
             return;
         }
 
@@ -299,14 +280,14 @@ class Product_Meta
      * @param WC_Product|int $product
      * @param bool           $value
      *
-     * @return void
+     * @return bool
      */
     public function set_unpublished_by_sync($product, $value)
     {
         $product_id = $this->get_product_id($product);
 
         if (!$product_id) {
-            return;
+            return false;
         }
 
         if ($value) {
@@ -316,12 +297,14 @@ class Product_Meta
                 'yes'
             );
 
-            return;
+            return $this->was_unpublished_by_sync($product_id);
         }
 
         delete_post_meta(
             $product_id,
             self::UNPUBLISHED_BY_SYNC_META
         );
+
+        return !$this->was_unpublished_by_sync($product_id);
     }
 }

@@ -74,7 +74,7 @@ class Supplier_Feed_Downloader
         );
 
         if (is_wp_error($response)) {
-            $this->delete_file($file);
+            $this->delete_temp_file($file);
 
             return new WP_Error(
                 'feed_download_error',
@@ -85,7 +85,7 @@ class Supplier_Feed_Downloader
         $status = (int) wp_remote_retrieve_response_code($response);
 
         if ($status < 200 || $status >= 300) {
-            $this->delete_file($file);
+            $this->delete_temp_file($file);
 
             return new WP_Error(
                 'feed_http_error',
@@ -101,7 +101,7 @@ class Supplier_Feed_Downloader
         $size = is_file($file) ? filesize($file) : false;
 
         if ($size === false || $size === 0) {
-            $this->delete_file($file);
+            $this->delete_temp_file($file);
 
             return new WP_Error(
                 'feed_empty_file',
@@ -110,7 +110,7 @@ class Supplier_Feed_Downloader
         }
 
         if ($size >= self::MAX_FILE_SIZE) {
-            $this->delete_file($file);
+            $this->delete_temp_file($file);
 
             return new WP_Error(
                 'feed_too_large',
@@ -125,7 +125,7 @@ class Supplier_Feed_Downloader
     /**
      * Удалить временный файл.
      */
-    private function delete_file($file)
+    public function delete_temp_file($file)
     {
         if (is_string($file) && is_file($file)) {
             wp_delete_file($file);

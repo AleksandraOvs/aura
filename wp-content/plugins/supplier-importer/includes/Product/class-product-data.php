@@ -114,7 +114,11 @@ class Product_Data
             $this->data['images'] = array_values(
                 array_unique(
                     array_filter(
-                        $this->data['images']
+                        $this->data['images'],
+                        static function ($image) {
+                            return is_string($image)
+                                && trim($image) !== '';
+                        }
                     )
                 )
             );
@@ -135,10 +139,12 @@ class Product_Data
         }
 
         $value = str_replace(
-            [' ', ','],
-            ['', '.'],
+            ["\xC2\xA0", ' '],
+            '',
             (string) $value
         );
+
+        $value = str_replace(',', '.', $value);
 
         if (!is_numeric($value)) {
             throw new InvalidArgumentException(
@@ -146,7 +152,15 @@ class Product_Data
             );
         }
 
-        return (float) $value;
+        $price = (float) $value;
+
+        if (!is_finite($price)) {
+            throw new InvalidArgumentException(
+                'Цена выходит за допустимый числовой диапазон.'
+            );
+        }
+
+        return $price;
     }
 
     /**
@@ -163,10 +177,12 @@ class Product_Data
         }
 
         $value = str_replace(
-            [' ', ','],
-            ['', '.'],
+            ["\xC2\xA0", ' '],
+            '',
             (string) $value
         );
+
+        $value = str_replace(',', '.', $value);
 
         if (!is_numeric($value)) {
             throw new InvalidArgumentException(
@@ -174,11 +190,19 @@ class Product_Data
             );
         }
 
-        if (strpos($value, '.') !== false) {
-            return (float) $value;
+        $stock = (float) $value;
+
+        if (!is_finite($stock)) {
+            throw new InvalidArgumentException(
+                'Остаток выходит за допустимый числовой диапазон.'
+            );
         }
 
-        return (int) $value;
+        if (floor($stock) === $stock) {
+            return (int) $stock;
+        }
+
+        return $stock;
     }
 
     /**
@@ -187,16 +211,21 @@ class Product_Data
     private function validate()
     {
         foreach (self::REQUIRED_FIELDS as $field) {
-            if (!isset($this->data[$field])) {
+            $value = $this->data[$field] ?? null;
+
+            if (
+                !is_string($value)
+                && !is_numeric($value)
+            ) {
                 throw new InvalidArgumentException(
                     sprintf(
-                        'В Product_Data отсутствует обязательное поле "%s".',
+                        'Обязательное поле "%s" должно быть строкой.',
                         $field
                     )
                 );
             }
 
-            if (trim((string) $this->data[$field]) === '') {
+            if (trim((string) $value) === '') {
                 throw new InvalidArgumentException(
                     sprintf(
                         'Обязательное поле "%s" не может быть пустым.',

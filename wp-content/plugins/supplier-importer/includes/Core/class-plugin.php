@@ -7,28 +7,27 @@ if (!defined('ABSPATH')) {
 }
 
 use Supplier_Importer\AJAX\Ajax_Errors;
+use Supplier_Importer\AJAX\Ajax_Import;
+use Supplier_Importer\AJAX\Ajax_Process;
+use Supplier_Importer\AJAX\Ajax_Mapping;
+use Supplier_Importer\AJAX\Ajax_Feed_Import;
+
+use Supplier_Importer\Admin\Admin;
+
 use Supplier_Importer\Suppliers\Denkirs\Denkirs;
 use Supplier_Importer\Suppliers\Maytoni\Maytoni;
 use Supplier_Importer\Suppliers\CrystalLux\Crystal_Lux;
 use Supplier_Importer\Suppliers\Supplier_Manager;
-use Supplier_Importer\AJAX\Ajax_Import;
-use Supplier_Importer\AJAX\Ajax_Process;
-use Supplier_Importer\Admin\Admin;
-use Supplier_Importer\AJAX\Ajax_Mapping;
 use Supplier_Importer\Suppliers\Supplier_Feed_Scheduler;
 use Supplier_Importer\Suppliers\Feed_Sync;
-//use Supplier_Importer\CSV\Csv_Reader;
-//use Supplier_Importer\Import\Import_Processor;
-//use Supplier_Importer\Import\Import_Repository;
-//use Supplier_Importer\Import\Import_Session;
-//use Supplier_Importer\CSV\Csv_Reader;
-//use Supplier_Importer\Import\Import_Manager;
-//use Supplier_Importer\Suppliers\Denkirs\Denkirs_Mapper;
+use Supplier_Importer\AJAX\Ajax_Yml_Upload;
 
 
 class Plugin
 {
     private static $supplier_manager = null;
+
+    private static $feed_sync = null;
 
     public static function init()
     {
@@ -60,12 +59,10 @@ class Plugin
         self::register_ajax();
 
         new Admin();
-        new Supplier_Feed_Scheduler();
-        new Feed_Sync();
 
-        // Logger::info(
-        //     'Плагин Supplier Importer успешно загружен.'
-        // );
+        self::$feed_sync = new Feed_Sync();
+
+        new Supplier_Feed_Scheduler();
     }
 
     private static function register_suppliers()
@@ -90,11 +87,18 @@ class Plugin
         return self::$supplier_manager;
     }
 
+    public static function get_feed_sync()
+    {
+        return self::$feed_sync;
+    }
+
     private static function register_ajax()
     {
         new Ajax_Import();
         new Ajax_Process();
         new Ajax_Errors();
         new Ajax_Mapping();
+        new Ajax_Feed_Import();
+        new Ajax_Yml_Upload();
     }
 }

@@ -11,6 +11,13 @@ use Supplier_Importer\Import\Mapping_Repository;
 
 class Crystal_Lux_Mapper
 {
+    private $mapping_repository;
+
+    public function __construct()
+    {
+        $this->mapping_repository = new Mapping_Repository();
+    }
+
     public function map($row)
     {
         if (!is_array($row)) {
@@ -67,10 +74,6 @@ class Crystal_Lux_Mapper
                 $row,
                 'Видео RuTube [ATT_RUTUBE]'
             ),
-            'supplier_url' => $this->value(
-                $row,
-                'Детальная картинка (путь)'
-            ),
         ];
 
         return Product_Data::from_array([
@@ -114,9 +117,7 @@ class Crystal_Lux_Mapper
             return '';
         }
 
-        $repository = new Mapping_Repository();
-
-        $mapping = $repository->find(
+        $mapping = $this->mapping_repository->find(
             'crystal_lux',
             'category',
             $category,
@@ -273,9 +274,7 @@ class Crystal_Lux_Mapper
         $value,
         $taxonomy
     ) {
-        $repository = new Mapping_Repository();
-
-        $mapping = $repository->find(
+        $mapping = $this->mapping_repository->find(
             'crystal_lux',
             'attribute_value',
             $value,
@@ -364,6 +363,26 @@ class Crystal_Lux_Mapper
 
         $value = str_replace(',', '.', $value);
 
-        return is_numeric($value) ? $value : null;
+        if (!is_numeric($value)) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    'Некорректное числовое значение Crystal Lux: %s',
+                    $value
+                )
+            );
+        }
+
+        $number = (float) $value;
+
+        if (!is_finite($number)) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    'Числовое значение Crystal Lux выходит за допустимый диапазон: %s',
+                    $value
+                )
+            );
+        }
+
+        return $number;
     }
 }

@@ -14,6 +14,8 @@ use Supplier_Importer\Product\Product_Categories;
 use Supplier_Importer\Product\Product_Attributes;
 use Supplier_Importer\Product\Product_Images;
 use Supplier_Importer\Product\Product_Brand;
+use Supplier_Importer\Product\Product_Finder;
+use Supplier_Importer\Product\Supplier_Product_Meta;
 
 class Product_Creator
 {
@@ -27,6 +29,8 @@ class Product_Creator
     private $product_attributes;
     private $product_images;
     private $product_brand;
+    private $product_finder;
+    private $supplier_product_meta;
 
     /**
      * Конструктор.
@@ -38,6 +42,8 @@ class Product_Creator
         $this->product_attributes = new Product_Attributes();
         $this->product_images = new Product_Images();
         $this->product_brand = new Product_Brand();
+        $this->product_finder = new Product_Finder();
+        $this->supplier_product_meta = new Supplier_Product_Meta();
     }
 
     /**
@@ -77,6 +83,23 @@ class Product_Creator
             'CREATE DEBUG: START SKU=' . $sku
         );
 
+        $barcode = trim((string) $product_data->get('barcode', ''));
+
+        if ($barcode !== '') {
+            $existing_product = $this->product_finder->find_by_barcode($barcode);
+
+            if ($existing_product) {
+                throw new \RuntimeException(
+                    sprintf(
+                        'Нельзя создать товар: штрихкод "%s" '
+                            . 'уже используется товаром ID %d.',
+                        $barcode,
+                        $existing_product->get_id()
+                    )
+                );
+            }
+        }
+
         $start = microtime(true);
 
         $product = new WC_Product_Simple();
@@ -108,6 +131,11 @@ class Product_Creator
         $start = microtime(true);
 
         $this->set_supplier_meta(
+            $product,
+            $product_data
+        );
+
+        $this->supplier_product_meta->update(
             $product,
             $product_data
         );
@@ -180,7 +208,18 @@ class Product_Creator
 
         $start = microtime(true);
 
+        $product->set_status('publish');
+
         $product->save();
+
+        if ($product->get_status() !== 'publish') {
+            throw new \RuntimeException(
+                sprintf(
+                    'Не удалось опубликовать созданный товар ID %d.',
+                    $product->get_id()
+                )
+            );
+        }
 
         \Supplier_Importer\Core\Logger::info(
             'CREATE DEBUG: save_2 SKU=' . $sku
@@ -241,7 +280,10 @@ class Product_Creator
         // Специальная обработка наличия для Crystal Lux.
         if ($product_data->get_supplier() === 'crystal_lux') {
             $meta = $product_data->get_meta();
-            $discontinued = !empty($meta['discontinued']);
+            $discontinued = (
+                isset($meta['discontinued'])
+                && $meta['discontinued'] === true
+            );
 
             if ($discontinued) {
                 // Снят с производства — публикуем, но купить нельзя.
@@ -257,9 +299,9 @@ class Product_Creator
         }
 
         /**
-         * Новые товары сразу создаются опубликованными.
+         * До завершения импорта товар остаётся черновиком.
          */
-        $product->set_status('publish');
+        $product->set_status('draft');
     }
 
     /**

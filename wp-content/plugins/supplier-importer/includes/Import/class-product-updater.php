@@ -6,7 +6,6 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-use InvalidArgumentException;
 use WC_Product;
 use Supplier_Importer\Product\Product_Data;
 use Supplier_Importer\Product\Product_Meta;
@@ -14,6 +13,7 @@ use Supplier_Importer\Product\Product_Categories;
 use Supplier_Importer\Product\Product_Attributes;
 use Supplier_Importer\Product\Product_Images;
 use Supplier_Importer\Product\Product_Brand;
+use Supplier_Importer\Product\Supplier_Product_Meta;
 
 class Product_Updater
 {
@@ -22,6 +22,7 @@ class Product_Updater
     private $product_attributes;
     private $product_images;
     private $product_brand;
+    private $supplier_product_meta;
 
     public function __construct()
     {
@@ -30,6 +31,7 @@ class Product_Updater
         $this->product_attributes = new Product_Attributes();
         $this->product_images = new Product_Images();
         $this->product_brand = new Product_Brand();
+        $this->supplier_product_meta = new Supplier_Product_Meta();
     }
 
     /**
@@ -44,6 +46,7 @@ class Product_Updater
         WC_Product $product,
         Product_Data $product_data
     ) {
+
 
         $sku = trim((string) $product_data->get_sku());
 
@@ -66,17 +69,7 @@ class Product_Updater
             }
         }
 
-        if (!$product instanceof WC_Product) {
-            throw new InvalidArgumentException(
-                'Product_Updater ожидает объект WC_Product.'
-            );
-        }
-
         $sku = $product_data->get_sku();
-
-        \Supplier_Importer\Core\Logger::info(
-            'UPDATE DEBUG: START SKU=' . $sku
-        );
 
         $start = microtime(true);
 
@@ -93,10 +86,14 @@ class Product_Updater
         // Назначаем бренду товара значение из данных поставщика.
         $start = microtime(true);
 
-        $this->product_brand->assign(
-            $product,
-            $product_data->get('brand', '')
-        );
+        $brand = trim((string) $product_data->get('brand', ''));
+
+        if ($brand !== '') {
+            $this->product_brand->assign(
+                $product,
+                $brand
+            );
+        }
 
         \Supplier_Importer\Core\Logger::info(
             'UPDATE DEBUG: brand SKU=' . $sku
@@ -108,7 +105,17 @@ class Product_Updater
         $start = microtime(true);
 
         try {
-            $category_path = $product_data->get('category', '');
+            $category_path = trim(
+                (string) $product_data->get('category', '')
+            );
+
+            if ($category_path !== '') {
+                $this->product_categories->assign(
+                    $product,
+                    $category_path,
+                    $product_data->get_supplier()
+                );
+            }
 
             \Supplier_Importer\Core\Logger::info(
                 'UPDATE DEBUG: categories START SKU=' . $sku
@@ -119,12 +126,6 @@ class Product_Updater
                 'SUPPLIER DEBUG: ' . wp_json_encode([
                     'supplier' => $product_data->get_supplier(),
                 ], JSON_UNESCAPED_UNICODE)
-            );
-
-            $this->product_categories->assign(
-                $product,
-                $category_path,
-                $product_data->get_supplier()
             );
 
             \Supplier_Importer\Core\Logger::info(
@@ -142,10 +143,6 @@ class Product_Updater
             throw $e;
         }
 
-        \Supplier_Importer\Core\Logger::info(
-            'UPDATE DEBUG: categories SKU=' . $sku
-                . ', time=' . round(microtime(true) - $start, 2) . ' sec'
-        );
 
         $start = microtime(true);
 
@@ -171,6 +168,11 @@ class Product_Updater
         $start = microtime(true);
 
         $this->update_supplier_meta(
+            $product,
+            $product_data
+        );
+
+        $this->supplier_product_meta->update(
             $product,
             $product_data
         );
@@ -252,7 +254,10 @@ class Product_Updater
         // Специальная обработка наличия для Crystal Lux.
         if ($product_data->get_supplier() === 'crystal_lux') {
             $meta = $product_data->get_meta();
-            $discontinued = !empty($meta['discontinued']);
+            $discontinued = (
+                isset($meta['discontinued'])
+                && $meta['discontinued'] === true
+            );
 
             if ($discontinued) {
                 // Снят с производства — публикуем, но купить нельзя.

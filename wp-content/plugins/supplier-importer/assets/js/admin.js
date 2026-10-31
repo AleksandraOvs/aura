@@ -2448,3 +2448,185 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 });
+
+
+// ==========================================
+// YML upload и ручной запуск фида
+// ==========================================
+
+document.addEventListener('DOMContentLoaded', function () {
+
+    /**
+     * Показать сообщение в информационном блоке.
+     */
+    function showFeedMessage(element, message, type = 'info') {
+        if (!element) {
+            return;
+        }
+
+        element.hidden = false;
+        element.className = 'supplier-importer__info supplier-importer__info--' + type;
+        element.textContent = message;
+    }
+
+    /**
+     * Получить текст ошибки из ответа AJAX.
+     */
+    function getAjaxError(response) {
+        if (response && response.data && response.data.message) {
+            return response.data.message;
+        }
+
+        return 'Не удалось выполнить запрос.';
+    }
+
+    /**
+     * Сформировать сообщение с результатами импорта.
+     */
+    function getImportResultMessage(data) {
+        const result = data.result || data;
+        const total = Number(result.total || 0);
+        const created = Number(result.created || 0);
+        const updated = Number(result.updated || 0);
+        const skipped = Number(result.skipped || 0);
+        const errors = Number(result.errors || 0);
+
+        return [
+            'Импорт завершён.',
+            'Всего: ' + total,
+            'Создано: ' + created,
+            'Обновлено: ' + updated,
+            'Пропущено: ' + skipped,
+            'Ошибок: ' + errors
+        ].join('\n');
+    }
+
+    /**
+     * Отправить AJAX-запрос.
+     */
+    async function sendImportRequest(formData) {
+        const response = await fetch(supplierImporter.ajaxUrl, {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(getAjaxError(data));
+        }
+
+        return data.data || {};
+    }
+
+    // ------------------------------------------
+    // Загрузка YML-файла
+    // ------------------------------------------
+
+    const ymlForm = document.getElementById('supplier-yml-upload-form');
+
+    if (ymlForm) {
+        const fileInput = document.getElementById('supplier-yml-upload-file');
+        const button = document.getElementById('supplier-yml-upload-start');
+        const info = document.getElementById('supplier-yml-upload-info');
+
+        ymlForm.addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            if (!fileInput.files.length) {
+                showFeedMessage(info, 'Выберите YML-файл.', 'error');
+                return;
+            }
+
+            const file = fileInput.files[0];
+
+            if (!/\.(yml|yaml)$/i.test(file.name)) {
+                showFeedMessage(info, 'Выберите файл с расширением .yml или .yaml.', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+
+            formData.append('action', 'supplier_import_yml_upload_start');
+            formData.append('nonce', supplierImporter.nonce);
+            formData.append('file', file);
+
+            button.disabled = true;
+            showFeedMessage(info, 'Загрузка файла и импорт. Не закрывайте страницу...', 'info');
+
+            try {
+                const data = await sendImportRequest(formData);
+
+                showFeedMessage(
+                    info,
+                    getImportResultMessage(data),
+                    'success'
+                );
+
+                fileInput.value = '';
+
+            } catch (error) {
+                showFeedMessage(
+                    info,
+                    error.message || 'Ошибка при импорте YML.',
+                    'error'
+                );
+            } finally {
+                button.disabled = false;
+            }
+        });
+    }
+
+    // ------------------------------------------
+    // Ручной запуск фида по URL
+    // ------------------------------------------
+
+    const feedForm = document.getElementById('supplier-feed-run-form');
+
+    if (feedForm) {
+        const supplierSelect = document.getElementById('supplier-feed-run-supplier');
+        const button = document.getElementById('supplier-feed-run-start');
+        const info = document.getElementById('supplier-feed-run-info');
+
+        feedForm.addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            const supplierId = supplierSelect.value;
+
+            if (!supplierId) {
+                showFeedMessage(info, 'Выберите поставщика.', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+
+            formData.append('action', 'supplier_import_feed_start');
+            formData.append('nonce', supplierImporter.nonce);
+            formData.append('supplier_id', supplierId);
+
+            button.disabled = true;
+            showFeedMessage(info, 'Запуск импорта по URL. Дождитесь завершения...', 'info');
+
+            try {
+                const data = await sendImportRequest(formData);
+
+                showFeedMessage(
+                    info,
+                    getImportResultMessage(data),
+                    'success'
+                );
+
+            } catch (error) {
+                showFeedMessage(
+                    info,
+                    error.message || 'Ошибка при запуске фида.',
+                    'error'
+                );
+            } finally {
+                button.disabled = false;
+            }
+        });
+    }
+
+});

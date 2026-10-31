@@ -8,11 +8,25 @@ if (!defined('ABSPATH')) {
 
 use Supplier_Importer\Product\Product_Data;
 use Supplier_Importer\Import\Mapping_Repository;
+use InvalidArgumentException;
 
 class Maytoni_Mapper
 {
+    private $mapping_repository;
+
+    public function __construct()
+    {
+        $this->mapping_repository = new Mapping_Repository();
+    }
+
     public function map($row)
     {
+        if (!is_array($row)) {
+            throw new InvalidArgumentException(
+                'Maytoni Mapper ожидает массив данных товара.'
+            );
+        }
+
         return Product_Data::from_array([
             'supplier' => 'maytoni',
 
@@ -106,9 +120,7 @@ class Maytoni_Mapper
             return '';
         }
 
-        $repository = new Mapping_Repository();
-
-        $mapping = $repository->find(
+        $mapping = $this->mapping_repository->find(
             'maytoni',
             'category',
             $category,
@@ -178,19 +190,9 @@ class Maytoni_Mapper
             'price'
         );
 
-        if ($price === '') {
-            return null;
-        }
-
-        $price = str_replace(
-            ',',
-            '.',
-            $price
-        );
-
-        return is_numeric($price)
-            ? (float) $price
-            : null;
+        return $price === ''
+            ? null
+            : $price;
     }
 
     private function get_stock($row)
@@ -200,13 +202,9 @@ class Maytoni_Mapper
             'Stock'
         );
 
-        if ($stock === '') {
-            return null;
-        }
-
-        return is_numeric($stock)
-            ? (int) $stock
-            : null;
+        return $stock === ''
+            ? null
+            : $stock;
     }
 
     private function get_images($row)
@@ -284,9 +282,7 @@ class Maytoni_Mapper
         $value,
         $taxonomy
     ) {
-        $repository = new Mapping_Repository();
-
-        $mapping = $repository->find(
+        $mapping = $this->mapping_repository->find(
             'maytoni',
             'attribute_value',
             $value,

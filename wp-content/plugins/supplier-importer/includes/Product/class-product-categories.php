@@ -37,8 +37,19 @@ class Product_Categories
             return [];
         }
 
+        $current_ids = $product->get_category_ids();
+
+        $category_ids = array_values(
+            array_unique(
+                array_merge(
+                    $current_ids,
+                    $term_ids
+                )
+            )
+        );
+
         $product->set_category_ids(
-            $term_ids
+            $category_ids
         );
 
         return $term_ids;

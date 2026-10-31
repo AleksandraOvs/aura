@@ -442,6 +442,24 @@
     left: .3em;
 }
 
+.supplier-importer__info {
+    white-space: pre-line;
+    margin: 12px 0;
+    padding: 12px;
+    border-left: 4px solid #2271b1;
+    background: #f0f6fc;
+}
+
+.supplier-importer__info--success {
+    border-color: #00a32a;
+    background: #edfaef;
+}
+
+.supplier-importer__info--error {
+    border-color: #d63638;
+    background: #fcf0f1;
+}
+
 @media (max-width: 782px) {
     .supplier-importer__error-info {
         grid-template-columns: 1fr;

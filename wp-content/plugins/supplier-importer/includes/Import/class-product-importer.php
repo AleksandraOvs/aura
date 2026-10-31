@@ -6,7 +6,6 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-//use InvalidArgumentException;
 use WC_Product;
 use Supplier_Importer\Product\Product_Data;
 use Supplier_Importer\Product\Product_Finder;

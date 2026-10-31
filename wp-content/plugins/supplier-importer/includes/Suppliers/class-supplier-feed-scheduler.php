@@ -6,6 +6,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+use Supplier_Importer\Core\Logger;
+
 class Supplier_Feed_Scheduler
 {
     private const CRON_HOOK = 'supplier_importer_run_supplier_feed';
@@ -13,6 +15,7 @@ class Supplier_Feed_Scheduler
     public function __construct()
     {
         add_action('init', [$this, 'sync_schedules']);
+
         add_action(
             self::CRON_HOOK,
             [$this, 'run_supplier_feed'],
@@ -64,15 +67,12 @@ class Supplier_Feed_Scheduler
             return;
         }
 
-        // Не создаём дубликаты заданий.
         if (wp_next_scheduled(self::CRON_HOOK, [$supplier_id])) {
             return;
         }
 
-        $timestamp = $this->get_next_run_timestamp($settings);
-
         wp_schedule_single_event(
-            $timestamp,
+            $this->get_next_run_timestamp($settings),
             self::CRON_HOOK,
             [$supplier_id]
         );
@@ -135,12 +135,17 @@ class Supplier_Feed_Scheduler
         }
 
         $time = $settings['time'] ?? '03:00';
-        [$hour, $minute] = array_map('intval', explode(':', $time));
+
+        [$hour, $minute] = array_map(
+            'intval',
+            explode(':', $time)
+        );
 
         $next = $now->setTime($hour, $minute, 0);
 
         if ($next <= $now) {
             $days = $schedule === 'weekly' ? 7 : 1;
+
             $next = $next->modify('+' . $days . ' days');
         }
 
@@ -148,12 +153,15 @@ class Supplier_Feed_Scheduler
     }
 
     /**
-     * Точка входа планировщика.
+     * Запускает импорт фида через Feed_Sync.
      *
-     * Сам импорт подключим следующим этапом.
+     * Загрузка, обработка и запись истории находятся
+     * в одном сервисе Feed_Sync.
      */
     public function run_supplier_feed($supplier_id)
     {
+        $supplier_id = sanitize_key($supplier_id);
+
         $settings = Supplier_Feed_Settings::get($supplier_id);
 
         if (
@@ -165,52 +173,27 @@ class Supplier_Feed_Scheduler
             return;
         }
 
-        $downloader = new Feed_Downloader();
-        $file = $downloader->download($settings['url']);
-
-        if (is_wp_error($file)) {
-            error_log(
-                sprintf(
-                    '[Supplier Importer] Ошибка загрузки фида %s: %s',
-                    $supplier_id,
-                    $file->get_error_message()
-                )
-            );
-
-            $this->clear_schedule($supplier_id);
-            $this->ensure_schedule($supplier_id);
-
-            return;
-        }
-
         try {
-            /**
-             * Передаём скачанный файл следующему этапу.
-             *
-             * Аргументы:
-             * 1. ID поставщика.
-             * 2. Путь к временному файлу.
-             * 3. Настройки поставщика.
-             */
-            do_action(
-                'supplier_importer_process_downloaded_feed',
+            $feed_sync = new Feed_Sync();
+
+            $feed_sync->run_from_url(
                 $supplier_id,
-                $file,
-                $settings
+                $settings,
+                'cron'
             );
         } catch (\Throwable $exception) {
-            error_log(
-                sprintf(
-                    '[Supplier Importer] Ошибка обработки фида %s: %s',
-                    $supplier_id,
-                    $exception->getMessage()
-                )
+            Logger::error(
+                'Ошибка автоматического импорта фида.',
+                [
+                    'supplier' => $supplier_id,
+                    'message'  => $exception->getMessage(),
+                ]
             );
         } finally {
-            if (is_file($file)) {
-                wp_delete_file($file);
-            }
-
+            /*
+             * Одноразовое задание завершается.
+             * Планируем следующее выполнение.
+             */
             $this->clear_schedule($supplier_id);
             $this->ensure_schedule($supplier_id);
         }

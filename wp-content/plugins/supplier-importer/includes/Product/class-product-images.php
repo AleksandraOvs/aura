@@ -252,35 +252,36 @@ class Product_Images
 
             return 0;
         }
+        try {
 
-        /*
+            /*
      * 2. Определяем тип файла.
      */
-        $mime_type = mime_content_type(
-            $tmp_file
-        );
+            $mime_type = mime_content_type(
+                $tmp_file
+            );
 
-        $original_size = filesize(
-            $tmp_file
-        );
+            $original_size = filesize(
+                $tmp_file
+            );
 
-        $file_name = $this->get_file_name(
-            $image_url
-        );
+            $file_name = $this->get_file_name(
+                $image_url
+            );
 
-        Logger::info(
-            'IMAGE DEBUG: ORIGINAL'
-                . ' url=' . $image_url
-                . ' type=' . $mime_type
-                . ' size='
-                . round(
-                    $original_size / 1024 / 1024,
-                    2
-                )
-                . ' MB'
-        );
+            Logger::info(
+                'IMAGE DEBUG: ORIGINAL'
+                    . ' url=' . $image_url
+                    . ' type=' . $mime_type
+                    . ' size='
+                    . round(
+                        $original_size / 1024 / 1024,
+                        2
+                    )
+                    . ' MB'
+            );
 
-        /*
+            /*
  * 3. Оптимизируем JPEG и PNG.
  *
  * JPEG:
@@ -292,337 +293,341 @@ class Product_Images
  * - прозрачность заменяем белым фоном;
  * - quality 82.
  */
-        if (
-            in_array(
-                $mime_type,
-                [
-                    'image/jpeg',
-                    'image/jpg',
-                    'image/png',
-                ],
-                true
-            )
-        ) {
+            if (
+                in_array(
+                    $mime_type,
+                    [
+                        'image/jpeg',
+                        'image/jpg',
+                        'image/png',
+                    ],
+                    true
+                )
+            ) {
 
-            $optimize_start = microtime(true);
+                $optimize_start = microtime(true);
 
-            /*
+                /*
      * PNG обрабатываем через GD напрямую.
      *
      * Это позволяет гарантированно получить
      * белый фон вместо прозрачности.
      */
-            if ($mime_type === 'image/png') {
+                if ($mime_type === 'image/png') {
 
-                $source = @imagecreatefrompng($tmp_file);
+                    $source = @imagecreatefrompng($tmp_file);
 
-                if (!$source) {
-
-                    Logger::info(
-                        'IMAGE DEBUG: PNG LOAD ERROR'
-                            . ' file=' . $tmp_file
-                    );
-                } else {
-
-                    $width = imagesx($source);
-                    $height = imagesy($source);
-
-                    /*
-             * Создаём белый JPEG-холст.
-             */
-                    $canvas = imagecreatetruecolor(
-                        $width,
-                        $height
-                    );
-
-                    $white = imagecolorallocate(
-                        $canvas,
-                        255,
-                        255,
-                        255
-                    );
-
-                    imagefill(
-                        $canvas,
-                        0,
-                        0,
-                        $white
-                    );
-
-                    /*
-             * Копируем PNG поверх белого фона.
-             */
-                    imagecopy(
-                        $canvas,
-                        $source,
-                        0,
-                        0,
-                        0,
-                        0,
-                        $width,
-                        $height
-                    );
-
-                    /*
-             * Сохраняем обратно в тот же временный файл
-             * уже как JPEG.
-             */
-                    $saved = imagejpeg(
-                        $canvas,
-                        $tmp_file,
-                        82
-                    );
-
-                    /*
-             * Освобождаем память.
-             */
-                    imagedestroy($source);
-                    imagedestroy($canvas);
-
-                    if (!$saved) {
+                    if (!$source) {
 
                         Logger::info(
-                            'IMAGE DEBUG: PNG TO JPEG ERROR'
+                            'IMAGE DEBUG: PNG LOAD ERROR'
+                                . ' file=' . $tmp_file
                         );
                     } else {
 
-                        $optimized_size = filesize(
-                            $tmp_file
+                        $width = imagesx($source);
+                        $height = imagesy($source);
+
+                        /*
+             * Создаём белый JPEG-холст.
+             */
+                        $canvas = imagecreatetruecolor(
+                            $width,
+                            $height
                         );
 
-                        $saved_bytes = $original_size
-                            - $optimized_size;
+                        $white = imagecolorallocate(
+                            $canvas,
+                            255,
+                            255,
+                            255
+                        );
 
-                        $saved_percent = 0;
-
-                        if ($original_size > 0) {
-                            $saved_percent = round(
-                                (
-                                    $saved_bytes
-                                    / $original_size
-                                ) * 100,
-                                1
-                            );
-                        }
-
-                        Logger::info(
-                            'IMAGE DEBUG: IMAGE OPTIMIZED'
-                                . ' original_type=' . $mime_type
-                                . ' final_type=image/jpeg'
-                                . ' before='
-                                . round(
-                                    $original_size / 1024 / 1024,
-                                    2
-                                )
-                                . ' MB'
-                                . ' after='
-                                . round(
-                                    $optimized_size / 1024 / 1024,
-                                    2
-                                )
-                                . ' MB'
-                                . ' saved='
-                                . $saved_percent
-                                . '%'
-                                . ' time='
-                                . round(
-                                    microtime(true)
-                                        - $optimize_start,
-                                    2
-                                )
-                                . ' sec'
+                        imagefill(
+                            $canvas,
+                            0,
+                            0,
+                            $white
                         );
 
                         /*
+             * Копируем PNG поверх белого фона.
+             */
+                        imagecopy(
+                            $canvas,
+                            $source,
+                            0,
+                            0,
+                            0,
+                            0,
+                            $width,
+                            $height
+                        );
+
+                        /*
+             * Сохраняем обратно в тот же временный файл
+             * уже как JPEG.
+             */
+                        $saved = imagejpeg(
+                            $canvas,
+                            $tmp_file,
+                            82
+                        );
+
+                        /*
+             * Освобождаем память.
+             */
+                        imagedestroy($source);
+                        imagedestroy($canvas);
+
+                        if (!$saved) {
+
+                            Logger::info(
+                                'IMAGE DEBUG: PNG TO JPEG ERROR'
+                            );
+                        } else {
+
+                            $optimized_size = filesize(
+                                $tmp_file
+                            );
+
+                            $saved_bytes = $original_size
+                                - $optimized_size;
+
+                            $saved_percent = 0;
+
+                            if ($original_size > 0) {
+                                $saved_percent = round(
+                                    (
+                                        $saved_bytes
+                                        / $original_size
+                                    ) * 100,
+                                    1
+                                );
+                            }
+
+                            Logger::info(
+                                'IMAGE DEBUG: IMAGE OPTIMIZED'
+                                    . ' original_type=' . $mime_type
+                                    . ' final_type=image/jpeg'
+                                    . ' before='
+                                    . round(
+                                        $original_size / 1024 / 1024,
+                                        2
+                                    )
+                                    . ' MB'
+                                    . ' after='
+                                    . round(
+                                        $optimized_size / 1024 / 1024,
+                                        2
+                                    )
+                                    . ' MB'
+                                    . ' saved='
+                                    . $saved_percent
+                                    . '%'
+                                    . ' time='
+                                    . round(
+                                        microtime(true)
+                                            - $optimize_start,
+                                        2
+                                    )
+                                    . ' sec'
+                            );
+
+                            /*
                  * После конвертации PNG → JPEG
                  * меняем MIME и имя файла.
                  */
-                        $mime_type = 'image/jpeg';
+                            $mime_type = 'image/jpeg';
 
-                        $file_name = pathinfo(
-                            $file_name,
-                            PATHINFO_FILENAME
-                        ) . '.jpg';
+                            $file_name = pathinfo(
+                                $file_name,
+                                PATHINFO_FILENAME
+                            ) . '.jpg';
+                        }
+                    }
+                } else {
+
+                    /*
+         * JPEG оптимизируем через WordPress Image Editor.
+         */
+                    $image_editor = wp_get_image_editor(
+                        $tmp_file
+                    );
+
+                    if (is_wp_error($image_editor)) {
+
+                        Logger::info(
+                            'IMAGE DEBUG: OPTIMIZE SKIP'
+                                . ' reason=image_editor_error'
+                                . ' type=' . $mime_type
+                                . ' error='
+                                . $image_editor->get_error_message()
+                        );
+                    } else {
+
+                        $image_editor->set_quality(82);
+
+                        $optimized = $image_editor->save(
+                            $tmp_file,
+                            'image/jpeg'
+                        );
+
+                        if (is_wp_error($optimized)) {
+
+                            Logger::info(
+                                'IMAGE DEBUG: OPTIMIZE ERROR'
+                                    . ' type=' . $mime_type
+                                    . ' error='
+                                    . $optimized->get_error_message()
+                            );
+                        } else {
+
+                            $optimized_size = filesize(
+                                $tmp_file
+                            );
+
+                            $saved_bytes = $original_size
+                                - $optimized_size;
+
+                            $saved_percent = 0;
+
+                            if ($original_size > 0) {
+                                $saved_percent = round(
+                                    (
+                                        $saved_bytes
+                                        / $original_size
+                                    ) * 100,
+                                    1
+                                );
+                            }
+
+                            Logger::info(
+                                'IMAGE DEBUG: IMAGE OPTIMIZED'
+                                    . ' original_type=' . $mime_type
+                                    . ' final_type=image/jpeg'
+                                    . ' before='
+                                    . round(
+                                        $original_size / 1024 / 1024,
+                                        2
+                                    )
+                                    . ' MB'
+                                    . ' after='
+                                    . round(
+                                        $optimized_size / 1024 / 1024,
+                                        2
+                                    )
+                                    . ' MB'
+                                    . ' saved='
+                                    . $saved_percent
+                                    . '%'
+                                    . ' time='
+                                    . round(
+                                        microtime(true)
+                                            - $optimize_start,
+                                        2
+                                    )
+                                    . ' sec'
+                            );
+
+                            $mime_type = 'image/jpeg';
+
+                            $file_name = pathinfo(
+                                $file_name,
+                                PATHINFO_FILENAME
+                            ) . '.jpg';
+                        }
                     }
                 }
             } else {
 
-                /*
-         * JPEG оптимизируем через WordPress Image Editor.
-         */
-                $image_editor = wp_get_image_editor(
-                    $tmp_file
+                Logger::info(
+                    'IMAGE DEBUG: OPTIMIZE SKIP'
+                        . ' url=' . $image_url
+                        . ' type=' . $mime_type
+                        . ' reason=unsupported_type'
+                );
+            }
+
+            /*
+     * 4. Формируем файл для WordPress.
+     */
+            $file = [
+                'name'     => $file_name,
+                'type'     => $mime_type,
+                'tmp_name' => $tmp_file,
+                'error'    => 0,
+                'size'     => filesize($tmp_file),
+            ];
+
+            /*
+     * 5. Создаём attachment.
+     */
+            $media_start = microtime(true);
+
+            $attachment_id = @media_handle_sideload(
+                $file,
+                $product_id
+            );
+
+            Logger::info(
+                'IMAGE DEBUG: media_handle_sideload END'
+                    . ' time='
+                    . round(
+                        microtime(true) - $media_start,
+                        2
+                    )
+                    . ' sec'
+            );
+
+            if (is_wp_error($attachment_id)) {
+
+                Logger::info(
+                    'IMAGE DEBUG: media ERROR'
+                        . ' error='
+                        . $attachment_id->get_error_message()
                 );
 
-                if (is_wp_error($image_editor)) {
 
-                    Logger::info(
-                        'IMAGE DEBUG: OPTIMIZE SKIP'
-                            . ' reason=image_editor_error'
-                            . ' type=' . $mime_type
-                            . ' error='
-                            . $image_editor->get_error_message()
-                    );
-                } else {
 
-                    $image_editor->set_quality(82);
-
-                    $optimized = $image_editor->save(
-                        $tmp_file,
-                        'image/jpeg'
-                    );
-
-                    if (is_wp_error($optimized)) {
-
-                        Logger::info(
-                            'IMAGE DEBUG: OPTIMIZE ERROR'
-                                . ' type=' . $mime_type
-                                . ' error='
-                                . $optimized->get_error_message()
-                        );
-                    } else {
-
-                        $optimized_size = filesize(
-                            $tmp_file
-                        );
-
-                        $saved_bytes = $original_size
-                            - $optimized_size;
-
-                        $saved_percent = 0;
-
-                        if ($original_size > 0) {
-                            $saved_percent = round(
-                                (
-                                    $saved_bytes
-                                    / $original_size
-                                ) * 100,
-                                1
-                            );
-                        }
-
-                        Logger::info(
-                            'IMAGE DEBUG: IMAGE OPTIMIZED'
-                                . ' original_type=' . $mime_type
-                                . ' final_type=image/jpeg'
-                                . ' before='
-                                . round(
-                                    $original_size / 1024 / 1024,
-                                    2
-                                )
-                                . ' MB'
-                                . ' after='
-                                . round(
-                                    $optimized_size / 1024 / 1024,
-                                    2
-                                )
-                                . ' MB'
-                                . ' saved='
-                                . $saved_percent
-                                . '%'
-                                . ' time='
-                                . round(
-                                    microtime(true)
-                                        - $optimize_start,
-                                    2
-                                )
-                                . ' sec'
-                        );
-
-                        $mime_type = 'image/jpeg';
-
-                        $file_name = pathinfo(
-                            $file_name,
-                            PATHINFO_FILENAME
-                        ) . '.jpg';
-                    }
-                }
+                return 0;
             }
-        } else {
 
-            Logger::info(
-                'IMAGE DEBUG: OPTIMIZE SKIP'
-                    . ' url=' . $image_url
-                    . ' type=' . $mime_type
-                    . ' reason=unsupported_type'
-            );
-        }
-        /*
-     * 4. Получаем имя файла.
+            /*
+     * 6. Сохраняем исходный URL поставщика.
      */
-        $file_name = $this->get_file_name(
-            $image_url
-        );
-
-        /*
-     * 5. Формируем файл для WordPress.
-     */
-        $file = [
-            'name'     => $file_name,
-            'type'     => $mime_type,
-            'tmp_name' => $tmp_file,
-            'error'    => 0,
-            'size'     => filesize($tmp_file),
-        ];
-
-        /*
-     * 6. Создаём attachment.
-     */
-        $media_start = microtime(true);
-
-        $attachment_id = @media_handle_sideload(
-            $file,
-            $product_id
-        );
-
-        Logger::info(
-            'IMAGE DEBUG: media_handle_sideload END'
-                . ' time='
-                . round(
-                    microtime(true) - $media_start,
-                    2
-                )
-                . ' sec'
-        );
-
-        if (is_wp_error($attachment_id)) {
-
-            Logger::info(
-                'IMAGE DEBUG: media ERROR'
-                    . ' error='
-                    . $attachment_id->get_error_message()
+            update_post_meta(
+                $attachment_id,
+                self::SOURCE_URL_META,
+                $image_url
             );
 
-            @unlink($tmp_file);
+            /*
+     * 7. Финальный лог.
+     */
+            Logger::info(
+                'IMAGE DEBUG: END'
+                    . ' attachment_id='
+                    . $attachment_id
+                    . ' total='
+                    . round(
+                        microtime(true) - $start,
+                        2
+                    )
+                    . ' sec'
+            );
 
-            return 0;
+            return (int) $attachment_id;
+        } finally {
+
+            if (
+                is_string($tmp_file)
+                && $tmp_file !== ''
+                && file_exists($tmp_file)
+            ) {
+                @unlink($tmp_file);
+            }
         }
-
-        /*
-     * 7. Сохраняем исходный URL поставщика.
-     */
-        update_post_meta(
-            $attachment_id,
-            self::SOURCE_URL_META,
-            $image_url
-        );
-
-        /*
-     * 8. Финальный лог.
-     */
-        Logger::info(
-            'IMAGE DEBUG: END'
-                . ' attachment_id='
-                . $attachment_id
-                . ' total='
-                . round(
-                    microtime(true) - $start,
-                    2
-                )
-                . ' sec'
-        );
-
-        return (int) $attachment_id;
     }
 
     /**

@@ -26,7 +26,7 @@ class Product_Attributes
             return;
         }
 
-        $product_attributes = [];
+        $product_attributes = $product->get_attributes();
 
         foreach ($attributes as $taxonomy => $value) {
             $taxonomy = trim((string) $taxonomy);
@@ -50,8 +50,8 @@ class Product_Attributes
 
             $taxonomy_name = $this->get_taxonomy_name($taxonomy);
 
-            if (!$this->ensure_attribute_taxonomy($taxonomy_name)) {
-                \Supplier_Importer\Core\Logger::info(
+            if (!$this->ensure_attribute_taxonomy($taxonomy_name, $label)) {
+                \Supplier_Importer\Core\Logger::error(
                     'ATTRIBUTE ERROR: не удалось подготовить таксономию '
                         . $taxonomy_name
                 );
@@ -80,8 +80,10 @@ class Product_Attributes
      * Создать глобальный атрибут при необходимости
      * и зарегистрировать его таксономию в текущем запросе.
      */
-    private function ensure_attribute_taxonomy($taxonomy_name)
-    {
+    private function ensure_attribute_taxonomy(
+        $taxonomy_name,
+        $label = ''
+    ) {
         if (!function_exists('wc_create_attribute')) {
             return false;
         }
@@ -99,9 +101,11 @@ class Product_Attributes
 
         if (!$attribute_id) {
             $attribute_id = wc_create_attribute([
-                'name'         => ucwords(
-                    str_replace(['-', '_'], ' ', $slug)
-                ),
+                'name' => $label !== ''
+                    ? $label
+                    : ucwords(
+                        str_replace(['-', '_'], ' ', $slug)
+                    ),
                 'slug'         => $slug,
                 'type'         => 'select',
                 'order_by'     => 'menu_order',
@@ -109,7 +113,7 @@ class Product_Attributes
             ]);
 
             if (is_wp_error($attribute_id)) {
-                \Supplier_Importer\Core\Logger::info(
+                \Supplier_Importer\Core\Logger::error(
                     'ATTRIBUTE ERROR: создание атрибута '
                         . $slug . ': ' . $attribute_id->get_error_message()
                 );
@@ -167,11 +171,21 @@ class Product_Attributes
 
     private function get_taxonomy_name($taxonomy)
     {
-        if (strpos($taxonomy, 'pa_') === 0) {
-            return $taxonomy;
-        }
+        $taxonomy = trim((string) $taxonomy);
 
-        return 'pa_' . $taxonomy;
+        $taxonomy = preg_replace(
+            '/^pa_/',
+            '',
+            $taxonomy
+        );
+
+        $taxonomy = wc_sanitize_taxonomy_name(
+            $taxonomy
+        );
+
+        return $taxonomy !== ''
+            ? 'pa_' . $taxonomy
+            : '';
     }
 
     private function get_or_create_terms($taxonomy, $value)
