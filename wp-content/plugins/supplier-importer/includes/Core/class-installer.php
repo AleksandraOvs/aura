@@ -13,7 +13,7 @@ class Installer
      *
      * Увеличивать при изменении структуры таблиц.
      */
-    private const DB_VERSION = '4';
+    private const DB_VERSION = '5';
 
     private const DB_VERSION_OPTION = 'supplier_importer_db_version';
 
