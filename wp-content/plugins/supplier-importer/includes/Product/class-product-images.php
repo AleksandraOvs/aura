@@ -565,19 +565,24 @@ class Product_Images
      */
             $media_start = microtime(true);
 
+            Logger::info(
+                'IMAGE DEBUG: MEDIA START'
+                    . ' memory='
+                    . round(memory_get_usage(true) / 1024 / 1024, 2)
+                    . ' MB'
+            );
+
             $attachment_id = @media_handle_sideload(
                 $file,
                 $product_id
             );
 
             Logger::info(
-                'IMAGE DEBUG: media_handle_sideload END'
+                'IMAGE DEBUG: MEDIA END'
                     . ' time='
-                    . round(
-                        microtime(true) - $media_start,
-                        2
-                    )
+                    . round(microtime(true) - $media_start, 2)
                     . ' sec'
+                    . ' attachment_id=' . (int) $attachment_id
             );
 
             if (is_wp_error($attachment_id)) {

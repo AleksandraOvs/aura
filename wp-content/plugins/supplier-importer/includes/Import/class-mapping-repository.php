@@ -25,40 +25,22 @@ class Mapping_Repository
         $supplier,
         $type,
         $source_value,
-        $source_parent = null
+        $source_parent = ''
     ) {
         global $wpdb;
-
-        if ($source_parent === null) {
-            return $wpdb->get_row(
-                $wpdb->prepare(
-                    "SELECT *
-                    FROM {$this->table}
-                    WHERE supplier = %s
-                    AND type = %s
-                    AND source_parent IS NULL
-                    AND source_value = %s
-                    LIMIT 1",
-                    $supplier,
-                    $type,
-                    $source_value
-                ),
-                ARRAY_A
-            );
-        }
 
         return $wpdb->get_row(
             $wpdb->prepare(
                 "SELECT *
-                FROM {$this->table}
-                WHERE supplier = %s
-                AND type = %s
-                AND source_parent = %s
-                AND source_value = %s
-                LIMIT 1",
+            FROM {$this->table}
+            WHERE supplier = %s
+            AND type = %s
+            AND source_parent = %s
+            AND source_value = %s
+            LIMIT 1",
                 $supplier,
                 $type,
-                $source_parent,
+                (string) $source_parent,
                 $source_value
             ),
             ARRAY_A
@@ -203,5 +185,47 @@ class Mapping_Repository
                 $source_value
             )
         );
+    }
+
+    /**
+     * Получить сопоставления значений атрибутов поставщика.
+     *
+     * Результат:
+     * [
+     *     'source_parent' => [
+     *         'исходное значение' => ID термина WooCommerce,
+     *     ],
+     * ]
+     *
+     * @param string $supplier
+     *
+     * @return array
+     */
+    public function get_attribute_value_mappings($supplier)
+    {
+        $rows = $this->get_by_supplier(
+            $supplier,
+            'attribute_value'
+        );
+
+        $mappings = [];
+
+        foreach ($rows as $row) {
+            $source_parent = (string) $row['source_parent'];
+            $source_value  = (string) $row['source_value'];
+            $target_id     = (int) $row['target_id'];
+
+            if ($target_id <= 0) {
+                continue;
+            }
+
+            if (!isset($mappings[$source_parent])) {
+                $mappings[$source_parent] = [];
+            }
+
+            $mappings[$source_parent][$source_value] = $target_id;
+        }
+
+        return $mappings;
     }
 }

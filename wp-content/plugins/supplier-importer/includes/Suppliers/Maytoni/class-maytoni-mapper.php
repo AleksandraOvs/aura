@@ -104,9 +104,13 @@ class Maytoni_Mapper
             return '';
         }
 
-        return trim(
-            (string) $row[$key]
-        );
+        $value = $row[$key];
+
+        if (!is_scalar($value)) {
+            return '';
+        }
+
+        return trim((string) $value);
     }
 
     private function get_category($row)
@@ -353,7 +357,7 @@ class Maytoni_Mapper
         return '';
     }
 
-    private function get_attribute_mapping()
+    public function get_attribute_mapping()
     {
         return [
             'style_name' => 'style',

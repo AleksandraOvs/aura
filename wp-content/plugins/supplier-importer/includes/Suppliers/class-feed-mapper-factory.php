@@ -14,14 +14,19 @@ class Feed_Mapper_Factory
     /**
      * Создаёт маппер для фида поставщика.
      *
-     * @param string $supplier_id ID поставщика.
-     * @param string $format      Формат фида.
-     * @param string $file_path   Путь к скачанному файлу.
+     * @param string     $supplier_id ID поставщика.
+     * @param string     $format      Формат фида.
+     * @param string     $file_path   Путь к файлу фида.
+     * @param array|null $categories  Готовый справочник категорий.
      *
      * @return Feed_Mapper
      */
-    public function create($supplier_id, $format, $file_path)
-    {
+    public function create(
+        $supplier_id,
+        $format,
+        $file_path,
+        $categories = null
+    ) {
         if (!is_file($file_path) || !is_readable($file_path)) {
             throw new \InvalidArgumentException(
                 'Файл фида не найден или недоступен для чтения.'
@@ -32,11 +37,18 @@ class Feed_Mapper_Factory
         $format = strtolower(sanitize_key($format));
 
         if ($supplier_id === 'maytoni' && $format === 'yml') {
-            $category_reader = new Yml_Category_Reader();
 
-            $categories = $category_reader->read($file_path);
+            /*
+             * Если справочник передан, используем его.
+             * Иначе читаем категории из исходного YML.
+             */
+            if ($categories === null) {
+                $category_reader = new Yml_Category_Reader();
 
-            if (empty($categories)) {
+                $categories = $category_reader->read($file_path);
+            }
+
+            if (!is_array($categories) || empty($categories)) {
                 throw new \UnexpectedValueException(
                     'В YML-фиде Maytoni не найдены категории.'
                 );

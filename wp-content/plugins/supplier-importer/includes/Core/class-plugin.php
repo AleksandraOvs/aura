@@ -55,6 +55,7 @@ class Plugin
 
     public static function plugins_loaded()
     {
+        Installer::maybe_upgrade();
         self::register_suppliers();
         self::register_ajax();
 

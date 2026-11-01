@@ -38,6 +38,11 @@ class Ajax_Mapping
         );
 
         add_action(
+            'wp_ajax_supplier_mapping_get_attribute_values',
+            [$this, 'get_attribute_values']
+        );
+
+        add_action(
             'wp_ajax_supplier_mapping_get_attribute_labels',
             [$this, 'get_attribute_labels']
         );
@@ -189,6 +194,12 @@ class Ajax_Mapping
                     $source_value === ''
                     || !$target_id
                 ) {
+                    continue;
+                }
+
+                $term = get_term($target_id, 'product_cat');
+
+                if (!$term || is_wp_error($term)) {
                     continue;
                 }
 
@@ -496,7 +507,112 @@ class Ajax_Mapping
         }
     }
 
+    /**
+     * Возвращает сохранённые сопоставления значений атрибутов.
+     */
+    public function get_attribute_values()
+    {
+        try {
+            $this->check_permissions();
+            $this->check_nonce();
 
+            $supplier = isset($_POST['supplier'])
+                ? sanitize_key(
+                    wp_unslash($_POST['supplier'])
+                )
+                : '';
+
+            if ($supplier === '') {
+                throw new RuntimeException(
+                    'Не указан поставщик.'
+                );
+            }
+
+            // Таксономии текущих атрибутов из анализа фида.
+            $taxonomies_json = isset($_POST['taxonomies'])
+                ? wp_unslash($_POST['taxonomies'])
+                : '';
+
+            $taxonomies = json_decode(
+                $taxonomies_json,
+                true
+            );
+
+            if (!is_array($taxonomies)) {
+                throw new RuntimeException(
+                    'Не переданы таксономии атрибутов.'
+                );
+            }
+
+            $repository =
+                new \Supplier_Importer\Import\Mapping_Repository();
+
+            $saved_mappings =
+                $repository->get_attribute_value_mappings(
+                    $supplier
+                );
+
+            $mappings = [];
+
+            foreach ($saved_mappings as $source_parent => $values) {
+
+                if (!isset($taxonomies[$source_parent])) {
+                    continue;
+                }
+
+                $taxonomy = sanitize_key(
+                    $taxonomies[$source_parent]
+                );
+
+                if ($taxonomy === '') {
+                    continue;
+                }
+
+                if (strpos($taxonomy, 'pa_') !== 0) {
+                    $taxonomy = 'pa_' . $taxonomy;
+                }
+
+                if (!taxonomy_exists($taxonomy)) {
+                    continue;
+                }
+
+                foreach ($values as $source_value => $target_id) {
+
+                    $target_id = absint($target_id);
+
+                    if (!$target_id) {
+                        continue;
+                    }
+
+                    $term = get_term(
+                        $target_id,
+                        $taxonomy
+                    );
+
+                    if (!$term || is_wp_error($term)) {
+                        continue;
+                    }
+
+                    $mappings[$source_parent][$source_value] = [
+                        'target_id'   => $target_id,
+                        'target_name' => $term->name,
+                    ];
+                }
+            }
+
+            wp_send_json_success([
+                'mappings' => $mappings,
+            ]);
+        } catch (\Throwable $e) {
+
+            wp_send_json_error(
+                [
+                    'message' => $e->getMessage(),
+                ],
+                400
+            );
+        }
+    }
     /**
      * Возвращает список глобальных атрибутов WooCommerce.
      */

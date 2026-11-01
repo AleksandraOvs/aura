@@ -23,7 +23,7 @@ class Ajax_Feed_Import
     }
 
     /**
-     * Запускает импорт фида по сохранённому URL.
+     * Подготавливает импорт фида по сохранённому URL.
      */
     public function start_import()
     {
@@ -65,36 +65,37 @@ class Ajax_Feed_Import
             }
 
             /*
-             * Ручной запуск не зависит от настройки расписания.
-             * Даже если Cron отключён, пользователь может
-             * запустить импорт вручную.
-             */
+         * Ручной запуск не зависит от настройки расписания.
+         */
             $feed_sync = new Feed_Sync();
 
-            $result = $feed_sync->run_from_url(
+            $result = $feed_sync->prepare_yml_import_from_url(
                 $supplier_id,
                 $settings,
                 'manual'
             );
 
             Logger::info(
-                'Ручной импорт фида завершён.',
+                'Фид поставщика подготовлен к импорту.',
                 [
                     'import_id' => $result['import_id'] ?? 0,
                     'supplier'  => $supplier_id,
-                    'status'    => $result['status'] ?? '',
+                    'total'     => $result['total'] ?? 0,
                 ]
             );
 
             wp_send_json_success([
                 'import_id' => $result['import_id'],
+                'run_id'    => $result['run_id'],
                 'supplier'  => $supplier_id,
                 'status'    => $result['status'],
-                'result'    => $result['result'],
+                'phase'     => $result['phase'],
+                'total'     => $result['total'],
+                'analysis'  => $result['analysis'] ?? [],
             ]);
         } catch (\Throwable $e) {
             Logger::error(
-                'Не удалось запустить ручной импорт фида.',
+                'Не удалось подготовить ручной импорт фида.',
                 [
                     'supplier' => $supplier_id,
                     'message'  => $e->getMessage(),

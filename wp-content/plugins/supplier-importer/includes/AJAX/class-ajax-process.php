@@ -49,37 +49,85 @@ class Ajax_Process
             );
 
             if ($session->is_finished()) {
-                throw new RuntimeException(
-                    'Импорт уже завершён.'
-                );
+                wp_send_json_success([
+                    'import_id' => $import_id,
+                    'status'    => $session->get_status(),
+                    'offset'    => $session->get_offset(),
+                    'total'     => $session->get_total(),
+                    'progress'  => $session->get_progress()->to_array(),
+                    'finished'  => true,
+                ]);
             }
 
-            $supplier_manager = Plugin::get_supplier_manager();
+            /*
+ * YML обрабатывается отдельным пакетным механизмом.
+ */
+            if ($session->get_format() === 'yml') {
+                $feed_sync = new \Supplier_Importer\Suppliers\Feed_Sync();
 
-            $supplier = $supplier_manager->get(
-                $session->get_supplier()
-            );
+                if ($session->get_phase() === 'products') {
+                    $result = $feed_sync->process_yml_batch(
+                        $import_id
+                    );
+                } elseif ($session->get_phase() === 'sync') {
+                    $result = $feed_sync->process_yml_sync_batch(
+                        $import_id
+                    );
+                } else {
+                    throw new RuntimeException(
+                        'Неизвестный этап YML-импорта.'
+                    );
+                }
 
-            if (!$supplier) {
-                throw new RuntimeException(
-                    sprintf(
-                        'Поставщик "%s" не найден.',
-                        $session->get_supplier()
-                    )
+                /*
+     * Сессия обновляется внутри Feed_Sync.
+     * Используем возвращённую сессию для ответа.
+     */
+                $session = $this->repository->load_session(
+                    $import_id
                 );
+
+                Logger::info(
+                    'YML AJAX PROCESS DEBUG',
+                    [
+                        'import_id' => $import_id,
+                        'result' => $result,
+                        'session' => $session
+                            ? $session->to_array()
+                            : null,
+                    ]
+                );
+            } else {
+                /*
+     * Старый CSV-механизм оставляем без изменений.
+     */
+                $supplier_manager = Plugin::get_supplier_manager();
+
+                $supplier = $supplier_manager->get(
+                    $session->get_supplier()
+                );
+
+                if (!$supplier) {
+                    throw new RuntimeException(
+                        sprintf(
+                            'Поставщик "%s" не найден.',
+                            $session->get_supplier()
+                        )
+                    );
+                }
+
+                $reader = new Csv_Reader(
+                    $session->get_file()
+                );
+
+                $processor = new Import_Processor(
+                    $session,
+                    $reader,
+                    $supplier
+                );
+
+                $result = $processor->process();
             }
-
-            $reader = new Csv_Reader(
-                $session->get_file()
-            );
-
-            $processor = new Import_Processor(
-                $session,
-                $reader,
-                $supplier
-            );
-
-            $result = $processor->process();
             Logger::info(
                 'Чанк импорта обработан через AJAX.',
                 [

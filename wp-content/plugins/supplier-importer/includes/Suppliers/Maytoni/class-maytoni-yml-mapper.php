@@ -18,10 +18,14 @@ class Maytoni_Yml_Mapper implements Feed_Mapper
      */
     private $categories = [];
 
+    private $mapper;
+
     public function __construct(array $categories = [])
     {
         $this->categories = $categories;
+        $this->mapper = new Maytoni_Mapper();
     }
+
     public function get_format()
     {
         return 'yml';
@@ -77,6 +81,16 @@ class Maytoni_Yml_Mapper implements Feed_Mapper
 
         $row['Категория'] = $this->categories[$category_id]
             ?? '';
+        \Supplier_Importer\Core\Logger::info(
+            'MAYTONI YML ROW DEBUG',
+            [
+                'id' => $row['id'],
+                'vendorCode' => $row['vendorCode'],
+                'name' => $row['name'],
+                'price' => $row['price'],
+                'category' => $row['Категория'],
+            ]
+        );
 
         $row['Stock'] = $this->get_stock(
             $params,
@@ -113,8 +127,7 @@ class Maytoni_Yml_Mapper implements Feed_Mapper
             $row['price'] = null;
         }
 
-        $mapper = new Maytoni_Mapper();
-        $product_data = $mapper->map($row);
+        $product_data = $this->mapper->map($row);
 
         if (!$product_data instanceof Product_Data) {
             throw new \UnexpectedValueException(

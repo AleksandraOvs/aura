@@ -8,7 +8,60 @@ if (!defined('ABSPATH')) {
 
 class Installer
 {
+    /**
+     * Текущая версия схемы БД.
+     *
+     * Увеличивать при изменении структуры таблиц.
+     */
+    private const DB_VERSION = '4';
+
+    private const DB_VERSION_OPTION = 'supplier_importer_db_version';
+
+    /**
+     * Активация плагина.
+     */
     public static function activate()
+    {
+        self::install_schema();
+
+        update_option(
+            self::DB_VERSION_OPTION,
+            self::DB_VERSION
+        );
+    }
+
+    /**
+     * Проверяет и обновляет схему БД.
+     *
+     * Вызывается при загрузке плагина.
+     */
+    public static function maybe_upgrade()
+    {
+        $installed_version = get_option(
+            self::DB_VERSION_OPTION,
+            '0'
+        );
+
+        if (version_compare(
+            (string) $installed_version,
+            self::DB_VERSION,
+            '>='
+        )) {
+            return;
+        }
+
+        self::install_schema();
+
+        update_option(
+            self::DB_VERSION_OPTION,
+            self::DB_VERSION
+        );
+    }
+
+    /**
+     * Создаёт и обновляет таблицы.
+     */
+    private static function install_schema()
     {
         global $wpdb;
 
@@ -26,21 +79,42 @@ class Installer
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             supplier VARCHAR(100) NOT NULL,
             file TEXT NOT NULL,
+
             status VARCHAR(20) NOT NULL DEFAULT 'pending',
+
             total INT UNSIGNED NOT NULL DEFAULT 0,
             processed INT UNSIGNED NOT NULL DEFAULT 0,
             created INT UNSIGNED NOT NULL DEFAULT 0,
             updated INT UNSIGNED NOT NULL DEFAULT 0,
             skipped INT UNSIGNED NOT NULL DEFAULT 0,
             errors INT UNSIGNED NOT NULL DEFAULT 0,
+
             offset INT UNSIGNED NOT NULL DEFAULT 0,
+
+            run_id VARCHAR(64) NOT NULL DEFAULT '',
+            format VARCHAR(10) NOT NULL DEFAULT 'csv',
+            source VARCHAR(20) NOT NULL DEFAULT 'upload',
+            phase VARCHAR(20) NOT NULL DEFAULT 'products',
+
+            staging_file TEXT NULL,
+            cursor BIGINT UNSIGNED NOT NULL DEFAULT 0,
+
+            sync_cursor BIGINT UNSIGNED NOT NULL DEFAULT 0,
+sync_checked BIGINT UNSIGNED NOT NULL DEFAULT 0,
+sync_unpublished BIGINT UNSIGNED NOT NULL DEFAULT 0,
+sync_republished BIGINT UNSIGNED NOT NULL DEFAULT 0,
+
             started_at DATETIME NULL,
             finished_at DATETIME NULL,
+
             created_by BIGINT UNSIGNED NOT NULL DEFAULT 0,
-            PRIMARY KEY (id),
+
+            PRIMARY KEY  (id),
             KEY supplier (supplier),
             KEY status (status),
-            KEY created_by (created_by)
+            KEY created_by (created_by),
+            KEY run_id (run_id),
+            KEY supplier_status (supplier, status)
         ) {$charset_collate};";
 
         dbDelta($sql_imports);
@@ -60,7 +134,8 @@ class Installer
             message TEXT NOT NULL,
             raw_data LONGTEXT NULL,
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
+
+            PRIMARY KEY  (id),
             KEY import_id (import_id),
             KEY csv_row (csv_row),
             KEY sku (sku),
@@ -72,24 +147,25 @@ class Installer
         /*
          * Таблица сопоставлений.
          */
-
         $mappings_table =
             $wpdb->prefix . 'supplier_mappings';
 
         $sql_mappings = "CREATE TABLE {$mappings_table} (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    supplier VARCHAR(100) NOT NULL,
-    type VARCHAR(20) NOT NULL,
-    source_value VARCHAR(255) NOT NULL,
-    target_id BIGINT UNSIGNED NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY  (id),
-    UNIQUE KEY supplier_type_source (supplier, type, source_value),
-    KEY supplier (supplier),
-    KEY type (type),
-    KEY target_id (target_id)
-) {$charset_collate};";
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            supplier VARCHAR(100) NOT NULL,
+            type VARCHAR(20) NOT NULL,
+            source_value VARCHAR(255) NOT NULL,
+            source_parent VARCHAR(255) NOT NULL DEFAULT '',
+            target_id BIGINT UNSIGNED NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+            PRIMARY KEY  (id),
+            UNIQUE KEY supplier_type_parent_source (supplier, type, source_parent, source_value),
+            KEY supplier (supplier),
+            KEY type (type),
+            KEY target_id (target_id)
+        ) {$charset_collate};";
 
         dbDelta($sql_mappings);
     }

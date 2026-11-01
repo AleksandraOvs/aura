@@ -13,6 +13,12 @@ use Supplier_Importer\Import\Import_Repository;
 use Supplier_Importer\Import\Xml_Reader;
 use Supplier_Importer\Import\Yml_Validator;
 use Supplier_Importer\Product\Product_Meta;
+use Supplier_Importer\Import\Import_Session;
+use Supplier_Importer\Import\Jsonl_Stager;
+use Supplier_Importer\Import\Yml_Category_Reader;
+use Supplier_Importer\Import\Yml_Category_Storage;
+use Supplier_Importer\Import\Yml_Import_Processor;
+use Supplier_Importer\Product\Product_Data;
 
 class Feed_Sync
 {
@@ -711,5 +717,690 @@ class Feed_Sync
                 ? 'Cron'
                 : 'ручной запуск'
         );
+    }
+
+    /**
+     * Скачать YML-фид и подготовить его к пакетному импорту.
+     *
+     * @param string $supplier_id ID поставщика.
+     * @param array  $settings    Настройки фида.
+     * @param string $source      Источник запуска.
+     *
+     * @return array
+     */
+    public function prepare_yml_import_from_url(
+        $supplier_id,
+        $settings,
+        $source = 'manual'
+    ) {
+        if (
+            !is_array($settings)
+            || empty($settings['url'])
+        ) {
+            throw new \RuntimeException(
+                'Не указан URL фида.'
+            );
+        }
+
+        $downloader = new Supplier_Feed_Downloader();
+        $file = '';
+
+        try {
+            $file = $downloader->download(
+                $settings['url']
+            );
+
+            if (is_wp_error($file)) {
+                throw new \RuntimeException(
+                    $file->get_error_message()
+                );
+            }
+
+            return $this->prepare_yml_import(
+                $supplier_id,
+                $file,
+                $settings,
+                $source
+            );
+        } finally {
+            if ($file && !is_wp_error($file)) {
+                $downloader->delete_temp_file($file);
+            }
+        }
+    }
+
+    /**
+     * Подготовить YML-фид к пакетному импорту.
+     *
+     * Категории читаются один раз.
+     * Товары преобразуются в JSONL.
+     * Создаётся одна сессия на весь запуск.
+     *
+     * @param string $supplier_id ID поставщика.
+     * @param string $file        Путь к исходному YML.
+     * @param array  $settings    Настройки фида.
+     * @param string $source      Источник запуска.
+     * @param string $file_label  Название файла.
+     *
+     * @return array
+     */
+    public function prepare_yml_import(
+        $supplier_id,
+        $file,
+        $settings,
+        $source = 'manual',
+        $file_label = ''
+    ) {
+        $supplier_id = sanitize_key($supplier_id);
+
+        $source = $source === 'cron'
+            ? 'cron'
+            : 'manual';
+
+        $repository = new Import_Repository();
+
+        $file_label = $this->get_file_label(
+            $file,
+            $settings,
+            $source,
+            $file_label
+        );
+
+        $staging_file = '';
+        $categories_file = '';
+
+        $import_id = 0;
+
+        try {
+            /*
+         * Проверяем исходный фид.
+         */
+            $this->validate_feed(
+                $supplier_id,
+                $file,
+                $settings
+            );
+
+            /*
+         * Создаём каталог временных файлов.
+         */
+            $upload_dir = wp_upload_dir();
+
+            if (!empty($upload_dir['error'])) {
+                throw new \RuntimeException(
+                    $upload_dir['error']
+                );
+            }
+
+            $import_dir = trailingslashit(
+                $upload_dir['basedir']
+            ) . 'supplier-importer';
+
+            if (
+                !is_dir($import_dir)
+                && !wp_mkdir_p($import_dir)
+            ) {
+                throw new \RuntimeException(
+                    'Не удалось создать каталог импорта.'
+                );
+            }
+
+            /*
+         * Генерируем единый идентификатор запуска.
+         */
+            $run_id = wp_generate_uuid4();
+
+            $file_prefix = sanitize_file_name($run_id);
+
+            $staging_file = trailingslashit($import_dir)
+                . $file_prefix . '.jsonl';
+
+            $categories_file = $staging_file
+                . '.categories.json';
+
+            /*
+         * Читаем категории из исходного YML
+         * только один раз.
+         */
+            $category_reader = new Yml_Category_Reader();
+
+            $categories = $category_reader->read($file);
+
+            /*
+         * Сохраняем справочник категорий.
+         */
+            $category_storage = new Yml_Category_Storage();
+
+            $category_storage->save(
+                $categories_file,
+                $categories
+            );
+
+            /*
+ * Анализируем категории и атрибуты
+ * для интерфейса сопоставлений.
+ */
+            $analyzer = new \Supplier_Importer\Import\Yml_Analyzer();
+
+            $analysis = $analyzer->analyze(
+                $file,
+                $categories
+            );
+
+            /*
+         * Преобразуем товары в JSONL.
+         */
+            $stager = new Jsonl_Stager();
+
+            $total = $stager->stage(
+                $file,
+                $staging_file
+            );
+
+            if ($total <= 0) {
+                throw new \RuntimeException(
+                    'Фид не содержит ни одной записи товара.'
+                );
+            }
+
+            /*
+         * Создаём сессию пакетного импорта.
+         */
+            $session = new Import_Session(
+                $supplier_id,
+                $file_label,
+                $total
+            );
+
+            $session->set_run_id($run_id);
+            $session->set_format('yml');
+            $session->set_source($source);
+            $session->set_phase('products');
+            $session->set_staging_file($staging_file);
+
+            $session->start();
+
+            /*
+         * Создаём запись истории.
+         */
+            $import_id = $repository->create($session);
+
+            if (!$import_id) {
+                throw new \RuntimeException(
+                    'Не удалось создать сессию импорта.'
+                );
+            }
+
+            Logger::info(
+                sprintf(
+                    'YML IMPORT PREPARED: supplier=%s, source=%s, import_id=%d, run_id=%s, total=%d',
+                    $supplier_id,
+                    $source,
+                    $import_id,
+                    $run_id,
+                    $total
+                )
+            );
+
+            return [
+                'import_id' => $import_id,
+                'run_id'    => $run_id,
+                'status'    => $session->get_status(),
+                'phase'     => $session->get_phase(),
+                'total'     => $total,
+                'analysis' => $analysis,
+            ];
+        } catch (\Throwable $e) {
+            /*
+ * Если сессия уже создана, но подготовка завершилась
+ * исключением, закрываем её со статусом failed.
+ */
+            if ($import_id) {
+                try {
+                    $failed_session = $repository->load_session($import_id);
+
+                    if (
+                        $failed_session instanceof Import_Session
+                        && !$failed_session->is_finished()
+                    ) {
+                        $failed_session->fail();
+                        $repository->update($failed_session);
+                    }
+                } catch (\Throwable $storage_error) {
+                    Logger::error(
+                        'Не удалось закрыть сессию после ошибки подготовки YML.',
+                        [
+                            'import_id' => $import_id,
+                            'message'   => $storage_error->getMessage(),
+                        ]
+                    );
+                }
+            }
+            /*
+         * Удаляем временные файлы,
+         * если подготовка не завершилась.
+         */
+            if ($staging_file && is_file($staging_file)) {
+                @unlink($staging_file);
+            }
+
+            if ($categories_file && is_file($categories_file)) {
+                @unlink($categories_file);
+            }
+
+            Logger::error(
+                'Ошибка подготовки YML-импорта.',
+                [
+                    'supplier' => $supplier_id,
+                    'source'   => $source,
+                    'message'  => $e->getMessage(),
+                ]
+            );
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Обработать очередной пакет YML-товаров.
+     *
+     * @param int $import_id  ID импорта.
+     * @param int $batch_size Размер пакета.
+     *
+     * @return array
+     */
+    public function process_yml_batch(
+        $import_id,
+        $batch_size = 3
+    ) {
+        $repository = new Import_Repository();
+
+
+        $session = $repository->load_session($import_id);
+
+        if (!$session instanceof Import_Session) {
+            throw new \RuntimeException(
+                'Сессия импорта не найдена.'
+            );
+        }
+
+        if ($session->get_format() !== 'yml') {
+            throw new \InvalidArgumentException(
+                'Сессия не является YML-импортом.'
+            );
+        }
+
+        if ($session->get_phase() !== 'products') {
+            throw new \RuntimeException(
+                'Сессия не находится на этапе импорта товаров.'
+            );
+        }
+
+        if (
+            !in_array(
+                $session->get_status(),
+                ['pending', 'running'],
+                true
+            )
+        ) {
+            throw new \RuntimeException(
+                'Сессия не находится в активном состоянии.'
+            );
+        }
+
+        /*
+     * Восстанавливаем справочник категорий.
+     */
+        $staging_file = $session->get_staging_file();
+
+        $categories_file = $staging_file
+            . '.categories.json';
+
+        $category_storage = new Yml_Category_Storage();
+
+        $categories = $category_storage->load(
+            $categories_file
+        );
+
+        /*
+     * Создаём mapper без повторного чтения YML.
+     *
+     * В качестве file_path передаём staging-файл:
+     * фабрике достаточно проверить его доступность,
+     * поскольку категории уже переданы.
+     */
+        $factory = new Feed_Mapper_Factory();
+
+        $mapper = $factory->create(
+            $session->get_supplier(),
+            'yml',
+            $staging_file,
+            $categories
+        );
+
+        /*
+     * Callback сохраняет метку текущего запуска
+     * на успешно импортированном товаре.
+     */
+        $run_id = $session->get_run_id();
+        $supplier_id = $session->get_supplier();
+
+        $product_meta = new Product_Meta();
+
+        $on_success = function (
+            $product,
+            $product_data,
+            $action
+        ) use (
+            $run_id,
+            $supplier_id,
+            $product_meta
+        ) {
+            if (!$product instanceof \WC_Product) {
+                throw new \RuntimeException(
+                    'Импортёр вернул некорректный объект товара.'
+                );
+            }
+
+            if (!$product_data instanceof Product_Data) {
+                throw new \RuntimeException(
+                    'Импортёр вернул некорректные данные товара.'
+                );
+            }
+
+            if (
+                $product_data->get_supplier() !== $supplier_id
+            ) {
+                throw new \RuntimeException(
+                    'Поставщик товара не совпадает с поставщиком фида.'
+                );
+            }
+
+            $product_meta->set_feed_run(
+                $product,
+                $run_id
+            );
+
+            if (
+                $product_meta->get_feed_run($product) !== $run_id
+            ) {
+                throw new \RuntimeException(
+                    sprintf(
+                        'Не удалось сохранить метку запуска фида для товара ID %d.',
+                        $product->get_id()
+                    )
+                );
+            }
+        };
+
+        /*
+     * Запускаем обработку пакета.
+     */
+        $processor = new Yml_Import_Processor(
+            $session,
+            $mapper,
+            $on_success
+        );
+
+        return $processor->process(
+            max(1, absint($batch_size))
+        );
+    }
+
+    /**
+     * Обработать очередную порцию синхронизации товаров.
+     *
+     * @param int $import_id  ID импорта.
+     * @param int $batch_size Размер порции.
+     *
+     * @return array
+     */
+    public function process_yml_sync_batch(
+        $import_id,
+        $batch_size = 100
+    ) {
+        $repository = new Import_Repository();
+
+        $session = $repository->load_session($import_id);
+
+        if (!$session instanceof Import_Session) {
+            throw new \RuntimeException(
+                'Сессия импорта не найдена.'
+            );
+        }
+
+        if ($session->get_format() !== 'yml') {
+            throw new \InvalidArgumentException(
+                'Сессия не является YML-импортом.'
+            );
+        }
+
+        if ($session->get_phase() !== 'sync') {
+            throw new \RuntimeException(
+                'Сессия не находится на этапе синхронизации.'
+            );
+        }
+
+        if (
+            !in_array(
+                $session->get_status(),
+                ['pending', 'running'],
+                true
+            )
+        ) {
+            throw new \RuntimeException(
+                'Сессия не находится в активном состоянии.'
+            );
+        }
+
+        /*
+ * Дополнительная защита:
+ * синхронизация запрещена, если были ошибки импорта товаров.
+ */
+        $progress = $session->get_progress();
+
+        if (
+            $progress->get_errors() > 0
+            || $session->get_total() <= 0
+            || $progress->get_processed() !== $session->get_total()
+        ) {
+            $session->fail();
+
+            try {
+                $repository->update($session);
+            } catch (\Throwable $storage_error) {
+                Logger::error(
+                    'Не удалось сохранить статус failed: импорт товаров обработан не полностью.',
+                    [
+                        'import_id' => $session->get_import_id(),
+                        'message'   => $storage_error->getMessage(),
+                    ]
+                );
+            }
+
+            throw new \RuntimeException(
+                'Синхронизация отменена: импорт товаров завершился с ошибками или обработан не полностью.'
+            );
+        }
+
+        $session->start();
+
+        try {
+            $sync = new Feed_Product_Sync();
+
+            $batch = $sync->sync_missing_products_batch(
+                $session->get_supplier(),
+                $session->get_run_id(),
+                $session->get_sync_cursor(),
+                max(1, absint($batch_size))
+            );
+
+            if (!is_array($batch)) {
+                throw new \RuntimeException(
+                    'Метод синхронизации вернул некорректный результат.'
+                );
+            }
+
+            $required_keys = [
+                'last_product_id',
+                'checked',
+                'unpublished',
+                'republished',
+                'finished',
+            ];
+
+            foreach ($required_keys as $key) {
+                if (!array_key_exists($key, $batch)) {
+                    throw new \RuntimeException(
+                        sprintf(
+                            'Результат синхронизации не содержит поле "%s".',
+                            $key
+                        )
+                    );
+                }
+            }
+
+            if (
+                !is_numeric($batch['last_product_id'])
+                || !is_numeric($batch['checked'])
+                || !is_numeric($batch['unpublished'])
+                || !is_numeric($batch['republished'])
+                || !is_bool($batch['finished'])
+            ) {
+                throw new \RuntimeException(
+                    'Метод синхронизации вернул некорректные данные.'
+                );
+            }
+
+            if (
+                (float) $batch['last_product_id'] < 0
+                || (float) $batch['checked'] < 0
+                || (float) $batch['unpublished'] < 0
+                || (float) $batch['republished'] < 0
+                || (float) $batch['last_product_id'] != (int) $batch['last_product_id']
+                || (float) $batch['checked'] != (int) $batch['checked']
+                || (float) $batch['unpublished'] != (int) $batch['unpublished']
+                || (float) $batch['republished'] != (int) $batch['republished']
+            ) {
+                throw new \RuntimeException(
+                    'Метод синхронизации вернул некорректные числовые значения.'
+                );
+            }
+
+            if (
+                (int) $batch['last_product_id']
+                < (int) $session->get_sync_cursor()
+            ) {
+                throw new \RuntimeException(
+                    'Курсор синхронизации не может уменьшаться.'
+                );
+            }
+
+            /*
+         * Сохраняем курсор и накопленную статистику.
+         */
+            $session->set_sync_cursor(
+                $batch['last_product_id']
+            );
+
+            $session->increment_sync_checked(
+                $batch['checked']
+            );
+
+            $session->increment_sync_unpublished(
+                $batch['unpublished']
+            );
+
+            $session->increment_sync_republished(
+                $batch['republished']
+            );
+
+            /*
+         * Синхронизация закончена — завершаем импорт.
+         */
+            if ($batch['finished']) {
+                $session->complete();
+            }
+
+            $repository->update($session);
+
+            /*
+ * Удаляем временные файлы после полного завершения импорта.
+ */
+            if (
+                $batch['finished']
+                && $session->get_status() === 'completed'
+            ) {
+                $staging_file = $session->get_staging_file();
+
+                $files_to_delete = [
+                    $staging_file,
+                    $staging_file . '.categories.json',
+                ];
+
+                foreach ($files_to_delete as $file) {
+                    if (
+                        is_file($file)
+                        && !@unlink($file)
+                    ) {
+                        Logger::warning(
+                            'Не удалось удалить временный файл YML-импорта.',
+                            [
+                                'import_id' => $session->get_import_id(),
+                                'file'      => $file,
+                            ]
+                        );
+                    }
+                }
+            }
+
+            Logger::info(
+                'YML SYNC BATCH: END',
+                [
+                    'import_id'   => $session->get_import_id(),
+                    'cursor'      => $session->get_sync_cursor(),
+                    'checked'     => $session->get_sync_checked(),
+                    'unpublished' => $session->get_sync_unpublished(),
+                    'republished' => $session->get_sync_republished(),
+                    'finished'    => $batch['finished'],
+                ]
+            );
+
+            return [
+                'session' => $session->to_array(),
+                'phase'   => $session->get_phase(),
+                'sync'    => [
+                    'checked'     => $session->get_sync_checked(),
+                    'unpublished' => $session->get_sync_unpublished(),
+                    'republished' => $session->get_sync_republished(),
+                    'last_product_id' => $session->get_sync_cursor(),
+                    'finished'    => $batch['finished'],
+                ],
+            ];
+        } catch (\Throwable $e) {
+            $session->fail();
+
+            try {
+                $repository->update($session);
+            } catch (\Throwable $storage_error) {
+                Logger::error(
+                    'Не удалось сохранить статус failed после ошибки синхронизации.',
+                    [
+                        'import_id' => $session->get_import_id(),
+                        'message'   => $storage_error->getMessage(),
+                    ]
+                );
+            }
+
+            Logger::error(
+                'Ошибка пакетной синхронизации товаров.',
+                [
+                    'import_id' => $session->get_import_id(),
+                    'message'   => $e->getMessage(),
+                ]
+            );
+
+            throw $e;
+        }
     }
 }

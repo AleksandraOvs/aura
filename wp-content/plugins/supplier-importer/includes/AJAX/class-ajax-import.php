@@ -33,6 +33,8 @@ class Ajax_Import
 
     public function start_import()
     {
+        $file_path = '';
+        $import_created = false;
         try {
             $this->check_permissions();
             $this->check_nonce();
@@ -54,6 +56,17 @@ class Ajax_Import
             ) {
                 throw new InvalidArgumentException(
                     'Ошибка загрузки CSV-файла.'
+                );
+            }
+
+
+            $extension = strtolower(
+                pathinfo($file['name'], PATHINFO_EXTENSION)
+            );
+
+            if ($extension !== 'csv') {
+                throw new InvalidArgumentException(
+                    'Допускаются только CSV-файлы.'
                 );
             }
 
@@ -120,6 +133,7 @@ class Ajax_Import
             );
 
             $import_id = $this->repository->create($session);
+            $import_created = true;
 
             Logger::info(
                 'Импорт создан через AJAX.',
@@ -150,6 +164,14 @@ class Ajax_Import
                     'message' => $e->getMessage(),
                 ]
             );
+
+            if (
+                !$import_created
+                && $file_path !== ''
+                && file_exists($file_path)
+            ) {
+                wp_delete_file($file_path);
+            }
 
             wp_send_json_error(
                 [
@@ -187,6 +209,13 @@ class Ajax_Import
     private function save_uploaded_file($file)
     {
         $upload_dir = wp_upload_dir();
+
+        if (!empty($upload_dir['error'])) {
+            throw new RuntimeException(
+                'Ошибка директории загрузок: '
+                    . $upload_dir['error']
+            );
+        }
 
         $directory = trailingslashit(
             $upload_dir['basedir']

@@ -29,8 +29,6 @@ document.addEventListener('DOMContentLoaded', function () {
         '#supplier-import-errors-list'
     );
 
-
-
     if (
         !form
         || !fileInput
@@ -41,7 +39,13 @@ document.addEventListener('DOMContentLoaded', function () {
         || !progressStats
         || !startButton
     ) {
-        return;
+        console.warn(
+            'CSV import form elements not found.'
+        );
+    } else {
+        console.log('SUPPLIER IMPORTER FORM HANDLER INIT');
+
+        // Здесь пока оставляем существующий form.addEventListener(...)
     }
     let currentImportId = null;
     let lastErrorsCount = 0;
@@ -140,6 +144,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function processImport(importId) {
+        console.log('PROCESS IMPORT CALLED:', importId);
         const formData = new FormData();
 
         formData.append(
@@ -177,6 +182,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 const data = result.data;
+                console.log('IMPORT AJAX RESPONSE:', data);
+                console.log('IMPORT SERVER PROGRESS:', data.progress);
 
                 updateProgress(data);
 
@@ -201,10 +208,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function updateProgress(data) {
+        console.log('UPDATE PROGRESS CALLED:', data);
 
         progressBlock.hidden = false;
 
-        const progress = data.progress;
+        const progress = data.progress || {};
 
         const processed = Number(
             progress.processed || 0
@@ -212,6 +220,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const total = Number(
             progress.total || data.total || 0
+        );
+        const progressCount = document.querySelector(
+            '#supplier-importer-progress-count'
         );
 
         const percent = Number(
@@ -226,18 +237,13 @@ document.addEventListener('DOMContentLoaded', function () {
         console.log('ERRORS COUNT:', errorsCount);
         console.log('CURRENT IMPORT ID:', currentImportId);
 
-        const progressCount = document.querySelector(
-            '#supplier-import-progress-count'
-        );
+        if (progressCount) {
+            progressCount.textContent =
+                processed + ' / ' + total;
+        }
 
         progressBar.style.width =
             percent + '%';
-
-        progressPercent.textContent =
-            percent + '%';
-
-        progressCount.textContent =
-            processed + ' / ' + total;
 
         progressStats.innerHTML = `
         <div class="supplier-importer__stat">
@@ -294,13 +300,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function finishImport(data) {
 
+        const isCompleted = data.status === 'completed';
+
         startButton.disabled = false;
         startButton.textContent = 'Начать импорт';
 
         progressBlock.hidden = false;
 
-        progressPercent.textContent = '100%';
-        progressBar.style.width = '100%';
+        if (isCompleted) {
+            progressPercent.textContent = '100%';
+            progressBar.style.width = '100%';
+        }
 
         const progress = data.progress || {};
 
@@ -358,10 +368,14 @@ document.addEventListener('DOMContentLoaded', function () {
     `;
 
         info.innerHTML = `
-        <p>
-            <strong>Импорт завершён.</strong>
-        </p>
-    `;
+    <p>
+        <strong>
+            ${isCompleted
+                ? 'Импорт успешно завершён.'
+                : 'Импорт завершился с ошибкой.'}
+        </strong>
+    </p>
+`;
 
         if (Number(progress.errors || 0) > 0) {
             loadImportErrors(data.import_id);
@@ -686,6 +700,61 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
+    function loadAttributeValueMappings(supplier, attributes) {
+
+        const taxonomies = {};
+
+        attributes.forEach(function (attribute) {
+            if (attribute.source && attribute.taxonomy) {
+                taxonomies[attribute.source] = attribute.taxonomy;
+            }
+        });
+
+        const formData = new FormData();
+
+        formData.append(
+            'action',
+            'supplier_mapping_get_attribute_values'
+        );
+
+        formData.append(
+            'nonce',
+            supplierImporter.nonce
+        );
+
+        formData.append(
+            'supplier',
+            supplier
+        );
+
+        formData.append(
+            'taxonomies',
+            JSON.stringify(taxonomies)
+        );
+
+        return fetch(
+            supplierImporter.ajaxUrl,
+            {
+                method: 'POST',
+                body: formData
+            }
+        )
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function (result) {
+
+                if (!result.success) {
+                    throw new Error(
+                        result.data?.message
+                        || 'Не удалось загрузить сохранённые сопоставления атрибутов.'
+                    );
+                }
+
+                return result.data.mappings || {};
+            });
+    }
+
     function loadAttributeLabels(mappingBlock) {
         const content = mappingBlock.querySelector(
             '[data-attribute-labels-content]'
@@ -864,11 +933,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 const data = result.data || {};
                 const errors = data.errors || [];
 
-                // Обновляем исходные названия только после успешного ответа.
-                const savedIds = new Set(
-                    labels.map((item) => String(item.attribute_id))
-                );
-
                 if (errors.length === 0) {
                     inputs.forEach((input) => {
                         input.dataset.originalLabel = input.value.trim();
@@ -916,6 +980,7 @@ document.addEventListener('DOMContentLoaded', function () {
             : [];
 
         let savedMappings = {};
+        let savedAttributeMappings = {};
 
         try {
             savedMappings = await loadCategoryMappings(supplier);
@@ -927,6 +992,23 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (error) {
             console.error(
                 'Ошибка загрузки сохранённых категорий:',
+                error
+            );
+        }
+
+        try {
+            savedAttributeMappings = await loadAttributeValueMappings(
+                supplier,
+                attributes
+            );
+
+            console.log(
+                'Сохранённые сопоставления атрибутов:',
+                savedAttributeMappings
+            );
+        } catch (error) {
+            console.error(
+                'Ошибка загрузки сохранённых сопоставлений атрибутов:',
                 error
             );
         }
@@ -1056,7 +1138,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </p>
 
                 <div class="supplier-importer__mapping-attributes">
-                    ${renderAttributes(attributes)}
+                    ${renderAttributes(attributes, savedAttributeMappings)}
                 </div>
             </div>
 
@@ -1142,7 +1224,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    function renderAttributes(attributes) {
+    function renderAttributes(attributes, savedMappings = {}) {
 
         if (!attributes.length) {
             return `
@@ -1158,17 +1240,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 ? attribute.values
                 : [];
 
+            const sourceParent = attribute.source;
+            const taxonomy = attribute.taxonomy || '';
+
             return `
             <div
                 class="supplier-importer__attribute"
                 data-attribute-index="${attributeIndex}"
-                data-source="${escapeHtml(attribute.source)}"
+                data-source="${escapeHtml(sourceParent)}"
+                data-taxonomy="${escapeHtml(taxonomy)}"
             >
 
                 <div class="supplier-importer__attribute-header">
 
                     <strong>
-                        ${escapeHtml(attribute.source)}
+                        ${escapeHtml(attribute.label || sourceParent)}
                     </strong>
 
                     <span>
@@ -1182,7 +1268,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     ${values.map(function (item, valueIndex) {
 
                 const sourceValue =
-                    typeof item === 'object'
+                    item && typeof item === 'object'
                         ? item.value
                         : item;
 
@@ -1191,10 +1277,21 @@ document.addEventListener('DOMContentLoaded', function () {
                         ? Number(item.count || 0)
                         : 0;
 
+                const saved =
+                    savedMappings[sourceParent]?.[sourceValue] || null;
+
+                const targetId = saved
+                    ? Number(saved.target_id)
+                    : 0;
+
+                const targetName = saved
+                    ? saved.target_name
+                    : '';
+
                 return `
                             <div
                                 class="supplier-importer__mapping-item supplier-importer__attribute-value"
-                                data-attribute="${escapeHtml(attribute.source)}"
+                                data-attribute="${escapeHtml(sourceParent)}"
                                 data-value-index="${valueIndex}"
                             >
 
@@ -1236,8 +1333,29 @@ document.addEventListener('DOMContentLoaded', function () {
 
                                 <div
                                     class="supplier-importer__mapping-selected"
-                                    hidden
-                                ></div>
+                                    data-target-id="${targetId}"
+                                    data-taxonomy="${escapeHtml(taxonomy)}"
+                                    ${targetId ? '' : 'hidden'}
+                                >
+                                    ${targetId
+                        ? `
+                                            <span>
+                                                Выбрано:
+                                                <strong>
+                                                    ${escapeHtml(targetName)}
+                                                </strong>
+                                            </span>
+
+                                            <button
+                                                type="button"
+                                                class="supplier-importer__mapping-clear"
+                                            >
+                                                Изменить
+                                            </button>
+                                        `
+                        : ''
+                    }
+                                </div>
 
                             </div>
                         `;
@@ -1464,6 +1582,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 event.preventDefault();
+
+                delete selected.dataset.targetId;
+
+                selected.hidden = true;
+                selected.innerHTML = '';
+
                 openTree();
             });
 
@@ -1760,11 +1884,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     timeout = setTimeout(
                         function () {
 
-                            const attribute =
-                                item.dataset.attribute;
+                            const taxonomy = item.closest(
+                                '.supplier-importer__attribute'
+                            )?.dataset.taxonomy;
+
+                            if (!taxonomy) {
+                                return;
+                            }
 
                             searchAttributeTerms(
-                                attribute,
+                                taxonomy,
                                 search,
                                 results,
                                 selected,
@@ -1776,16 +1905,42 @@ document.addEventListener('DOMContentLoaded', function () {
                     );
                 }
             );
+            selected.addEventListener('click', function (event) {
+
+                const changeButton = event.target.closest(
+                    '.supplier-importer__mapping-clear'
+                );
+
+                if (!changeButton) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                selected.hidden = true;
+                selected.innerHTML = '';
+
+                delete selected.dataset.targetId;
+                delete selected.dataset.taxonomy;
+
+                input.focus();
+            });
         });
     }
 
     function searchAttributeTerms(
-        attribute,
+        taxonomy,
         search,
         results,
         selected,
         input
     ) {
+
+        if (!taxonomy) {
+            results.hidden = false;
+            results.textContent = 'Для атрибута не настроена таксономия.';
+            return;
+        }
 
         const formData = new FormData();
 
@@ -1798,103 +1953,6 @@ document.addEventListener('DOMContentLoaded', function () {
             'nonce',
             supplierImporter.nonce
         );
-
-        /*
-         * Пока передаём source напрямую.
-         *
-         * Сервер сам добавит pa_:
-         *
-         * цвет арматуры
-         * → pa_цвет арматуры
-         *
-         * Но это НЕ то, что нам нужно.
-         *
-         * Поэтому taxonomy будем брать
-         * из карты ниже.
-         */
-        const taxonomyMap = {
-
-            'стиль': 'style',
-
-            'форма': 'forma',
-
-            'цвет арматуры': 'armature-color',
-
-            'материал арматуры':
-                'armature-material',
-
-            'цвет плафона':
-                'shade-color',
-
-            'материал плафона':
-                'shade-material',
-
-            'ширина/диаметр':
-                'shirina-diametr',
-
-            'длина':
-                'dlina-mm',
-
-            'высота':
-                'vysota-mm',
-
-            'тип лампы':
-                'tip-lampochki',
-
-            'мощность общая':
-                'obshhaya-moshhnost',
-
-            'напряжение':
-                'napryazhenie',
-
-            'тип цоколя':
-                'base',
-
-            'степень защиты ip':
-                'ip',
-
-            'цвет свечения':
-                'color-temperature',
-
-            'место установки':
-                'tip-krepleniya',
-
-            'страна происхождения':
-                'strana-proishozhdenia',
-
-            'коллекция':
-                'collection',
-
-            'Назначение помещения':
-                'room-purpose',
-
-            'форма плафона':
-                'shade-shape',
-
-            'лампы в комплекте':
-                'led',
-
-            'площадь освещения':
-                'light-area',
-
-            'световой поток':
-                'light-flux'
-        };
-
-        const taxonomy =
-            taxonomyMap[attribute] || '';
-
-        if (!taxonomy) {
-            results.hidden = false;
-
-            results.innerHTML = `
-            <div class="supplier-importer__mapping-error">
-                Для атрибута не настроена таксономия.
-            </div>
-        `;
-
-            return;
-        }
 
         formData.append(
             'taxonomy',
@@ -2165,8 +2223,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     );
                 }
 
-                status.textContent =
-                    'Сопоставления сохранены.';
 
                 console.log(
                     'Сохранено mappings:',
@@ -2174,10 +2230,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 );
 
                 button.disabled = false;
-
-                const savedCount = Number(
-                    result.data.saved || 0
-                );
 
                 status.textContent =
                     'Категории сохранены.';
@@ -2234,6 +2286,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (
                 !selected
+                || selected.hidden
                 || !sourceValue
             ) {
                 return;
@@ -2520,6 +2573,42 @@ document.addEventListener('DOMContentLoaded', function () {
         return data.data || {};
     }
 
+    /**
+ * Пакетная обработка подготовленного YML-фида.
+ */
+    async function processFeedImport(importId, info) {
+        let data;
+
+        while (true) {
+            const formData = new FormData();
+
+            formData.append('action', 'supplier_import_process');
+            formData.append('nonce', supplierImporter.nonce);
+            formData.append('import_id', importId);
+
+            data = await sendImportRequest(formData);
+
+            const progress = data.progress || {};
+
+            const processed = Number(progress.processed || 0);
+            const total = Number(progress.total || data.total || 0);
+
+            showFeedMessage(
+                info,
+                `Импорт товаров: ${processed} / ${total}`,
+                'info'
+            );
+
+            if (data.finished) {
+                return data;
+            }
+
+            await new Promise(function (resolve) {
+                setTimeout(resolve, 300);
+            });
+        }
+    }
+
     // ------------------------------------------
     // Загрузка YML-файла
     // ------------------------------------------
@@ -2609,12 +2698,43 @@ document.addEventListener('DOMContentLoaded', function () {
             showFeedMessage(info, 'Запуск импорта по URL. Дождитесь завершения...', 'info');
 
             try {
-                const data = await sendImportRequest(formData);
+                // Подготавливаем фид и создаём сессию импорта.
+                const prepared = await sendImportRequest(formData);
+
+                const importId = Number(prepared.import_id);
+
+                if (!importId) {
+                    throw new Error(
+                        'Сервер не вернул ID созданного импорта.'
+                    );
+                }
 
                 showFeedMessage(
                     info,
-                    getImportResultMessage(data),
-                    'success'
+                    `Фид подготовлен. Найдено товаров: ${prepared.total}. Начинаем импорт...`,
+                    'info'
+                );
+
+                // Запускаем пакетную обработку товаров и синхронизацию.
+                const result = await processFeedImport(importId, info);
+
+                const progress = result.progress || {};
+
+                const message = [
+                    result.status === 'completed'
+                        ? 'Импорт успешно завершён.'
+                        : 'Импорт завершился с ошибкой.',
+                    'Всего: ' + Number(result.total || 0),
+                    'Создано: ' + Number(progress.created || 0),
+                    'Обновлено: ' + Number(progress.updated || 0),
+                    'Пропущено: ' + Number(progress.skipped || 0),
+                    'Ошибок: ' + Number(progress.errors || 0)
+                ].join('\n');
+
+                showFeedMessage(
+                    info,
+                    message,
+                    result.status === 'completed' ? 'success' : 'error'
                 );
 
             } catch (error) {
