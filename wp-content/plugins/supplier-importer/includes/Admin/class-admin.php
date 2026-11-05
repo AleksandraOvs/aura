@@ -302,6 +302,9 @@ class Admin
                         <option value="citilux">
                             CITILUX
                         </option>
+                        <option value="lightstar">
+                            Lightstar
+                        </option>
 
                     </select>
 

@@ -243,16 +243,6 @@ class Feed_Sync
                 sanitize_key($settings['format'] ?? '')
             );
 
-            Logger::info(
-                'Проверка формата фида.',
-                [
-                    'supplier_id' => $supplier_id,
-                    'settings_format' => $settings['format'] ?? '(пусто)',
-                    'normalized_format' => $format,
-                    'supported_format' => $supported_formats[$supplier_id] ?? '(не задан)',
-                ]
-            );
-
             /*
  * Анализируем YML и сохраняем обнаруженные значения.
  */
@@ -695,6 +685,7 @@ class Feed_Sync
         $supported_formats = [
             'maytoni' => 'yml',
             'citilux' => 'xml',
+            'lightstar' => 'yml',
         ];
 
 

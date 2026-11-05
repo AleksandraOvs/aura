@@ -10,6 +10,7 @@ use Supplier_Importer\Import\Yml_Category_Reader;
 use Supplier_Importer\Suppliers\Maytoni\Maytoni_Yml_Mapper;
 use Supplier_Importer\Suppliers\Citilux\Citilux_Mapper;
 use Supplier_Importer\Suppliers\Citilux\Citilux_Yml_Category_Reader;
+use Supplier_Importer\Suppliers\Lightstar\Lightstar_Mapper;
 
 class Feed_Mapper_Factory
 {
@@ -56,6 +57,26 @@ class Feed_Mapper_Factory
             }
 
             return new Maytoni_Yml_Mapper($categories);
+        }
+
+        /*
+ * LIGHTSTAR — YML.
+ */
+        if ($supplier_id === 'lightstar' && $format === 'yml') {
+
+            if ($categories === null) {
+                $category_reader = new Yml_Category_Reader();
+
+                $categories = $category_reader->read($file_path);
+            }
+
+            if (!is_array($categories) || empty($categories)) {
+                throw new \UnexpectedValueException(
+                    'В YML-фиде Lightstar не найдены категории.'
+                );
+            }
+
+            return new Lightstar_Mapper($categories);
         }
 
         /*
