@@ -2,7 +2,7 @@ wp-config.php
 wp-content/uploads/wc-logs
 
 # Игнорировать директорию с импортами поставщиков
-/wp-content/plugins/supplier-importer/suppliers/
+/wp-content/uploads/supplier-importer/
 
 # Игнорировать загрузки WordPress
 /wp-content/uploads/
