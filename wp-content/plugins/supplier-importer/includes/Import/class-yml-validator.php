@@ -9,15 +9,13 @@ if (!defined('ABSPATH')) {
 class Yml_Validator
 {
     /**
-     * Проверить структуру и целостность YML-фида.
+     * Проверяет структуру и целостность YML-фида.
      *
-     * Проверяется весь XML-документ, а не только его начало.
-     *
-     * @param string $file_path Путь к файлу.
+     * @param string $file_path
      *
      * @return void
      *
-     * @throws \RuntimeException Если фид некорректен.
+     * @throws \RuntimeException
      */
     public function validate($file_path)
     {
@@ -39,29 +37,32 @@ class Yml_Validator
         $reader = new \XMLReader();
 
         $root_found = false;
+        $shop_found = false;
+        $offers_found = false;
+
         $shop_depth = null;
         $offers_depth = null;
+
         $offer_count = 0;
 
         try {
-            if (
-                !$reader->open(
-                    $file_path,
-                    null,
-                    LIBXML_NONET | LIBXML_COMPACT
-                )
-            ) {
+            if (!$reader->open(
+                $file_path,
+                null,
+                LIBXML_NONET | LIBXML_COMPACT
+            )) {
                 throw new \RuntimeException(
                     'Не удалось открыть YML-файл для проверки.'
                 );
             }
 
             while ($reader->read()) {
+
                 if ($reader->nodeType === \XMLReader::ELEMENT) {
+
                     $name = $reader->localName;
                     $depth = $reader->depth;
 
-                    // Первый элемент документа должен быть yml_catalog.
                     if (!$root_found) {
                         if ($name !== 'yml_catalog') {
                             throw new \RuntimeException(
@@ -74,64 +75,64 @@ class Yml_Validator
                         continue;
                     }
 
-                    // Секция shop должна находиться непосредственно
-                    // внутри yml_catalog.
                     if (
                         $name === 'shop'
                         && $depth === 1
                     ) {
+                        $shop_found = true;
                         $shop_depth = $depth;
                         continue;
                     }
 
-                    // Секция offers должна находиться внутри shop.
                     if (
                         $name === 'offers'
                         && $shop_depth !== null
                         && $depth === $shop_depth + 1
                     ) {
-                        $offers_depth = $depth;
+                        $offer_count++;
+                        $offers_found = true;
                         continue;
                     }
 
-                    // Считаем только offer непосредственно внутри offers.
                     if (
                         $name === 'offer'
                         && $offers_depth !== null
                         && $depth === $offers_depth + 1
                     ) {
-                        ++$offer_count;
+                        $offer_count++;
                     }
                 }
 
                 if ($reader->nodeType === \XMLReader::END_ELEMENT) {
+
+                    $name = $reader->localName;
+                    $depth = $reader->depth;
+
                     if (
                         $offers_depth !== null
-                        && $reader->depth === $offers_depth
-                        && $reader->localName === 'offers'
+                        && $depth === $offers_depth
+                        && $name === 'offers'
                     ) {
                         $offers_depth = null;
                     }
 
                     if (
                         $shop_depth !== null
-                        && $reader->depth === $shop_depth
-                        && $reader->localName === 'shop'
+                        && $depth === $shop_depth
+                        && $name === 'shop'
                     ) {
                         $shop_depth = null;
                     }
                 }
             }
 
-            // XMLReader может обнаружить ошибку разбора во время чтения.
-            // Проверяем ошибки после прохода по всему документу.
             $errors = libxml_get_errors();
 
             foreach ($errors as $error) {
                 if ($error->level >= LIBXML_ERR_ERROR) {
                     throw new \RuntimeException(
                         sprintf(
-                            'Ошибка разбора YML на строке %d: %s',
+                            'Ошибка разбора XML на строке %d: %s',
                             $error->line,
                             trim($error->message)
                         )
@@ -145,7 +146,22 @@ class Yml_Validator
                 );
             }
 
-            if ($shop_depth !== null || $offers_depth !== null) {
+            if (!$shop_found) {
+                throw new \RuntimeException(
+                    'В YML-файле не найдена секция shop.'
+                );
+            }
+
+            if (!$offers_found) {
+                throw new \RuntimeException(
+                    'В YML-файле не найдена секция offers.'
+                );
+            }
+
+            if (
+                $shop_depth !== null
+                || $offers_depth !== null
+            ) {
                 throw new \RuntimeException(
                     'Некорректная структура YML: '
                         . 'не закрыта секция shop или offers.'

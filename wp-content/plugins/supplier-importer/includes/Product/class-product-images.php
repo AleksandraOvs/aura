@@ -15,6 +15,16 @@ class Product_Images
     private const SOURCE_URL_META = '_supplier_image_url';
 
     /**
+     * Размеры изображений, создаваемые при импорте товаров.
+     */
+    private const IMPORT_IMAGE_SIZES = [
+        'woocommerce_thumbnail',
+        'woocommerce_single',
+        'woocommerce_gallery_thumbnail',
+        'thumbnail',
+    ];
+
+    /**
      * Обрабатывает изображения товара.
      *
      * @param WC_Product $product
@@ -180,6 +190,7 @@ class Product_Images
         return (int) $query->posts[0];
     }
 
+
     /**
      * Скачивает изображение и создаёт attachment.
      */
@@ -201,278 +212,193 @@ class Product_Images
         /*
      * 1. Скачиваем оригинальное изображение.
      */
-        $download_start = microtime(true);
-
-        $tmp_file = download_url(
+        $original_tmp_file = download_url(
             $image_url,
             30
         );
 
-        if (is_wp_error($tmp_file)) {
-
+        if (is_wp_error($original_tmp_file)) {
             Logger::info(
-                'IMAGE DEBUG: download ERROR'
+                'IMAGE DEBUG: DOWNLOAD ERROR'
                     . ' url=' . $image_url
-                    . ' error=' . $tmp_file->get_error_message()
+                    . ' error=' . $original_tmp_file->get_error_message()
             );
 
             return 0;
         }
+
+        // Файл, который в итоге передадим WordPress.
+        $tmp_file = $original_tmp_file;
+
         try {
 
             /*
-     * 2. Определяем тип файла.
-     */
-            $mime_type = mime_content_type(
-                $tmp_file
-            );
+         * 2. Проверяем исходный файл.
+         */
+            if (
+                !is_file($original_tmp_file)
+                || !is_readable($original_tmp_file)
+            ) {
+                Logger::info(
+                    'IMAGE DEBUG: ORIGINAL FILE INVALID'
+                        . ' url=' . $image_url
+                );
 
-            $original_size = filesize(
-                $tmp_file
-            );
+                return 0;
+            }
+
+            $original_size = filesize($original_tmp_file);
+
+            if ($original_size === false || $original_size <= 0) {
+                Logger::info(
+                    'IMAGE DEBUG: INVALID ORIGINAL SIZE'
+                        . ' url=' . $image_url
+                );
+
+                return 0;
+            }
+
+            $image_info = @getimagesize($original_tmp_file);
+
+            if (!$image_info || empty($image_info['mime'])) {
+                Logger::info(
+                    'IMAGE DEBUG: INVALID IMAGE'
+                        . ' url=' . $image_url
+                );
+
+                return 0;
+            }
+
+            $mime_type = $image_info['mime'];
 
             $file_name = $this->get_file_name(
                 $image_url
             );
 
             /*
- * 3. Оптимизируем JPEG и PNG.
- *
- * JPEG:
- * - сохраняем JPEG;
- * - quality 82.
- *
- * PNG:
- * - переводим в JPEG;
- * - прозрачность заменяем белым фоном;
- * - quality 82.
- */
+         * 3. Оптимизируем JPEG и PNG.
+         */
             if (
                 in_array(
                     $mime_type,
                     [
                         'image/jpeg',
-                        'image/jpg',
                         'image/png',
                     ],
                     true
                 )
             ) {
+                $optimization = $this->optimize_image(
+                    $tmp_file,
+                    $mime_type,
+                    $file_name
+                );
 
-                $optimize_start = microtime(true);
-
-                /*
-     * PNG обрабатываем через GD напрямую.
-     *
-     * Это позволяет гарантированно получить
-     * белый фон вместо прозрачности.
-     */
-                if ($mime_type === 'image/png') {
-
-                    $source = @imagecreatefrompng($tmp_file);
-
-                    if (!$source) {
-
-                        Logger::info(
-                            'IMAGE DEBUG: PNG LOAD ERROR'
-                                . ' file=' . $tmp_file
-                        );
-                    } else {
-
-                        $width = imagesx($source);
-                        $height = imagesy($source);
-
-                        /*
-             * Создаём белый JPEG-холст.
-             */
-                        $canvas = imagecreatetruecolor(
-                            $width,
-                            $height
-                        );
-
-                        $white = imagecolorallocate(
-                            $canvas,
-                            255,
-                            255,
-                            255
-                        );
-
-                        imagefill(
-                            $canvas,
-                            0,
-                            0,
-                            $white
-                        );
-
-                        /*
-             * Копируем PNG поверх белого фона.
-             */
-                        imagecopy(
-                            $canvas,
-                            $source,
-                            0,
-                            0,
-                            0,
-                            0,
-                            $width,
-                            $height
-                        );
-
-                        /*
-             * Сохраняем обратно в тот же временный файл
-             * уже как JPEG.
-             */
-                        $saved = imagejpeg(
-                            $canvas,
-                            $tmp_file,
-                            82
-                        );
-
-                        /*
-             * Освобождаем память.
-             */
-                        imagedestroy($source);
-                        imagedestroy($canvas);
-
-                        if (!$saved) {
-
-                            Logger::info(
-                                'IMAGE DEBUG: PNG TO JPEG ERROR'
-                            );
-                        } else {
-
-                            $optimized_size = filesize(
-                                $tmp_file
-                            );
-
-                            $saved_bytes = $original_size
-                                - $optimized_size;
-
-                            $saved_percent = 0;
-
-                            if ($original_size > 0) {
-                                $saved_percent = round(
-                                    (
-                                        $saved_bytes
-                                        / $original_size
-                                    ) * 100,
-                                    1
-                                );
-                            }
-
-                            /*
-                 * После конвертации PNG → JPEG
-                 * меняем MIME и имя файла.
-                 */
-                            $mime_type = 'image/jpeg';
-
-                            $file_name = pathinfo(
-                                $file_name,
-                                PATHINFO_FILENAME
-                            ) . '.jpg';
-                        }
-                    }
-                } else {
-
-                    /*
-         * JPEG оптимизируем через WordPress Image Editor.
-         */
-                    $image_editor = wp_get_image_editor(
-                        $tmp_file
+                if (is_wp_error($optimization)) {
+                    Logger::info(
+                        'IMAGE DEBUG: OPTIMIZATION FAILED'
+                            . ' url=' . $image_url
+                            . ' error=' . $optimization->get_error_message()
+                            . ' upload=skipped'
                     );
 
-                    if (is_wp_error($image_editor)) {
-
-                        Logger::info(
-                            'IMAGE DEBUG: OPTIMIZE SKIP'
-                                . ' reason=image_editor_error'
-                                . ' type=' . $mime_type
-                                . ' error='
-                                . $image_editor->get_error_message()
-                        );
-                    } else {
-
-                        $image_editor->set_quality(82);
-
-                        $optimized = $image_editor->save(
-                            $tmp_file,
-                            'image/jpeg'
-                        );
-
-                        if (is_wp_error($optimized)) {
-
-                            Logger::info(
-                                'IMAGE DEBUG: OPTIMIZE ERROR'
-                                    . ' type=' . $mime_type
-                                    . ' error='
-                                    . $optimized->get_error_message()
-                            );
-                        } else {
-
-                            $optimized_size = filesize(
-                                $tmp_file
-                            );
-
-                            $saved_bytes = $original_size
-                                - $optimized_size;
-
-                            $saved_percent = 0;
-
-                            if ($original_size > 0) {
-                                $saved_percent = round(
-                                    (
-                                        $saved_bytes
-                                        / $original_size
-                                    ) * 100,
-                                    1
-                                );
-                            }
-
-                            $mime_type = 'image/jpeg';
-
-                            $file_name = pathinfo(
-                                $file_name,
-                                PATHINFO_FILENAME
-                            ) . '.jpg';
-                        }
-                    }
+                    return 0;
                 }
             }
 
             /*
-     * 4. Формируем файл для WordPress.
-     */
+         * 4. Проверяем файл перед передачей WordPress.
+         */
+            if (
+                !is_file($tmp_file)
+                || !is_readable($tmp_file)
+            ) {
+                Logger::info(
+                    'IMAGE DEBUG: FINAL FILE MISSING'
+                        . ' url=' . $image_url
+                );
+
+                return 0;
+            }
+
+            $final_size = filesize($tmp_file);
+
+            if ($final_size === false || $final_size <= 0) {
+                Logger::info(
+                    'IMAGE DEBUG: FINAL FILE EMPTY'
+                        . ' url=' . $image_url
+                );
+
+                return 0;
+            }
+
             $file = [
                 'name'     => $file_name,
                 'type'     => $mime_type,
                 'tmp_name' => $tmp_file,
                 'error'    => 0,
-                'size'     => filesize($tmp_file),
+                'size'     => $final_size,
             ];
 
             /*
-     * 5. Создаём attachment.
-     */
+         * 5. Создаём attachment.
+         */
             $media_start = microtime(true);
 
             Logger::info(
                 'IMAGE DEBUG: MEDIA START'
+                    . ' size=' . size_format($final_size)
                     . ' memory='
-                    . round(memory_get_usage(true) / 1024 / 1024, 2)
+                    . round(
+                        memory_get_usage(true) / 1024 / 1024,
+                        2
+                    )
                     . ' MB'
             );
 
-            $attachment_id = @media_handle_sideload(
-                $file,
-                $product_id
+            /*
+ * Ограничиваем генерацию размеров только
+ * для текущего изображения поставщика.
+ */
+            $image_sizes_filter = static function (
+                $new_sizes,
+                $image_meta,
+                $attachment_id
+            ) {
+                return array_intersect_key(
+                    $new_sizes,
+                    array_flip(self::IMPORT_IMAGE_SIZES)
+                );
+            };
+
+            add_filter(
+                'intermediate_image_sizes_advanced',
+                $image_sizes_filter,
+                PHP_INT_MAX,
+                3
             );
 
-            if (is_wp_error($attachment_id)) {
+            try {
+                $attachment_id = @media_handle_sideload(
+                    $file,
+                    $product_id
+                );
+            } finally {
+                remove_filter(
+                    'intermediate_image_sizes_advanced',
+                    $image_sizes_filter,
+                    PHP_INT_MAX
+                );
+            }
 
+            if (is_wp_error($attachment_id)) {
                 Logger::info(
                     'IMAGE DEBUG: MEDIA ERROR'
                         . ' time='
-                        . round(microtime(true) - $media_start, 2)
+                        . round(
+                            microtime(true) - $media_start,
+                            2
+                        )
                         . ' sec'
                         . ' error='
                         . $attachment_id->get_error_message()
@@ -484,14 +410,17 @@ class Product_Images
             Logger::info(
                 'IMAGE DEBUG: MEDIA END'
                     . ' time='
-                    . round(microtime(true) - $media_start, 2)
+                    . round(
+                        microtime(true) - $media_start,
+                        2
+                    )
                     . ' sec'
                     . ' attachment_id=' . (int) $attachment_id
             );
 
             /*
-     * 6. Сохраняем исходный URL поставщика.
-     */
+         * 6. Сохраняем исходный URL поставщика.
+         */
             update_post_meta(
                 $attachment_id,
                 self::SOURCE_URL_META,
@@ -499,12 +428,12 @@ class Product_Images
             );
 
             /*
-     * 7. Финальный лог.
-     */
+         * 7. Финальный лог.
+         */
             Logger::info(
                 'IMAGE DEBUG: END'
-                    . ' attachment_id='
-                    . $attachment_id
+                    . ' attachment_id=' . $attachment_id
+                    . ' size=' . size_format($final_size)
                     . ' total='
                     . round(
                         microtime(true) - $start,
@@ -516,15 +445,266 @@ class Product_Images
             return (int) $attachment_id;
         } finally {
 
-            if (
-                is_string($tmp_file)
-                && $tmp_file !== ''
-                && file_exists($tmp_file)
-            ) {
-                @unlink($tmp_file);
+            /*
+         * Удаляем оба временных файла.
+         */
+            $files_to_delete = array_unique([
+                $original_tmp_file,
+                $tmp_file,
+            ]);
+
+            foreach ($files_to_delete as $temporary_file) {
+                if (
+                    is_string($temporary_file)
+                    && $temporary_file !== ''
+                    && is_file($temporary_file)
+                ) {
+                    @unlink($temporary_file);
+                }
             }
         }
     }
+
+
+    /**
+     * Оптимизирует JPEG и PNG через GD.
+     *
+     * JPEG:
+     * - преобразование в sRGB;
+     * - удаление метаданных и ICC-профиля;
+     * - качество 82.
+     *
+     * PNG:
+     * - сохраняет прозрачность;
+     * - удаляет метаданные;
+     * - сохраняет формат PNG.
+     *
+     * @param string $file_path Путь к файлу (передаётся по ссылке).
+     * @param string $mime_type MIME-тип (передаётся по ссылке).
+     * @param string $file_name Имя файла (передаётся по ссылке).
+     *
+     * @return true|\WP_Error
+     */
+    private function optimize_image(
+        &$file_path,
+        &$mime_type,
+        &$file_name
+    ) {
+        $original_size = filesize($file_path);
+
+        if ($original_size === false || $original_size <= 0) {
+            return new \WP_Error(
+                'image_empty',
+                'Исходное изображение пустое.'
+            );
+        }
+
+        $original_info = @getimagesize($file_path);
+
+        if (!$original_info) {
+            return new \WP_Error(
+                'image_invalid',
+                'Не удалось определить параметры изображения.'
+            );
+        }
+
+        /*
+     * Не перекодируем небольшие файлы.
+     *
+     * В них обычно нет существенной экономии,
+     * а повторное JPEG-кодирование может увеличить размер.
+     */
+        $min_size = 100 * 1024;
+
+        if ($original_size < $min_size) {
+            Logger::info(
+                'IMAGE DEBUG: OPTIMIZATION SKIPPED'
+                    . ' original=' . size_format($original_size)
+                    . ' reason=below_min_size'
+                    . ' mime=' . $mime_type
+            );
+
+            return true;
+        }
+
+        /*
+     * Определяем формат результата.
+     */
+        if ($mime_type === 'image/jpeg') {
+            $optimized_extension = 'jpg';
+            $quality = 82;
+        } elseif ($mime_type === 'image/png') {
+            $optimized_extension = 'png';
+            $quality = 82;
+        } else {
+            return new \WP_Error(
+                'unsupported_image_type',
+                'Неподдерживаемый тип изображения.'
+            );
+        }
+
+        /*
+     * Создаём отдельный временный файл.
+     */
+        $optimized_file = $file_path
+            . '.optimized.'
+            . $optimized_extension;
+
+        try {
+
+            /*
+         * 1. Открываем изображение через WordPress.
+         */
+            $image_editor = wp_get_image_editor($file_path);
+
+            if (is_wp_error($image_editor)) {
+                return new \WP_Error(
+                    'image_editor_error',
+                    $image_editor->get_error_message()
+                );
+            }
+
+            /*
+         * 2. Настраиваем качество.
+         */
+            $image_editor->set_quality($quality);
+
+            /*
+         * 3. Сохраняем в исходном формате.
+         */
+            $result = $image_editor->save(
+                $optimized_file,
+                $mime_type
+            );
+
+            if (is_wp_error($result)) {
+                return new \WP_Error(
+                    'image_save_error',
+                    $result->get_error_message()
+                );
+            }
+
+            /*
+         * 4. Проверяем созданный файл.
+         */
+            if (
+                !is_file($optimized_file)
+                || !is_readable($optimized_file)
+            ) {
+                return new \WP_Error(
+                    'optimized_file_missing',
+                    'Оптимизированный файл не создан.'
+                );
+            }
+
+            $optimized_size = filesize($optimized_file);
+
+            if ($optimized_size === false || $optimized_size <= 0) {
+                return new \WP_Error(
+                    'optimized_file_empty',
+                    'Оптимизированный файл пустой.'
+                );
+            }
+
+            /*
+         * 5. Проверяем формат и размеры результата.
+         */
+            $optimized_info = @getimagesize($optimized_file);
+
+            if (
+                !$optimized_info
+                || empty($optimized_info['mime'])
+                || $optimized_info['mime'] !== $mime_type
+            ) {
+                return new \WP_Error(
+                    'optimized_file_invalid',
+                    'Оптимизированный файл имеет неверный формат.'
+                );
+            }
+
+            if (
+                (int) $optimized_info[0] !== (int) $original_info[0]
+                || (int) $optimized_info[1] !== (int) $original_info[1]
+            ) {
+                return new \WP_Error(
+                    'optimized_dimensions_changed',
+                    'Размеры изображения изменились после оптимизации.'
+                );
+            }
+
+            /*
+         * 6. Если результат не меньше оригинала,
+         * оставляем исходный файл.
+         */
+            if ($optimized_size >= $original_size) {
+                Logger::info(
+                    'IMAGE DEBUG: OPTIMIZATION SKIPPED'
+                        . ' original=' . size_format($original_size)
+                        . ' optimized=' . size_format($optimized_size)
+                        . ' reason=not_smaller'
+                        . ' mime=' . $mime_type
+                );
+
+                return true;
+            }
+
+            /*
+         * 7. Используем оптимизированный файл.
+         *
+         * Исходник не перезаписываем.
+         */
+            $file_path = $optimized_file;
+
+            /*
+         * JPEG может получить расширение .jpg.
+         * PNG остаётся PNG.
+         */
+            $file_name = pathinfo(
+                $file_name,
+                PATHINFO_FILENAME
+            ) . '.' . $optimized_extension;
+
+            /*
+         * 8. Логируем экономию.
+         */
+            $saved_percent = round(
+                (
+                    ($original_size - $optimized_size)
+                    / $original_size
+                ) * 100,
+                1
+            );
+
+            Logger::info(
+                'IMAGE DEBUG: OPTIMIZED'
+                    . ' original=' . size_format($original_size)
+                    . ' optimized=' . size_format($optimized_size)
+                    . ' saved=' . $saved_percent . '%'
+                    . ' mime=' . $mime_type
+            );
+
+            return true;
+        } catch (\Throwable $e) {
+
+            return new \WP_Error(
+                'image_optimization_exception',
+                $e->getMessage()
+            );
+        } finally {
+
+            /*
+         * Если файл не был выбран для загрузки,
+         * удаляем его.
+         */
+            if (
+                is_file($optimized_file)
+                && $file_path !== $optimized_file
+            ) {
+                @unlink($optimized_file);
+            }
+        }
+    }
+
 
     /**
      * Получает имя файла из URL.

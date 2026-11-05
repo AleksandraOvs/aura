@@ -686,6 +686,7 @@ class Feed_Sync
             'maytoni' => 'yml',
             'citilux' => 'xml',
             'lightstar' => 'yml',
+            'crystal_lux' => 'yml',
         ];
 
 
@@ -714,9 +715,11 @@ class Feed_Sync
 
 
         /*
-     * Оба фида используют XML-структуру YML:
-     * yml_catalog → shop → offers → offer.
-     */
+ * Поддерживаемые фиды используют структуру YML:
+ * yml_catalog → shop → offers → offer.
+ *
+ * CITILUX предварительно нормализуется в эту структуру.
+ */
         $validator = new Yml_Validator();
 
         $validator->validate($file);

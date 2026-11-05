@@ -296,12 +296,22 @@ class Admin
                         name="supplier_id"
                         required>
 
+                        <option value="denkirs">
+                            Denkirs
+                        </option>
+
                         <option value="maytoni">
                             Maytoni
                         </option>
+
+                        <option value="crystal-lux">
+                            Crystal Lux
+                        </option>
+
                         <option value="citilux">
                             CITILUX
                         </option>
+
                         <option value="lightstar">
                             Lightstar
                         </option>

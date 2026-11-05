@@ -11,6 +11,7 @@ use Supplier_Importer\Suppliers\Maytoni\Maytoni_Yml_Mapper;
 use Supplier_Importer\Suppliers\Citilux\Citilux_Mapper;
 use Supplier_Importer\Suppliers\Citilux\Citilux_Yml_Category_Reader;
 use Supplier_Importer\Suppliers\Lightstar\Lightstar_Mapper;
+use Supplier_Importer\Suppliers\CrystalLux\Crystal_Lux_Yml_Mapper;
 
 class Feed_Mapper_Factory
 {
@@ -57,6 +58,22 @@ class Feed_Mapper_Factory
             }
 
             return new Maytoni_Yml_Mapper($categories);
+        }
+
+        // CRYSTAL LUX — YML:
+        if ($supplier_id === 'crystal_lux' && $format === 'yml') {
+            if ($categories === null) {
+                $category_reader = new Yml_Category_Reader();
+                $categories = $category_reader->read($file_path);
+            }
+
+            if (!is_array($categories) || empty($categories)) {
+                throw new \UnexpectedValueException(
+                    'В YML-фиде Crystal Lux не найдены категории.'
+                );
+            }
+
+            return new Crystal_Lux_Yml_Mapper($categories);
         }
 
         /*
