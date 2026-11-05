@@ -32,15 +32,6 @@ class Product_Images
             );
         }
 
-        Logger::info(
-            'IMAGE MEMORY START: '
-                . round(memory_get_usage(true) / 1024 / 1024, 2)
-                . ' MB / peak '
-                . round(memory_get_peak_usage(true) / 1024 / 1024, 2)
-                . ' MB / limit '
-                . ini_get('memory_limit')
-        );
-
         if (
             !is_array($image_urls)
             || empty($image_urls)
@@ -62,13 +53,6 @@ class Product_Images
 
         foreach ($image_urls as $index => $image_url) {
 
-            Logger::info(
-                'IMAGE DEBUG: PROCESS '
-                    . ($index + 1)
-                    . '/' . count($image_urls)
-                    . ' url=' . $image_url
-            );
-
             $image_start = microtime(true);
 
             $attachment_id = $this->get_or_download_image(
@@ -76,25 +60,23 @@ class Product_Images
                 $product->get_id()
             );
 
-            Logger::info(
-                'IMAGE DEBUG: PROCESS END '
-                    . ($index + 1)
-                    . '/' . count($image_urls)
-                    . ' time=' . round(microtime(true) - $image_start, 2)
-                    . ' sec'
-                    . ' attachment_id=' . (int) $attachment_id
-            );
+            if (is_wp_error($attachment_id)) {
+                Logger::info(
+                    'IMAGE DEBUG: IMAGE ERROR'
+                        . ' url=' . $image_url
+                        . ' error=' . $attachment_id->get_error_message()
+                );
 
-            Logger::info(
-                'IMAGE MEMORY AFTER '
-                    . ($index + 1)
-                    . ': '
-                    . round(memory_get_usage(true) / 1024 / 1024, 2)
-                    . ' MB / peak '
-                    . round(memory_get_peak_usage(true) / 1024 / 1024, 2)
-                    . ' MB / limit '
-                    . ini_get('memory_limit')
-            );
+                continue;
+            }
+
+            if (!$attachment_id || !is_numeric($attachment_id)) {
+                Logger::info(
+                    'IMAGE DEBUG: INVALID ATTACHMENT ID'
+                );
+
+                return 0;
+            }
 
             if (!$attachment_id) {
                 continue;
@@ -216,12 +198,6 @@ class Product_Images
 
         $start = microtime(true);
 
-        Logger::info(
-            'IMAGE DEBUG: START'
-                . ' url=' . $image_url
-                . ' product_id=' . $product_id
-        );
-
         /*
      * 1. Скачиваем оригинальное изображение.
      */
@@ -230,16 +206,6 @@ class Product_Images
         $tmp_file = download_url(
             $image_url,
             30
-        );
-
-        Logger::info(
-            'IMAGE DEBUG: download_url END'
-                . ' time='
-                . round(
-                    microtime(true) - $download_start,
-                    2
-                )
-                . ' sec'
         );
 
         if (is_wp_error($tmp_file)) {
@@ -267,18 +233,6 @@ class Product_Images
 
             $file_name = $this->get_file_name(
                 $image_url
-            );
-
-            Logger::info(
-                'IMAGE DEBUG: ORIGINAL'
-                    . ' url=' . $image_url
-                    . ' type=' . $mime_type
-                    . ' size='
-                    . round(
-                        $original_size / 1024 / 1024,
-                        2
-                    )
-                    . ' MB'
             );
 
             /*
@@ -406,34 +360,6 @@ class Product_Images
                                 );
                             }
 
-                            Logger::info(
-                                'IMAGE DEBUG: IMAGE OPTIMIZED'
-                                    . ' original_type=' . $mime_type
-                                    . ' final_type=image/jpeg'
-                                    . ' before='
-                                    . round(
-                                        $original_size / 1024 / 1024,
-                                        2
-                                    )
-                                    . ' MB'
-                                    . ' after='
-                                    . round(
-                                        $optimized_size / 1024 / 1024,
-                                        2
-                                    )
-                                    . ' MB'
-                                    . ' saved='
-                                    . $saved_percent
-                                    . '%'
-                                    . ' time='
-                                    . round(
-                                        microtime(true)
-                                            - $optimize_start,
-                                        2
-                                    )
-                                    . ' sec'
-                            );
-
                             /*
                  * После конвертации PNG → JPEG
                  * меняем MIME и имя файла.
@@ -502,34 +428,6 @@ class Product_Images
                                 );
                             }
 
-                            Logger::info(
-                                'IMAGE DEBUG: IMAGE OPTIMIZED'
-                                    . ' original_type=' . $mime_type
-                                    . ' final_type=image/jpeg'
-                                    . ' before='
-                                    . round(
-                                        $original_size / 1024 / 1024,
-                                        2
-                                    )
-                                    . ' MB'
-                                    . ' after='
-                                    . round(
-                                        $optimized_size / 1024 / 1024,
-                                        2
-                                    )
-                                    . ' MB'
-                                    . ' saved='
-                                    . $saved_percent
-                                    . '%'
-                                    . ' time='
-                                    . round(
-                                        microtime(true)
-                                            - $optimize_start,
-                                        2
-                                    )
-                                    . ' sec'
-                            );
-
                             $mime_type = 'image/jpeg';
 
                             $file_name = pathinfo(
@@ -539,14 +437,6 @@ class Product_Images
                         }
                     }
                 }
-            } else {
-
-                Logger::info(
-                    'IMAGE DEBUG: OPTIMIZE SKIP'
-                        . ' url=' . $image_url
-                        . ' type=' . $mime_type
-                        . ' reason=unsupported_type'
-                );
             }
 
             /*
@@ -577,6 +467,20 @@ class Product_Images
                 $product_id
             );
 
+            if (is_wp_error($attachment_id)) {
+
+                Logger::info(
+                    'IMAGE DEBUG: MEDIA ERROR'
+                        . ' time='
+                        . round(microtime(true) - $media_start, 2)
+                        . ' sec'
+                        . ' error='
+                        . $attachment_id->get_error_message()
+                );
+
+                return 0;
+            }
+
             Logger::info(
                 'IMAGE DEBUG: MEDIA END'
                     . ' time='
@@ -584,19 +488,6 @@ class Product_Images
                     . ' sec'
                     . ' attachment_id=' . (int) $attachment_id
             );
-
-            if (is_wp_error($attachment_id)) {
-
-                Logger::info(
-                    'IMAGE DEBUG: media ERROR'
-                        . ' error='
-                        . $attachment_id->get_error_message()
-                );
-
-
-
-                return 0;
-            }
 
             /*
      * 6. Сохраняем исходный URL поставщика.
