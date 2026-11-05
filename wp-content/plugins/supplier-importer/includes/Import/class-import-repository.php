@@ -520,7 +520,9 @@ class Import_Repository
     }
 
     /**
-     * Находит незавершённый автоматический YML-импорт поставщика.
+     * Находит незавершённый автоматический импорт поставщика.
+     *
+     * Поддерживает YML и XML.
      *
      * @param string $supplier_id ID поставщика.
      *
@@ -541,13 +543,14 @@ class Import_Repository
                 "SELECT *
             FROM {$this->table_name}
             WHERE supplier = %s
-                AND format = %s
+                AND format IN (%s, %s)
                 AND source = %s
                 AND status IN (%s, %s)
             ORDER BY id DESC
             LIMIT 1",
                 $supplier_id,
                 'yml',
+                'xml',
                 'cron',
                 'pending',
                 'running'

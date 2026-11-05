@@ -71,9 +71,9 @@ class Yml_Feed_Cron_Worker
                     );
                 }
 
-                if ($session->get_format() !== 'yml') {
+                if (!in_array($session->get_format(), ['yml', 'xml'], true)) {
                     throw new \RuntimeException(
-                        'Cron Worker получил сессию не формата YML.'
+                        'Cron Worker получил сессию неподдерживаемого формата.'
                     );
                 }
 

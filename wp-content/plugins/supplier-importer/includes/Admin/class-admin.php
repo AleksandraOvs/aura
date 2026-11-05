@@ -5,6 +5,7 @@ namespace Supplier_Importer\Admin;
 use Supplier_Importer\Import\Import_Repository;
 use Supplier_Importer\Suppliers\Supplier_Feed_Settings;
 use Supplier_Importer\Core\Plugin;
+use Supplier_Importer\Admin\Admin_Mappings;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -99,7 +100,11 @@ class Admin
             ? sanitize_key(wp_unslash($_GET['tab']))
             : 'import';
 
-        if (!in_array($current_tab, ['import', 'statistics', 'feeds'], true)) {
+        if (!in_array(
+            $current_tab,
+            ['import', 'statistics', 'feeds', 'mappings'],
+            true
+        )) {
             $current_tab = 'import';
         }
 
@@ -136,6 +141,14 @@ class Admin
                     class="nav-tab <?php echo $current_tab === 'feeds' ? 'nav-tab-active' : ''; ?>">
                     Настройки фидов
                 </a>
+
+                <a
+                    href="<?php echo esc_url(
+                                admin_url('admin.php?page=supplier-importer&tab=mappings')
+                            ); ?>"
+                    class="nav-tab <?php echo $current_tab === 'mappings' ? 'nav-tab-active' : ''; ?>">
+                    Сопоставления
+                </a>
             </nav>
 
             <?php if ($current_tab === 'statistics') : ?>
@@ -145,6 +158,10 @@ class Admin
             <?php elseif ($current_tab === 'feeds') : ?>
 
                 <?php $this->render_feed_settings(); ?>
+
+            <?php elseif ($current_tab === 'mappings') : ?>
+
+                <?php (new Admin_Mappings())->render(); ?>
 
             <?php else : ?>
 
@@ -281,6 +298,9 @@ class Admin
 
                         <option value="maytoni">
                             Maytoni
+                        </option>
+                        <option value="citilux">
+                            CITILUX
                         </option>
 
                     </select>

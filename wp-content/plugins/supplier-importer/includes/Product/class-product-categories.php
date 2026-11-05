@@ -33,6 +33,16 @@ class Product_Categories
             $supplier
         );
 
+        \Supplier_Importer\Core\Logger::info(
+            'CATEGORY ASSIGN DEBUG: ' . wp_json_encode([
+                'product_id'   => $product->get_id(),
+                'supplier'     => $supplier,
+                'category_path' => $category_path,
+                'new_term_ids' => $term_ids,
+                'current_ids'  => $product->get_category_ids(),
+            ], JSON_UNESCAPED_UNICODE)
+        );
+
         if (empty($term_ids)) {
             return [];
         }

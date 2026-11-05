@@ -77,55 +77,92 @@ document.body.addEventListener('added_to_cart', function (e) {
 });
 
 /* ===============================
-      SINGLE PRODUCT GALLERY
-   =============================== */
+    SINGLE PRODUCT GALLERY
+ =============================== */
 
 document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.aura-product-gallery').forEach((gallery) => {
-        const mainElement = gallery.querySelector('.aura-product-gallery__main');
-        const thumbsElement = gallery.querySelector('.aura-product-gallery__thumbs');
+
+    document.querySelectorAll('.aura-product-gallery').forEach(gallery => {
+
+        const mainElement = gallery.querySelector(
+            '.aura-product-gallery__main'
+        );
+
+        const thumbsElement = gallery.querySelector(
+            '.aura-product-gallery__thumbs'
+        );
 
         if (!mainElement || typeof Swiper === 'undefined') {
             return;
         }
 
         let thumbsSwiper = null;
+        let mainSwiper = null;
 
+        // Определяем мобильное устройство по ширине окна.
+        const mobileQuery = window.matchMedia('(max-width: 480px)');
+
+        // Начальное направление до создания слайдера.
+        const getThumbsDirection = () => {
+            return mobileQuery.matches
+                ? 'horizontal'
+                : 'vertical';
+        };
+
+        // Инициализация миниатюр.
         if (thumbsElement) {
+
             thumbsSwiper = new Swiper(thumbsElement, {
-                direction: 'horizontal',
+
+                direction: getThumbsDirection(),
+
                 slidesPerView: 4,
                 spaceBetween: 10,
+
                 watchSlidesProgress: true,
-                breakpoints: {
-                    480: {
-                        direction: 'vertical',
-                        slidesPerView: 5,
-                        spaceBetween: 10,
-                    },
-                    768: {
-                        slidesPerView: 4,
-                        spaceBetween: 12,
-                    },
-                },
+
             });
+
         }
 
-        new Swiper(mainElement, {
+        // Инициализация основного слайдера.
+        mainSwiper = new Swiper(mainElement, {
+
             slidesPerView: 1,
             spaceBetween: 10,
-            //autoHeight: true,
+
             navigation: {
                 nextEl: gallery.querySelector('.slider-next'),
                 prevEl: gallery.querySelector('.slider-prev'),
             },
+
             thumbs: thumbsSwiper
                 ? {
                     swiper: thumbsSwiper,
                 }
                 : undefined,
+
         });
+
+        // Переключение направления при изменении ширины.
+        mobileQuery.addEventListener('change', () => {
+
+            if (!thumbsSwiper) {
+                return;
+            }
+
+            thumbsSwiper.changeDirection(
+                getThumbsDirection()
+            );
+
+            thumbsSwiper.update();
+
+            mainSwiper.update();
+
+        });
+
     });
+
 });
 
 /* ===============================

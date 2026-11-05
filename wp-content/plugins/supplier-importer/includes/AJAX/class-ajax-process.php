@@ -48,6 +48,13 @@ class Ajax_Process
                 $import_id
             );
 
+            // Проверяем, что сессия импорта найдена и загружена корректно.
+            if (!$session instanceof \Supplier_Importer\Import\Import_Session) {
+                throw new RuntimeException(
+                    'Сессия импорта не найдена.'
+                );
+            }
+
             if ($session->is_finished()) {
                 wp_send_json_success([
                     'import_id' => $import_id,
@@ -60,9 +67,9 @@ class Ajax_Process
             }
 
             /*
- * YML обрабатывается отдельным пакетным механизмом.
+ * YML и XML обрабатываются отдельным пакетным механизмом.
  */
-            if ($session->get_format() === 'yml') {
+            if (in_array($session->get_format(), ['yml', 'xml'], true)) {
                 $feed_sync = new \Supplier_Importer\Suppliers\Feed_Sync();
 
                 if ($session->get_phase() === 'products') {

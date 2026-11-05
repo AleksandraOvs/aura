@@ -42,10 +42,6 @@ class Xml_Reader implements Row_Reader
      */
     private $internal_errors_enabled = false;
 
-    /**
-     * @param string $file_path     Путь к файлу.
-     * @param string $record_element Имя элемента товара.
-     */
     public function __construct($file_path, $record_element = 'offer')
     {
         $this->file_path = $file_path;
@@ -75,7 +71,6 @@ class Xml_Reader implements Row_Reader
             );
         }
 
-        // Сохраняем глобальное состояние libxml и включаем сбор ошибок.
         $this->previous_internal_errors = libxml_use_internal_errors(true);
         $this->internal_errors_enabled = true;
 
@@ -116,11 +111,6 @@ class Xml_Reader implements Row_Reader
     /**
      * Прочитать следующую запись.
      *
-     * Возвращает массив полей товара или null при нормальном
-     * завершении файла.
-     *
-     * При ошибке разбора XML выбрасывает RuntimeException.
-     *
      * @return array|string|null
      */
     public function read()
@@ -131,28 +121,14 @@ class Xml_Reader implements Row_Reader
             );
         }
 
-        // Ошибки проверяются отдельно для текущего чтения.
         libxml_clear_errors();
 
         while (true) {
             $status = $this->reader->read();
 
             if (!$status) {
-                $errors = libxml_get_errors();
+                $this->throw_if_xml_errors();
 
-                foreach ($errors as $error) {
-                    if ($error->level >= LIBXML_ERR_ERROR) {
-                        throw new \RuntimeException(
-                            sprintf(
-                                'Ошибка разбора XML/YML на строке %d: %s',
-                                $error->line,
-                                trim($error->message)
-                            )
-                        );
-                    }
-                }
-
-                // Нет ошибок — это нормальный конец файла.
                 return null;
             }
 
@@ -188,18 +164,42 @@ class Xml_Reader implements Row_Reader
     }
 
     /**
+     * Проверить ошибки XML-разбора.
+     */
+    private function throw_if_xml_errors()
+    {
+        $errors = libxml_get_errors();
+
+        foreach ($errors as $error) {
+            if ($error->level >= LIBXML_ERR_ERROR) {
+                throw new \RuntimeException(
+                    sprintf(
+                        'Ошибка разбора XML/YML на строке %d: %s',
+                        $error->line,
+                        trim($error->message)
+                    )
+                );
+            }
+        }
+    }
+
+    /**
      * Преобразовать XML-элемент в массив.
      *
-     * Атрибуты сохраняются под ключом @attributes.
-     * Текстовое содержимое — под ключом @value.
-     * Повторяющиеся дочерние элементы становятся массивами.
+     * Для description сохраняется исходная внутренняя HTML-разметка.
      *
-     * @param \DOMElement $element XML-элемент.
+     * @param \DOMElement $element
      *
      * @return array|string
      */
     private function element_to_array(\DOMElement $element)
     {
+        if ($element->localName === 'description') {
+            return [
+                '@value' => $this->get_inner_xml($element),
+            ];
+        }
+
         $result = [];
         $repeated = [];
 
@@ -249,6 +249,29 @@ class Xml_Reader implements Row_Reader
 
         return $result;
     }
+
+    /**
+     * Получить внутреннее XML/HTML-содержимое элемента.
+     *
+     * @param \DOMElement $element
+     *
+     * @return string
+     */
+    private function get_inner_xml(\DOMElement $element)
+    {
+        $content = '';
+
+        foreach ($element->childNodes as $child) {
+            $html = $element->ownerDocument->saveHTML($child);
+
+            if ($html !== false) {
+                $content .= $html;
+            }
+        }
+
+        return trim($content);
+    }
+
     /**
      * Закрыть файл и восстановить состояние libxml.
      */

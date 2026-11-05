@@ -100,9 +100,9 @@ class Installer
             cursor BIGINT UNSIGNED NOT NULL DEFAULT 0,
 
             sync_cursor BIGINT UNSIGNED NOT NULL DEFAULT 0,
-sync_checked BIGINT UNSIGNED NOT NULL DEFAULT 0,
-sync_unpublished BIGINT UNSIGNED NOT NULL DEFAULT 0,
-sync_republished BIGINT UNSIGNED NOT NULL DEFAULT 0,
+            sync_checked BIGINT UNSIGNED NOT NULL DEFAULT 0,
+            sync_unpublished BIGINT UNSIGNED NOT NULL DEFAULT 0,
+            sync_republished BIGINT UNSIGNED NOT NULL DEFAULT 0,
 
             started_at DATETIME NULL,
             finished_at DATETIME NULL,

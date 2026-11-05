@@ -17,6 +17,7 @@ use Supplier_Importer\Admin\Admin;
 use Supplier_Importer\Suppliers\Denkirs\Denkirs;
 use Supplier_Importer\Suppliers\Maytoni\Maytoni;
 use Supplier_Importer\Suppliers\CrystalLux\Crystal_Lux;
+use Supplier_Importer\Suppliers\Citilux\Citilux;
 use Supplier_Importer\Suppliers\Supplier_Manager;
 use Supplier_Importer\Suppliers\Supplier_Feed_Scheduler;
 use Supplier_Importer\Suppliers\Feed_Sync;
@@ -80,6 +81,10 @@ class Plugin
 
         self::$supplier_manager->register(
             new Crystal_Lux()
+        );
+
+        self::$supplier_manager->register(
+            new Citilux()
         );
     }
 

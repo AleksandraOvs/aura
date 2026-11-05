@@ -228,4 +228,97 @@ class Mapping_Repository
 
         return $mappings;
     }
+
+
+    /**
+     * Найти сопоставление с учётом глобальных правил.
+     *
+     * Приоритет:
+     * 1. Индивидуальное правило поставщика.
+     * 2. Глобальное правило (*).
+     *
+     * @param string $supplier
+     * @param string $type
+     * @param string $source_value
+     * @param string $source_parent
+     *
+     * @return array|null
+     */
+    public function find_with_fallback(
+        $supplier,
+        $type,
+        $source_value,
+        $source_parent = ''
+    ) {
+        // Сначала ищем индивидуальное правило.
+        $mapping = $this->find(
+            $supplier,
+            $type,
+            $source_value,
+            $source_parent
+        );
+
+        if ($mapping) {
+            return $mapping;
+        }
+
+        // Если индивидуального нет — ищем глобальное.
+        return $this->find(
+            '*',
+            $type,
+            $source_value,
+            $source_parent
+        );
+    }
+
+    /**
+     * Получить индивидуальные и глобальные сопоставления.
+     *
+     * Индивидуальные правила имеют приоритет над глобальными.
+     *
+     * @param string $supplier
+     * @param string $type
+     *
+     * @return array
+     */
+    public function get_by_supplier_with_fallback(
+        $supplier,
+        $type = ''
+    ) {
+        $global_mappings = $this->get_by_supplier(
+            '*',
+            $type
+        );
+
+        $supplier_mappings = $this->get_by_supplier(
+            $supplier,
+            $type
+        );
+
+        $result = [];
+
+        // Сначала добавляем глобальные правила.
+        foreach ($global_mappings as $mapping) {
+            $key = serialize([
+                $mapping['type'],
+                $mapping['source_parent'],
+                $mapping['source_value'],
+            ]);
+
+            $result[$key] = $mapping;
+        }
+
+        // Индивидуальные правила перекрывают глобальные.
+        foreach ($supplier_mappings as $mapping) {
+            $key = serialize([
+                $mapping['type'],
+                $mapping['source_parent'],
+                $mapping['source_value'],
+            ]);
+
+            $result[$key] = $mapping;
+        }
+
+        return array_values($result);
+    }
 }

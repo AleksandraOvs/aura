@@ -28,6 +28,16 @@ class Ajax_Mapping
         );
 
         add_action(
+            'wp_ajax_supplier_mapping_get_attributes',
+            [$this, 'get_attributes']
+        );
+
+        add_action(
+            'wp_ajax_supplier_mapping_save_attributes',
+            [$this, 'save_attributes']
+        );
+
+        add_action(
             'wp_ajax_supplier_mapping_save',
             [$this, 'save_mappings']
         );
@@ -173,6 +183,10 @@ class Ajax_Mapping
             $saved = 0;
 
             foreach ($mappings as $mapping) {
+
+                if (!is_array($mapping)) {
+                    continue;
+                }
 
                 $source_value = isset(
                     $mapping['source_value']
@@ -602,6 +616,191 @@ class Ajax_Mapping
 
             wp_send_json_success([
                 'mappings' => $mappings,
+            ]);
+        } catch (\Throwable $e) {
+
+            wp_send_json_error(
+                [
+                    'message' => $e->getMessage(),
+                ],
+                400
+            );
+        }
+    }
+
+    /**
+     * Возвращает сохранённые сопоставления названий атрибутов.
+     */
+    public function get_attributes()
+    {
+        try {
+            $this->check_permissions();
+            $this->check_nonce();
+
+            $supplier = isset($_POST['supplier'])
+                ? sanitize_key(
+                    wp_unslash($_POST['supplier'])
+                )
+                : '';
+
+            if ($supplier === '') {
+                throw new RuntimeException(
+                    'Не указан поставщик.'
+                );
+            }
+
+            $repository =
+                new \Supplier_Importer\Import\Mapping_Repository();
+
+            $rows = $repository->get_by_supplier(
+                $supplier,
+                'attribute'
+            );
+
+            $mappings = [];
+
+            foreach ($rows as $row) {
+
+                $target_id = absint(
+                    $row['target_id']
+                );
+
+                if (!$target_id) {
+                    continue;
+                }
+
+                $attribute = wc_get_attribute($target_id);
+
+                if (!$attribute || is_wp_error($attribute)) {
+                    continue;
+                }
+
+                $mappings[$row['source_value']] = [
+                    'target_id'   => $target_id,
+                    'target_name' => $attribute->name,
+                    'target_slug' => $attribute->slug,
+                ];
+            }
+
+            wp_send_json_success([
+                'mappings' => $mappings,
+            ]);
+        } catch (\Throwable $e) {
+
+            wp_send_json_error(
+                [
+                    'message' => $e->getMessage(),
+                ],
+                400
+            );
+        }
+    }
+    /**
+     * Сохраняет сопоставления названий атрибутов.
+     */
+    public function save_attributes()
+    {
+        try {
+            $this->check_permissions();
+            $this->check_nonce();
+
+            $supplier = isset($_POST['supplier'])
+                ? sanitize_key(
+                    wp_unslash($_POST['supplier'])
+                )
+                : '';
+
+            $mappings_json = isset($_POST['mappings'])
+                ? wp_unslash($_POST['mappings'])
+                : '';
+
+            if ($supplier === '') {
+                throw new RuntimeException(
+                    'Не указан поставщик.'
+                );
+            }
+
+            if ($mappings_json === '') {
+                throw new RuntimeException(
+                    'Не переданы сопоставления.'
+                );
+            }
+
+            $mappings = json_decode(
+                $mappings_json,
+                true
+            );
+
+            if (!is_array($mappings)) {
+                throw new RuntimeException(
+                    'Некорректный формат сопоставлений.'
+                );
+            }
+
+            if (
+                !function_exists('wc_get_attribute')
+                || !function_exists('wc_get_attribute_taxonomies')
+            ) {
+                throw new RuntimeException(
+                    'WooCommerce недоступен.'
+                );
+            }
+
+            $attributes = wc_get_attribute_taxonomies();
+            $valid_attribute_ids = [];
+
+            foreach ($attributes as $attribute) {
+                $valid_attribute_ids[] = (int) $attribute->attribute_id;
+            }
+
+            $repository =
+                new \Supplier_Importer\Import\Mapping_Repository();
+
+            $saved = 0;
+
+            foreach ($mappings as $mapping) {
+
+                if (!is_array($mapping)) {
+                    continue;
+                }
+
+                $source_value = isset($mapping['source_value'])
+                    ? sanitize_text_field(
+                        $mapping['source_value']
+                    )
+                    : '';
+
+                $target_id = isset($mapping['target_id'])
+                    ? absint($mapping['target_id'])
+                    : 0;
+
+                if (
+                    $source_value === ''
+                    || !$target_id
+                    || !in_array($target_id, $valid_attribute_ids, true)
+                ) {
+                    continue;
+                }
+
+                $result = $repository->save(
+                    $supplier,
+                    'attribute',
+                    $source_value,
+                    $target_id,
+                    ''
+                );
+
+                if ($result) {
+                    $saved++;
+                }
+            }
+
+            wp_send_json_success([
+                'saved' => $saved,
+                'message' => sprintf(
+                    'Сохранено сопоставлений названий атрибутов: %d',
+                    $saved
+                ),
             ]);
         } catch (\Throwable $e) {
 

@@ -6,40 +6,23 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-use RuntimeException;
-use Supplier_Importer\Suppliers\Maytoni\Maytoni_Mapper;
-
 class Yml_Analyzer
 {
     /**
-     * Алиасы названий параметров из YML.
-     *
-     * Ключ — название из YML.
-     * Значение — исходный ключ, используемый Maytoni_Mapper.
+     * Максимальное количество значений одного атрибута.
      */
-    private $parameter_aliases = [
-        'Коллекция' => 'collection_name',
-        'Серия' => 'series_name',
-        'Гарантия (лет)' => 'Гарантия',
-        'Мощность (W)' => 'Мощность',
-        'Цветовая температура (K)' => 'ЦветоваяТемпература',
-        'IP' => 'ingress_protection_rating',
-    ];
-
+    private const MAX_ATTRIBUTE_VALUES = 100;
     /**
      * Проанализировать YML-файл.
      *
      * @param string $file_path Путь к YML-файлу.
-     * @param array  $categories Категории [ID => название].
+     * @param array  $categories Справочник категорий.
      *
      * @return array
      */
+
     public function analyze($file_path, array $categories)
     {
-        $maytoni_mapper = new Maytoni_Mapper();
-
-        $attribute_mapping = $maytoni_mapper->get_attribute_mapping();
-
         $category_counts = [];
         $attribute_counts = [];
 
@@ -61,7 +44,6 @@ class Yml_Analyzer
 
                 $this->count_attributes(
                     $record,
-                    $attribute_mapping,
                     $attribute_counts
                 );
             }
@@ -107,30 +89,33 @@ class Yml_Analyzer
             return;
         }
 
-        $category = $categories[$category_id] ?? $category_id;
+        $category = $categories[$category_id] ?? null;
 
-        // Категория может быть представлена массивом.
         if (is_array($category)) {
-            $category = $category['name']
-                ?? $category['@value']
+            $category_name = $category['path']
+                ?? $category['name']
                 ?? '';
+        } elseif (is_scalar($category)) {
+            // Временная совместимость со старым форматом справочника.
+            $category_name = (string) $category;
+        } else {
+            $category_name = $category_id;
         }
 
-        if (!is_scalar($category)) {
-            return;
-        }
-
-        $category_name = trim((string) $category);
+        $category_name = trim($category_name);
 
         if ($category_name === '') {
             return;
         }
 
         if (!isset($category_counts[$category_name])) {
-            $category_counts[$category_name] = 0;
+            $category_counts[$category_name] = [
+                'category_id' => $category_id,
+                'count' => 0,
+            ];
         }
 
-        $category_counts[$category_name]++;
+        $category_counts[$category_name]['count']++;
     }
 
     /**
@@ -138,7 +123,6 @@ class Yml_Analyzer
      */
     private function count_attributes(
         array $record,
-        array $attribute_mapping,
         array &$attribute_counts
     ) {
         if (!isset($record['param'])) {
@@ -147,8 +131,6 @@ class Yml_Analyzer
 
         $params = $record['param'];
 
-        // Один param может быть представлен ассоциативным массивом,
-        // несколько param — массивом таких массивов.
         if (
             !is_array($params)
             || !isset($params[0])
@@ -169,18 +151,11 @@ class Yml_Analyzer
                 continue;
             }
 
-            $source = $this->normalize_parameter_name(
-                trim((string) $name)
-            );
+            $source = trim((string) $name);
 
-            if (
-                $source === ''
-                || !isset($attribute_mapping[$source])
-            ) {
+            if ($source === '') {
                 continue;
             }
-
-            $taxonomy = $attribute_mapping[$source];
 
             $value = $param['@value'] ?? '';
 
@@ -196,35 +171,42 @@ class Yml_Analyzer
 
             if (!isset($attribute_counts[$source])) {
                 $attribute_counts[$source] = [
-                    'taxonomy' => $taxonomy,
                     'count' => 0,
                     'values' => [],
                 ];
             }
 
-            // Количество товаров с характеристикой.
-            // Один товар учитывается для source только один раз.
             if (!isset($counted_sources[$source])) {
                 $attribute_counts[$source]['count']++;
                 $counted_sources[$source] = true;
             }
+            $values = &$attribute_counts[$source]['values'];
 
-            if (!isset(
-                $attribute_counts[$source]['values'][$value]
-            )) {
-                $attribute_counts[$source]['values'][$value] = 0;
+            if (isset($values[$value])) {
+                $values[$value]++;
+            } elseif (
+                count($values) < self::MAX_ATTRIBUTE_VALUES
+            ) {
+                $values[$value] = 1;
+            } else {
+                $min_count = min($values);
+
+                if ($min_count > 1) {
+                    $min_value = array_search(
+                        $min_count,
+                        $values,
+                        true
+                    );
+
+                    if ($min_value !== false) {
+                        unset($values[$min_value]);
+                        $values[$value] = 1;
+                    }
+                }
             }
 
-            $attribute_counts[$source]['values'][$value]++;
+            unset($values);
         }
-    }
-
-    /**
-     * Нормализовать название параметра.
-     */
-    private function normalize_parameter_name($name)
-    {
-        return $this->parameter_aliases[$name] ?? $name;
     }
 
     /**
@@ -234,10 +216,11 @@ class Yml_Analyzer
     {
         $result = [];
 
-        foreach ($category_counts as $source => $count) {
+        foreach ($category_counts as $source => $data) {
             $result[] = [
                 'source' => $source,
-                'count' => $count,
+                'category_id' => $data['category_id'],
+                'count' => $data['count'],
             ];
         }
 
@@ -271,7 +254,6 @@ class Yml_Analyzer
 
             $result[] = [
                 'source' => $source,
-                'taxonomy' => $attribute['taxonomy'],
                 'count' => $attribute['count'],
                 'values' => $values,
             ];

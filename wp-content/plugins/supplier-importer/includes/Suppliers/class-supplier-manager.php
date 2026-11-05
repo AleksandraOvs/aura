@@ -63,6 +63,10 @@ class Supplier_Manager
     public function detect($headers)
     {
         foreach ($this->suppliers as $supplier) {
+            if (!method_exists($supplier, 'supports')) {
+                continue;
+            }
+
             if ($supplier->supports($headers)) {
                 return $supplier;
             }

@@ -95,9 +95,7 @@ class Product_Attributes
             return false;
         }
 
-        $attribute_id = wc_attribute_taxonomy_id_by_name(
-            'pa_' . $slug
-        );
+        $attribute_id = wc_attribute_taxonomy_id_by_name($slug);
 
         if (!$attribute_id) {
             $attribute_id = wc_create_attribute([
@@ -156,8 +154,14 @@ class Product_Attributes
 
         $attribute = new WC_Product_Attribute();
 
+        $attribute_slug = preg_replace(
+            '/^pa_/',
+            '',
+            $taxonomy_name
+        );
+
         $attribute->set_id(
-            wc_attribute_taxonomy_id_by_name($taxonomy_name)
+            wc_attribute_taxonomy_id_by_name($attribute_slug)
         );
 
         $attribute->set_name($taxonomy_name);

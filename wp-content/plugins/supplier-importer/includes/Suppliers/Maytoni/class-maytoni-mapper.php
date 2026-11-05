@@ -9,14 +9,24 @@ if (!defined('ABSPATH')) {
 use Supplier_Importer\Product\Product_Data;
 use Supplier_Importer\Import\Mapping_Repository;
 use InvalidArgumentException;
+use Supplier_Importer\Import\Mapping_Resolver;
 
 class Maytoni_Mapper
 {
     private $mapping_repository;
 
-    public function __construct()
+    private $mapping_resolver;
+
+    private $use_global_mappings = false;
+
+    public function __construct($use_global_mappings = false)
     {
         $this->mapping_repository = new Mapping_Repository();
+        $this->mapping_resolver = new Mapping_Resolver(
+            $this->mapping_repository
+        );
+
+        $this->use_global_mappings = (bool) $use_global_mappings;
     }
 
     public function map($row)
@@ -124,12 +134,19 @@ class Maytoni_Mapper
             return '';
         }
 
-        $mapping = $this->mapping_repository->find(
-            'maytoni',
-            'category',
-            $category,
-            ''
-        );
+        if ($this->use_global_mappings) {
+            $mapping = $this->mapping_resolver->resolve_category(
+                'maytoni',
+                $category
+            );
+        } else {
+            $mapping = $this->mapping_repository->find(
+                'maytoni',
+                'category',
+                $category,
+                ''
+            );
+        }
 
         if (
             is_array($mapping)
@@ -252,6 +269,9 @@ class Maytoni_Mapper
 
     private function get_attributes($row)
     {
+        if ($this->use_global_mappings) {
+            return $this->get_yml_attributes($row);
+        }
         $mapping = $this->get_attribute_mapping();
 
         $attributes = [];
@@ -281,6 +301,158 @@ class Maytoni_Mapper
 
         return $attributes;
     }
+
+    /**
+     * Собрать атрибуты YML через систему сопоставлений.
+     */
+    private function get_yml_attributes($row)
+    {
+        $source_attributes = $row['_supplier_attributes'] ?? [];
+
+        if (!is_array($source_attributes)) {
+            return [];
+        }
+
+        $attributes = [];
+
+        foreach ($source_attributes as $source => $value) {
+            $source = trim((string) $source);
+            $value = trim((string) $value);
+
+            if ($source === '' || $value === '') {
+                continue;
+            }
+
+            // Ищем сопоставление исходного названия атрибута.
+            $mapping = $this->mapping_resolver->resolve_attribute(
+                'maytoni',
+                $source
+            );
+
+            $attribute = null;
+
+            if (
+                is_array($mapping)
+                && !empty($mapping['target_id'])
+                && function_exists('wc_get_attribute')
+            ) {
+                $attribute = wc_get_attribute(
+                    (int) $mapping['target_id']
+                );
+            }
+
+            if (
+                $attribute
+                && !empty($attribute->attribute_name)
+            ) {
+                $taxonomy = wc_attribute_taxonomy_name(
+                    $attribute->attribute_name
+                );
+
+                $label = !empty($attribute->attribute_label)
+                    ? $attribute->attribute_label
+                    : $source;
+            } else {
+                // Если сопоставления нет, используем исходное название.
+                // Product_Attributes сможет создать атрибут автоматически.
+                $slug = wc_sanitize_taxonomy_name($source);
+
+                if ($slug === '') {
+                    continue;
+                }
+
+                $taxonomy = wc_attribute_taxonomy_name($slug);
+                $label = $source;
+            }
+
+            // Обрабатываем значения по отдельности, чтобы каждое
+            // из них могло иметь собственное сопоставление с термином.
+            $mapped_values = [];
+
+            $values = preg_split('/[,;]/', $value);
+
+            foreach ($values as $source_value) {
+                $source_value = trim($source_value);
+
+                if ($source_value === '') {
+                    continue;
+                }
+
+                $value_mapping = $this->mapping_resolver
+                    ->resolve_attribute_value(
+                        'maytoni',
+                        $source_value,
+                        $source
+                    );
+
+                if (
+                    is_array($value_mapping)
+                    && !empty($value_mapping['target_id'])
+                ) {
+                    $term = get_term(
+                        (int) $value_mapping['target_id'],
+                        $taxonomy
+                    );
+
+                    if ($term && !is_wp_error($term)) {
+                        $source_value = $term->name;
+                    }
+                }
+
+                if (!in_array($source_value, $mapped_values, true)) {
+                    $mapped_values[] = $source_value;
+                }
+            }
+
+            if (empty($mapped_values)) {
+                continue;
+            }
+
+            $mapped_value = implode(', ', $mapped_values);
+
+            // Несколько исходных параметров могут быть направлены
+            // в один атрибут WooCommerce.
+            if (!isset($attributes[$taxonomy])) {
+                $attributes[$taxonomy] = [
+                    'label' => $label,
+                    'value' => $mapped_value,
+                ];
+
+                continue;
+            }
+
+            $attributes[$taxonomy]['value'] = $this->merge_values(
+                $attributes[$taxonomy]['value'],
+                $mapped_value
+            );
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * Объединить значения без повторов.
+     */
+    private function merge_values($first, $second)
+    {
+        $values = [];
+
+        foreach ([$first, $second] as $source) {
+            foreach (preg_split('/[,;]/', (string) $source) as $value) {
+                $value = trim($value);
+
+                if (
+                    $value !== ''
+                    && !in_array($value, $values, true)
+                ) {
+                    $values[] = $value;
+                }
+            }
+        }
+
+        return implode(', ', $values);
+    }
+
     private function get_mapped_attribute_value(
         $source,
         $value,

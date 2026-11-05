@@ -20,15 +20,16 @@ class Yml_Import_Processor
     private $repository;
     private $error_repository;
     private $on_success;
+    private $attribute_mapper;
 
     public function __construct(
         Import_Session $session,
         Feed_Mapper $mapper,
         callable $on_success = null
     ) {
-        if ($session->get_format() !== 'yml') {
+        if (!in_array($session->get_format(), ['yml', 'xml'], true)) {
             throw new \InvalidArgumentException(
-                'Yml_Import_Processor предназначен только для YML.'
+                'Yml_Import_Processor поддерживает только YML и XML.'
             );
         }
 
@@ -37,6 +38,8 @@ class Yml_Import_Processor
 
         $this->reader = new Jsonl_Reader();
         $this->product_importer = new Product_Importer();
+
+        $this->attribute_mapper = new Feed_Attribute_Mapper();
 
         $this->repository = new Import_Repository();
         $this->error_repository = new Import_Error_Repository();
@@ -151,17 +154,19 @@ class Yml_Import_Processor
         } catch (\Throwable $e) {
             $this->session->fail();
 
-            $this->repository->update(
-                $this->session
-            );
-
-            Logger::error(
-                'Ошибка пакетного YML-импорта.',
-                [
-                    'import_id' => $this->session->get_import_id(),
-                    'message'   => $e->getMessage(),
-                ]
-            );
+            try {
+                $this->repository->update(
+                    $this->session
+                );
+            } catch (\Throwable $storage_error) {
+                Logger::error(
+                    'Не удалось сохранить статус failed после ошибки YML-импорта.',
+                    [
+                        'import_id' => $this->session->get_import_id(),
+                        'message'   => $storage_error->getMessage(),
+                    ]
+                );
+            }
 
             return $this->get_result([
                 'fatal_error' => $e->getMessage(),
@@ -205,6 +210,26 @@ class Yml_Import_Processor
             ) {
                 throw new \UnexpectedValueException(
                     'YML-маппер не вернул Product_Data.'
+                );
+            }
+
+            /*
+ * Преобразуем исходные параметры фида
+ * в глобальные атрибуты WooCommerce.
+ */
+            if ($product_data->get_supplier() === 'citilux') {
+                $product_attributes = $this->attribute_mapper->map(
+                    $product_data->get_attributes(),
+                    $product_data->get_supplier()
+                );
+
+                $product_data = \Supplier_Importer\Product\Product_Data::from_array(
+                    array_merge(
+                        $product_data->to_array(),
+                        [
+                            'attributes' => $product_attributes,
+                        ]
+                    )
                 );
             }
         } catch (\Throwable $e) {

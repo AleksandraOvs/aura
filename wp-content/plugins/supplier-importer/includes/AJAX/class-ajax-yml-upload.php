@@ -73,14 +73,9 @@ class Ajax_Yml_Upload
         }
 
         // Проверка ошибки загрузки.
-        if (
-            !isset($upload['error'])
-            || $upload['error'] !== UPLOAD_ERR_OK
-        ) {
+        if ($upload['error'] !== UPLOAD_ERR_OK) {
             wp_send_json_error([
-                'message' => $this->get_upload_error(
-                    $upload['error'] ?? UPLOAD_ERR_NO_FILE
-                ),
+                'message' => $this->get_upload_error($upload['error']),
             ], 400);
         }
 
@@ -157,10 +152,10 @@ class Ajax_Yml_Upload
             $settings = Supplier_Feed_Settings::get($supplier_id);
             $settings['format'] = 'yml';
 
-            // Полноценный импорт и синхронизация.
+            // Подготовка YML к пакетному импорту.
             $feed_sync = new Feed_Sync();
 
-            $result = $feed_sync->process_feed_file(
+            $result = $feed_sync->prepare_yml_import(
                 $supplier_id,
                 $file_path,
                 $settings,
@@ -181,14 +176,13 @@ class Ajax_Yml_Upload
         }
 
         wp_send_json_success([
-            'import_id' => $result['import_id'],
+            'import_id' => (int) $result['import_id'],
             'status'    => $result['status'],
-            'result'    => [
-                'total'   => (int) $result['result']['total'],
-                'created' => (int) $result['result']['created'],
-                'updated' => (int) $result['result']['updated'],
-                'skipped' => (int) $result['result']['skipped'],
-                'errors'  => (int) $result['result']['errors'],
+            'phase'     => $result['phase'],
+            'total'     => (int) $result['total'],
+            'analysis'  => $result['analysis'],
+            'supplier'  => [
+                'id' => $supplier_id,
             ],
         ]);
     }

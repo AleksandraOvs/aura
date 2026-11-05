@@ -23,7 +23,7 @@ class Maytoni_Yml_Mapper implements Feed_Mapper
     public function __construct(array $categories = [])
     {
         $this->categories = $categories;
-        $this->mapper = new Maytoni_Mapper();
+        $this->mapper = new Maytoni_Mapper(true);
     }
 
     public function get_format()
@@ -32,16 +32,21 @@ class Maytoni_Yml_Mapper implements Feed_Mapper
     }
 
     /**
-     * Преобразовать YML offer в существующий формат Maytoni CSV mapper.
+     * Преобразовать YML offer в существующий формат Maytoni mapper.
      */
     public function map(array $record)
     {
         $attributes = $record['@attributes'] ?? [];
 
-        $params = $this->extract_params($record['param'] ?? []);
+        $params = $this->extract_params(
+            $record['param'] ?? []
+        );
+        $source_params = $params;
+
+
 
         // Приводим известные названия параметров YML
-        // к ключам, которые ожидает существующий Maytoni_Mapper.
+        // к ключам, которые ожидает Maytoni_Mapper.
         $param_aliases = [
             'Коллекция' => 'collection_name',
             'Серия' => 'series_name',
@@ -52,25 +57,43 @@ class Maytoni_Yml_Mapper implements Feed_Mapper
         ];
 
         foreach ($param_aliases as $source => $target) {
-            if (
-                isset($params[$source])
-                && !isset($params[$target])
-            ) {
+            if (!isset($params[$source])) {
+                continue;
+            }
+
+            if (isset($params[$target])) {
+                $params[$target] = $this->merge_values(
+                    $params[$target],
+                    $params[$source]
+                );
+            } else {
                 $params[$target] = $params[$source];
             }
         }
 
         $row = [];
 
+        $row['_supplier_attributes'] = $source_params;
+
         $row['id'] = $attributes['id'] ?? '';
-        $row['vendorCode'] = $this->scalar($record['vendorCode'] ?? '');
-        $row['name'] = $this->scalar($record['name'] ?? '');
-        $row['url'] = $this->scalar($record['url'] ?? '');
-        $row['price'] = $this->scalar($record['price'] ?? '');
+        $row['vendorCode'] = $this->scalar(
+            $record['vendorCode'] ?? ''
+        );
+        $row['name'] = $this->scalar(
+            $record['name'] ?? ''
+        );
+        $row['url'] = $this->scalar(
+            $record['url'] ?? ''
+        );
+        $row['price'] = $this->scalar(
+            $record['price'] ?? ''
+        );
         $row['description'] = $this->scalar(
             $record['description'] ?? ''
         );
-        $row['barcode'] = $this->scalar($record['barcode'] ?? '');
+        $row['barcode'] = $this->scalar(
+            $record['barcode'] ?? ''
+        );
 
         $row['brand_name'] = $params['Бренд']
             ?? $this->scalar($record['vendor'] ?? '');
@@ -79,8 +102,19 @@ class Maytoni_Yml_Mapper implements Feed_Mapper
             $record['categoryId'] ?? ''
         );
 
-        $row['Категория'] = $this->categories[$category_id]
-            ?? '';
+        $category = $this->categories[$category_id] ?? null;
+
+        if (is_array($category)) {
+            $row['Категория'] = $category['path']
+                ?? $category['name']
+                ?? '';
+        } elseif (is_scalar($category)) {
+            // Совместимость со старым форматом справочника.
+            $row['Категория'] = (string) $category;
+        } else {
+            $row['Категория'] = '';
+        }
+
         \Supplier_Importer\Core\Logger::info(
             'MAYTONI YML ROW DEBUG',
             [
@@ -105,24 +139,27 @@ class Maytoni_Yml_Mapper implements Feed_Mapper
             $record['instruction'] ?? ''
         );
 
-        // Сохраняем изображения в том порядке,
-        // в котором они указаны в фиде.
-        $pictures = $this->as_list($record['picture'] ?? []);
+        // Сохраняем изображения в исходном порядке.
+        $pictures = $this->as_list(
+            $record['picture'] ?? []
+        );
 
         foreach ($pictures as $index => $picture) {
-            $row['Фото' . ($index + 1)] = $this->scalar($picture);
+            $row['Фото' . ($index + 1)] = $this->scalar(
+                $picture
+            );
         }
 
-        // Переносим параметры в поля, которые уже
-        // использует существующий Maytoni_Mapper.
+        // Переносим параметры в поля Maytoni_Mapper.
         foreach ($params as $name => $value) {
             if (!array_key_exists($name, $row)) {
                 $row[$name] = $value;
             }
         }
 
-        // Цена может отсутствовать у отдельных записей.
-        // Не подставляем искусственный ноль.
+
+        // Не подставляем искусственный ноль,
+        // если цена отсутствует.
         if ($row['price'] === '') {
             $row['price'] = null;
         }
@@ -140,10 +177,13 @@ class Maytoni_Yml_Mapper implements Feed_Mapper
 
     /**
      * Собрать параметры из элементов param.
+     *
+     * Повторяющиеся параметры объединяются через запятую.
      */
     private function extract_params($source)
     {
         $params = [];
+
 
         foreach ($this->as_list($source) as $item) {
             if (!is_array($item)) {
@@ -151,7 +191,9 @@ class Maytoni_Yml_Mapper implements Feed_Mapper
             }
 
             $attributes = $item['@attributes'] ?? [];
+
             $name = isset($attributes['name'])
+                && is_scalar($attributes['name'])
                 ? trim((string) $attributes['name'])
                 : '';
 
@@ -161,12 +203,46 @@ class Maytoni_Yml_Mapper implements Feed_Mapper
 
             $value = $this->scalar($item);
 
-            if ($value !== '') {
-                $params[$name] = $value;
+            if ($value === '') {
+                continue;
             }
+
+            if (!isset($params[$name])) {
+                $params[$name] = $value;
+                continue;
+            }
+
+            $params[$name] = $this->merge_values(
+                $params[$name],
+                $value
+            );
         }
 
         return $params;
+    }
+
+    /**
+     * Объединить значения через запятую без повторов.
+     */
+    private function merge_values($first, $second)
+    {
+        $values = [];
+
+        foreach ([$first, $second] as $source) {
+            foreach (explode(',', (string) $source) as $value) {
+                $value = trim($value);
+
+                if ($value === '') {
+                    continue;
+                }
+
+                if (!in_array($value, $values, true)) {
+                    $values[] = $value;
+                }
+            }
+        }
+
+        return implode(', ', $values);
     }
 
     /**
@@ -177,7 +253,6 @@ class Maytoni_Yml_Mapper implements Feed_Mapper
         array $record,
         array $attributes
     ) {
-        // Явно недоступный товар считаем отсутствующим на складе.
         if (
             isset($attributes['available'])
             && strtolower((string) $attributes['available']) === 'false'
@@ -238,8 +313,6 @@ class Maytoni_Yml_Mapper implements Feed_Mapper
             return [$value];
         }
 
-        // Массив XML-элемента с атрибутами — это один элемент,
-        // а не список повторяющихся элементов.
         if (
             array_key_exists('@attributes', $value)
             || array_key_exists('@value', $value)

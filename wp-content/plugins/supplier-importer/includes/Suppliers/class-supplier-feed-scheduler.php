@@ -285,6 +285,12 @@ class Supplier_Feed_Scheduler
 
                     $session = $repository->load_session($import_id);
 
+                    if (!$session instanceof \Supplier_Importer\Import\Import_Session) {
+                        throw new \RuntimeException(
+                            'Сессия импорта не найдена.'
+                        );
+                    }
+
                     if (!$session->is_finished()) {
                         $session->fail();
                         $repository->update($session);

@@ -29,88 +29,83 @@ document.addEventListener('DOMContentLoaded', function () {
         '#supplier-import-errors-list'
     );
 
-    if (
-        !form
-        || !fileInput
-        || !info
-        || !progressBlock
-        || !progressBar
-        || !progressPercent
-        || !progressStats
-        || !startButton
-    ) {
-        console.warn(
-            'CSV import form elements not found.'
-        );
-    } else {
-        console.log('SUPPLIER IMPORTER FORM HANDLER INIT');
-
-        // Здесь пока оставляем существующий form.addEventListener(...)
-    }
     let currentImportId = null;
     let lastErrorsCount = 0;
-    console.log('SUPPLIER IMPORTER FORM HANDLER INIT');
-    form.addEventListener('submit', function (event) {
-        event.preventDefault();
 
-        const file = fileInput.files[0];
 
-        if (!file) {
-            return;
-        }
+    if (
+        form
+        && fileInput
+        && info
+        && progressBlock
+        && progressBar
+        && progressPercent
+        && progressStats
+        && startButton
+    ) {
+        console.log('SUPPLIER IMPORTER FORM HANDLER INIT');
 
-        startButton.disabled = true;
-        startButton.textContent = 'Создаём импорт...';
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
 
-        info.hidden = false;
-        info.textContent = 'Загружаем CSV-файл...';
+            const file = fileInput.files[0];
 
-        const formData = new FormData();
-
-        formData.append(
-            'action',
-            'supplier_import_start'
-        );
-
-        formData.append(
-            'nonce',
-            supplierImporter.nonce
-        );
-
-        formData.append(
-            'file',
-            file
-        );
-
-        fetch(
-            supplierImporter.ajaxUrl,
-            {
-                method: 'POST',
-                body: formData
+            if (!file) {
+                return;
             }
-        )
-            .then(function (response) {
-                return response.json();
-            })
-            .then(function (result) {
 
-                if (!result.success) {
-                    throw new Error(
-                        result.data?.message
-                        || 'Не удалось создать импорт.'
-                    );
+            startButton.disabled = true;
+            startButton.textContent = 'Создаём импорт...';
+
+            info.hidden = false;
+            info.textContent = 'Загружаем CSV-файл...';
+
+            const formData = new FormData();
+
+            formData.append(
+                'action',
+                'supplier_import_start'
+            );
+
+            formData.append(
+                'nonce',
+                supplierImporter.nonce
+            );
+
+            formData.append(
+                'file',
+                file
+            );
+
+            fetch(
+                supplierImporter.ajaxUrl,
+                {
+                    method: 'POST',
+                    body: formData
                 }
+            )
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (result) {
 
-                const data = result.data;
-                currentImportId = data.import_id;
+                    if (!result.success) {
+                        throw new Error(
+                            result.data?.message
+                            || 'Не удалось создать импорт.'
+                        );
+                    }
 
-                console.log(
-                    'Import ID:',
-                    currentImportId
-                );
+                    const data = result.data;
+                    currentImportId = data.import_id;
+
+                    console.log(
+                        'Import ID:',
+                        currentImportId
+                    );
 
 
-                info.innerHTML = `
+                    info.innerHTML = `
                     <p>
                         <strong>Поставщик:</strong>
                         ${data.supplier.name}
@@ -122,26 +117,28 @@ document.addEventListener('DOMContentLoaded', function () {
                     </p>
                 `;
 
-                progressBlock.hidden = true;
+                    progressBlock.hidden = true;
 
-                startButton.textContent = 'Продолжить';
+                    startButton.textContent = 'Продолжить';
 
-                renderAnalysis(
-                    data.analysis,
-                    data.supplier.id
-                );
-            })
-            .catch(function (error) {
+                    return renderAnalysis(
+                        data.analysis,
+                        data.supplier.id
+                    );
+                })
+                .catch(function (error) {
 
-                console.error(error);
+                    console.error(error);
 
-                info.hidden = false;
-                info.textContent = error.message;
+                    info.hidden = false;
+                    info.textContent = error.message;
 
-                startButton.disabled = false;
-                startButton.textContent = 'Начать импорт';
-            });
-    });
+                    startButton.disabled = false;
+                    startButton.textContent = 'Начать импорт';
+                });
+        });
+    }
+
 
     function processImport(importId) {
         console.log('PROCESS IMPORT CALLED:', importId);
@@ -452,8 +449,6 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
-
-
     function renderImportErrors(errors) {
         if (!errorsBlock || !errorsList) {
             return;
@@ -700,14 +695,29 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
-    function loadAttributeValueMappings(supplier, attributes) {
-
+    function loadAttributeValueMappings(
+        supplier,
+        attributes,
+        savedAttributeNameMappings = {}
+    ) {
         const taxonomies = {};
 
         attributes.forEach(function (attribute) {
-            if (attribute.source && attribute.taxonomy) {
-                taxonomies[attribute.source] = attribute.taxonomy;
+            const source = attribute.source;
+
+            if (!source) {
+                return;
             }
+
+            const savedMapping = savedAttributeNameMappings[source];
+
+            if (!savedMapping || !savedMapping.target_slug) {
+                return;
+            }
+
+            const slug = savedMapping.target_slug.replace(/^pa_/, '');
+
+            taxonomies[source] = 'pa_' + slug;
         });
 
         const formData = new FormData();
@@ -743,11 +753,52 @@ document.addEventListener('DOMContentLoaded', function () {
                 return response.json();
             })
             .then(function (result) {
-
                 if (!result.success) {
                     throw new Error(
                         result.data?.message
                         || 'Не удалось загрузить сохранённые сопоставления атрибутов.'
+                    );
+                }
+
+                return result.data.mappings || {};
+            });
+    }
+
+    function loadAttributeMappings(supplier) {
+
+        const formData = new FormData();
+
+        formData.append(
+            'action',
+            'supplier_mapping_get_attributes'
+        );
+
+        formData.append(
+            'nonce',
+            supplierImporter.nonce
+        );
+
+        formData.append(
+            'supplier',
+            supplier
+        );
+
+        return fetch(
+            supplierImporter.ajaxUrl,
+            {
+                method: 'POST',
+                body: formData
+            }
+        )
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function (result) {
+
+                if (!result.success) {
+                    throw new Error(
+                        result.data?.message
+                        || 'Не удалось загрузить сопоставления названий атрибутов.'
                     );
                 }
 
@@ -959,17 +1010,36 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    async function renderAnalysis(analysis, supplier) {
+    async function renderAnalysis(
+        analysis,
+        supplier,
+        importId = currentImportId,
+        importContext = { type: 'csv' }
+    ) {
+        console.log('[MAPPING] renderAnalysis вызвана', {
+            supplier,
+            importId,
+            analysis
+        });
+
         const mappingBlock = document.querySelector(
             '#supplier-import-mapping'
         );
 
         if (!mappingBlock) {
-            return;
+            throw new Error(
+                'Не найден блок настройки импорта.'
+            );
         }
 
         mappingBlock.hidden = false;
         mappingBlock.dataset.supplier = supplier;
+
+        if (!analysis || typeof analysis !== 'object') {
+            throw new Error(
+                'Сервер не вернул корректные данные анализа файла поставщика.'
+            );
+        }
 
         const categories = Array.isArray(analysis.categories)
             ? analysis.categories
@@ -978,9 +1048,25 @@ document.addEventListener('DOMContentLoaded', function () {
         const attributes = Array.isArray(analysis.attributes)
             ? analysis.attributes
             : [];
-
         let savedMappings = {};
         let savedAttributeMappings = {};
+        let savedAttributeNameMappings = {};
+
+        let globalAttributes = [];
+
+        try {
+            globalAttributes = await loadGlobalAttributes();
+
+            console.log(
+                'Глобальные атрибуты WooCommerce:',
+                globalAttributes
+            );
+        } catch (error) {
+            console.error(
+                'Ошибка загрузки глобальных атрибутов:',
+                error
+            );
+        }
 
         try {
             savedMappings = await loadCategoryMappings(supplier);
@@ -997,9 +1083,26 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         try {
+            savedAttributeNameMappings = await loadAttributeMappings(
+                supplier
+            );
+
+            console.log(
+                'Сохранённые сопоставления названий атрибутов:',
+                savedAttributeNameMappings
+            );
+        } catch (error) {
+            console.error(
+                'Ошибка загрузки сопоставлений названий атрибутов:',
+                error
+            );
+        }
+
+        try {
             savedAttributeMappings = await loadAttributeValueMappings(
                 supplier,
-                attributes
+                attributes,
+                savedAttributeNameMappings
             );
 
             console.log(
@@ -1012,6 +1115,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 error
             );
         }
+
+
 
         mappingBlock.innerHTML = `
         <h3>Настройка импорта</h3>
@@ -1129,6 +1234,23 @@ document.addEventListener('DOMContentLoaded', function () {
         <div data-import-panel="attributes" class="panel-attributes" hidden>
  <h3>Атрибуты</h3>
  <div class="panel-attributes__inner">
+ <div class="supplier-importer__mapping-section">
+
+    <h4>Сопоставление названий атрибутов</h4>
+
+    <p class="supplier-importer__section-description">
+        Выберите глобальный атрибут WooCommerce,
+        которому соответствует каждый атрибут поставщика.
+    </p>
+
+    <div class="supplier-importer__mapping-attribute-names">
+        ${renderAttributeNameMappings(
+            attributes,
+            savedAttributeNameMappings
+        )}
+    </div>
+
+</div>
             <div class="supplier-importer__mapping-section">
            
                 <h4>Сопоставление значений атрибутов</h4>
@@ -1138,7 +1260,11 @@ document.addEventListener('DOMContentLoaded', function () {
 </p>
 
                 <div class="supplier-importer__mapping-attributes">
-                    ${renderAttributes(attributes, savedAttributeMappings)}
+                    ${renderAttributes(
+            attributes,
+            savedAttributeMappings,
+            savedAttributeNameMappings
+        )}
                 </div>
             </div>
 
@@ -1194,13 +1320,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
         initCategorySearch(mappingBlock);
         initAttributeSearch(mappingBlock);
+        initAttributeNameSearch(mappingBlock, globalAttributes);
         initImportTabs(mappingBlock);
 
         loadAttributeLabels(mappingBlock);
         initAttributeLabelsSave(mappingBlock);
 
-        initMappingSave(mappingBlock, currentImportId);
+        initMappingSave(
+            mappingBlock,
+            importId,
+            importContext
+        );
     }
+
+
+    window.supplierImporterRenderAnalysis = renderAnalysis;
+
 
     function initImportTabs(mappingBlock) {
         const tabs = mappingBlock.querySelectorAll('[data-import-tab]');
@@ -1224,7 +1359,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    function renderAttributes(attributes, savedMappings = {}) {
+    function renderAttributes(attributes, savedMappings = {},
+        savedNameMappings = {}) {
 
         if (!attributes.length) {
             return `
@@ -1241,7 +1377,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 : [];
 
             const sourceParent = attribute.source;
-            const taxonomy = attribute.taxonomy || '';
+            const savedName = savedNameMappings[sourceParent] || null;
+
+            const taxonomy = savedName && savedName.target_slug
+                ? 'pa_' + String(savedName.target_slug).replace(/^pa_/, '')
+                : '';
 
             return `
             <div
@@ -1367,6 +1507,95 @@ document.addEventListener('DOMContentLoaded', function () {
             </div>
         `;
 
+        }).join('');
+    }
+
+    function renderAttributeNameMappings(
+        attributes,
+        savedMappings = {}
+    ) {
+        if (!attributes.length) {
+            return `
+            <p>Атрибутов для сопоставления не найдено.</p>
+        `;
+        }
+
+        return attributes.map(function (attribute) {
+            const source = attribute.source || '';
+            const saved = savedMappings[source] || null;
+
+            const targetId = saved
+                ? Number(saved.target_id)
+                : 0;
+
+            const targetName = saved
+                ? saved.target_name
+                : '';
+
+            const targetSlug = saved?.target_slug || '';
+
+            return `
+            <div
+                class="supplier-importer__mapping-item supplier-importer__attribute-name"
+                data-source="${escapeHtml(source)}"
+            >
+                <div class="supplier-importer__mapping-source">
+                    <span class="supplier-importer__mapping-label">
+                        Атрибут поставщика
+                    </span>
+
+                    <strong>
+                        ${escapeHtml(attribute.label || source)}
+                    </strong>
+
+                    <span>
+                        Товаров: ${Number(attribute.count || 0)}
+                    </span>
+                </div>
+
+                <div class="supplier-importer__mapping-search">
+                    <label>
+                        Глобальный атрибут WooCommerce
+                    </label>
+
+                    <input
+                        type="text"
+                        class="supplier-importer__attribute-name-input"
+                        placeholder="Выберите атрибут..."
+                        autocomplete="off"
+                    >
+
+                    <div
+                        class="supplier-importer__attribute-name-results"
+                        hidden
+                    ></div>
+                </div>
+
+                <div
+                    class="supplier-importer__attribute-name-selected"
+                    data-target-id="${targetId}"
+                    data-target-slug="${escapeHtml(targetSlug)}"
+                    ${targetId ? '' : 'hidden'}
+                >
+                    ${targetId
+                    ? `
+                            <span>
+                                Выбрано:
+                                <strong>${escapeHtml(targetName)}</strong>
+                            </span>
+
+                            <button
+                                type="button"
+                                class="supplier-importer__attribute-name-clear"
+                            >
+                                Изменить
+                            </button>
+                        `
+                    : ''
+                }
+                </div>
+            </div>
+        `;
         }).join('');
     }
 
@@ -1928,6 +2157,226 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function initAttributeNameSearch(mappingBlock, globalAttributes) {
+
+        const items = mappingBlock.querySelectorAll(
+            '.supplier-importer__attribute-name'
+        );
+
+        function resetAttributeValueMappings(attributeBlock) {
+
+            if (!attributeBlock) {
+                return;
+            }
+
+            attributeBlock.dataset.taxonomy = '';
+
+            const valueItems = attributeBlock.querySelectorAll(
+                '.supplier-importer__attribute-value'
+            );
+
+            valueItems.forEach(function (valueItem) {
+
+                const results = valueItem.querySelector(
+                    '.supplier-importer__mapping-results'
+                );
+
+                if (results) {
+                    results.hidden = true;
+                    results.innerHTML = '';
+                }
+
+                const selected = valueItem.querySelector(
+                    '.supplier-importer__mapping-selected'
+                );
+
+                if (selected) {
+                    selected.hidden = true;
+                    selected.dataset.targetId = '';
+                    selected.dataset.taxonomy = '';
+                    selected.innerHTML = '';
+                }
+
+                const input = valueItem.querySelector(
+                    '.supplier-importer__mapping-input'
+                );
+
+                if (input) {
+                    input.value = '';
+                }
+
+            });
+        }
+
+        items.forEach(function (item) {
+
+            const input = item.querySelector(
+                '.supplier-importer__attribute-name-input'
+            );
+
+            const results = item.querySelector(
+                '.supplier-importer__attribute-name-results'
+            );
+
+            const selected = item.querySelector(
+                '.supplier-importer__attribute-name-selected'
+            );
+
+            const clearButton = item.querySelector(
+                '.supplier-importer__attribute-name-clear'
+            );
+
+            if (!input || !results || !selected) {
+                return;
+            }
+
+            input.addEventListener('click', function () {
+
+                if (selected.hidden) {
+                    renderResults('');
+                }
+
+            });
+
+            input.addEventListener('input', function () {
+                renderResults(input.value);
+            });
+
+            function renderResults(search) {
+
+                const query = search.trim().toLowerCase();
+
+                const filtered = globalAttributes.filter(function (attribute) {
+                    return String(attribute.label || '')
+                        .toLowerCase()
+                        .includes(query);
+                });
+
+                results.innerHTML = '';
+
+                if (!filtered.length) {
+                    results.innerHTML = `
+                    <div class="supplier-importer__mapping-empty">
+                        Атрибуты не найдены.
+                    </div>
+                `;
+                }
+
+                filtered.forEach(function (attribute) {
+
+                    const option = document.createElement('button');
+
+                    option.type = 'button';
+                    option.className = 'supplier-importer__mapping-result';
+                    option.textContent = attribute.label;
+
+                    option.addEventListener('click', function () {
+
+                        selected.dataset.targetId = attribute.id;
+                        selected.dataset.targetSlug = attribute.slug;
+
+                        const source = item.dataset.source;
+
+                        const attributeBlock = mappingBlock.querySelector(
+                            `.supplier-importer__attribute[data-source="${CSS.escape(source)}"]`
+                        );
+
+                        if (attributeBlock) {
+                            resetAttributeValueMappings(attributeBlock);
+
+                            const taxonomy =
+                                'pa_' + String(attribute.slug).replace(/^pa_/, '');
+
+                            attributeBlock.dataset.taxonomy = taxonomy;
+                        }
+
+                        selected.innerHTML = `
+                        <span>
+                            Выбрано:
+                            <strong>${escapeHtml(attribute.label)}</strong>
+                        </span>
+
+                        <button
+                            type="button"
+                            class="supplier-importer__attribute-name-clear"
+                        >
+                            Изменить
+                        </button>
+                    `;
+
+                        selected.hidden = false;
+                        input.value = '';
+                        results.hidden = true;
+
+                        initAttributeNameClear(selected, input);
+                    });
+
+                    results.appendChild(option);
+                });
+
+                results.hidden = false;
+            }
+
+            function initAttributeNameClear(selected, input) {
+
+                const button = selected.querySelector(
+                    '.supplier-importer__attribute-name-clear'
+                );
+
+                if (!button) {
+                    return;
+                }
+
+                button.addEventListener('click', function () {
+
+                    const item = selected.closest(
+                        '.supplier-importer__attribute-name'
+                    );
+
+                    if (item) {
+                        const source = item.dataset.source || '';
+
+                        const attributeBlock = mappingBlock.querySelector(
+                            `.supplier-importer__attribute[data-source="${CSS.escape(source)}"]`
+                        );
+
+                        resetAttributeValueMappings(attributeBlock);
+                    }
+
+                    selected.hidden = true;
+                    selected.dataset.targetId = '';
+                    selected.innerHTML = '';
+                    selected.dataset.targetSlug = '';
+
+                    input.value = '';
+                    input.focus();
+                });
+            }
+
+            if (clearButton) {
+                clearButton.addEventListener('click', function () {
+
+                    const source = item.dataset.source || '';
+
+                    const attributeBlock = mappingBlock.querySelector(
+                        `.supplier-importer__attribute[data-source="${CSS.escape(source)}"]`
+                    );
+
+                    resetAttributeValueMappings(attributeBlock);
+
+                    selected.hidden = true;
+                    selected.dataset.targetId = '';
+                    selected.innerHTML = '';
+                    selected.dataset.targetSlug = '';
+
+                    input.value = '';
+                    input.focus();
+                });
+            }
+
+        });
+    }
+
     function searchAttributeTerms(
         taxonomy,
         search,
@@ -2090,7 +2539,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function initMappingSave(
         mappingBlock,
-        importId
+        importId,
+        importContext = { type: 'csv' }
     ) {
 
         const button = mappingBlock.querySelector(
@@ -2162,7 +2612,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     mappingBlock,
                     importId,
                     button,
-                    status
+                    status,
+                    importContext
                 );
             }
         );
@@ -2174,8 +2625,15 @@ document.addEventListener('DOMContentLoaded', function () {
         mappingBlock,
         importId,
         button,
-        status
+        status,
+        importContext = { type: 'csv' }
     ) {
+
+        if (!status) {
+            button.disabled = false;
+            console.error('Не найден блок статуса сопоставлений.');
+            return;
+        }
 
         const formData = new FormData();
 
@@ -2211,8 +2669,26 @@ document.addEventListener('DOMContentLoaded', function () {
                 body: formData
             }
         )
-            .then(function (response) {
-                return response.json();
+            .then(async function (response) {
+                let result;
+
+                try {
+                    result = await response.json();
+                } catch (error) {
+                    throw new Error(
+                        'Сервер вернул некорректный JSON. HTTP: '
+                        + response.status
+                    );
+                }
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.data?.message
+                        || 'Ошибка HTTP: ' + response.status
+                    );
+                }
+
+                return result;
             })
             .then(function (result) {
 
@@ -2228,21 +2704,38 @@ document.addEventListener('DOMContentLoaded', function () {
                     'Сохранено mappings:',
                     result.data.saved
                 );
+                status.textContent =
+                    'Категории сохранены. Сохраняем названия атрибутов...';
 
-                button.disabled = false;
+                return saveAttributeNameMappings(
+                    supplier,
+                    mappingBlock
+                );
+
+            })
+
+            .then(function (result) {
+
+                console.log(
+                    'Сохранено названий атрибутов:',
+                    result.saved
+                );
 
                 status.textContent =
-                    'Категории сохранены.';
+                    'Названия атрибутов сохранены.';
 
-                saveAttributeMappings(
+                return saveAttributeMappings(
                     supplier,
                     mappingBlock,
                     importId,
                     button,
-                    status
+                    status,
+                    importContext
                 );
 
             })
+
+
             .catch(function (error) {
 
                 console.error(
@@ -2262,8 +2755,15 @@ document.addEventListener('DOMContentLoaded', function () {
         mappingBlock,
         importId,
         button,
-        status
+        status,
+        importContext = { type: 'csv' }
     ) {
+
+        if (!status || !button) {
+            throw new Error(
+                'Не удалось получить элементы управления импортом.'
+            );
+        }
 
         const items =
             mappingBlock.querySelectorAll(
@@ -2334,13 +2834,13 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!mappings.length) {
 
             status.textContent =
-                'Сопоставления сохранены.';
+                'Сопоставления сохранены. Запускаем импорт...';
 
-            button.disabled = true;
-
-            processImport(importId);
-
-            return;
+            return startImportByContext(
+                importId,
+                importContext,
+                status
+            );
         }
 
         const formData = new FormData();
@@ -2368,7 +2868,214 @@ document.addEventListener('DOMContentLoaded', function () {
         status.textContent =
             'Сохраняем атрибуты...';
 
-        fetch(
+        return fetch(
+            supplierImporter.ajaxUrl,
+            {
+                method: 'POST',
+                body: formData
+            }
+        )
+            .then(async function (response) {
+                let result;
+
+                try {
+                    result = await response.json();
+                } catch (error) {
+                    throw new Error(
+                        'Сервер вернул некорректный JSON. HTTP: '
+                        + response.status
+                    );
+                }
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.data?.message
+                        || 'Ошибка HTTP: ' + response.status
+                    );
+                }
+
+                return result;
+            })
+            .then(function (result) {
+
+                if (!result.success) {
+                    throw new Error(
+                        result.data?.message
+                        || 'Не удалось сохранить атрибуты.'
+                    );
+                }
+
+                status.textContent =
+                    'Сохранено сопоставлений: '
+                    + Number(result.data.saved || 0)
+                    + '. Запускаем импорт...';
+
+                return startImportByContext(
+                    importId,
+                    importContext,
+                    status
+                );
+            })
+            .catch(function (error) {
+
+                console.error(
+                    'Ошибка сохранения атрибутов:',
+                    error
+                );
+
+                status.textContent =
+                    error.message;
+
+                button.disabled = false;
+
+                throw error;
+            });
+    }
+
+    function startImportByContext(
+        importId,
+        importContext = { type: 'csv' },
+        status
+    ) {
+        if (!Number(importId)) {
+            throw new Error('Не передан ID импорта.');
+        }
+
+        if (importContext.type === 'yml') {
+
+            if (
+                typeof window.supplierImporterProcessFeedImport
+                !== 'function'
+            ) {
+                throw new Error(
+                    'Не удалось запустить обработчик YML-импорта.'
+                );
+            }
+
+            return window.supplierImporterProcessFeedImport(
+                importId,
+                importContext.info
+            ).then(function (result) {
+
+                if (!result) {
+                    throw new Error(
+                        'Обработчик YML-импорта не вернул результат.'
+                    );
+                }
+
+                const progress = result.progress || {};
+
+                status.textContent =
+                    result.status === 'completed'
+                        ? 'Импорт успешно завершён. '
+                        : 'Импорт завершился с ошибкой. ';
+
+                status.textContent +=
+                    'Создано: ' + Number(progress.created || 0)
+                    + ', обновлено: ' + Number(progress.updated || 0)
+                    + ', пропущено: ' + Number(progress.skipped || 0)
+                    + ', ошибок: ' + Number(progress.errors || 0);
+
+                return result;
+            });
+        }
+
+        processImport(importId);
+
+        return Promise.resolve();
+    }
+
+    function saveAttributeNameMappings(
+        supplier,
+        mappingBlock
+    ) {
+        const items = mappingBlock.querySelectorAll(
+            '.supplier-importer__attribute-name'
+        );
+
+        const mappings = [];
+
+        items.forEach(function (item) {
+            const source = item.dataset.source || '';
+
+            const selected = item.querySelector(
+                '.supplier-importer__attribute-name-selected'
+            );
+
+            if (!source || !selected || selected.hidden) {
+                return;
+            }
+
+            const targetId = Number(
+                selected.dataset.targetId || 0
+            );
+
+            if (!targetId) {
+                return;
+            }
+
+            mappings.push({
+                source_value: source,
+                target_id: targetId
+            });
+        });
+
+        const formData = new FormData();
+
+        formData.append(
+            'action',
+            'supplier_mapping_save_attributes'
+        );
+
+        formData.append(
+            'nonce',
+            supplierImporter.nonce
+        );
+
+        formData.append(
+            'supplier',
+            supplier
+        );
+
+        formData.append(
+            'mappings',
+            JSON.stringify(mappings)
+        );
+
+        return fetch(supplierImporter.ajaxUrl, {
+            method: 'POST',
+            body: formData
+        })
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function (result) {
+                if (!result.success) {
+                    throw new Error(
+                        result.data?.message
+                        || 'Не удалось сохранить названия атрибутов.'
+                    );
+                }
+
+                return result.data;
+            });
+    }
+
+    function loadGlobalAttributes() {
+
+        const formData = new FormData();
+
+        formData.append(
+            'action',
+            'supplier_mapping_get_attribute_labels'
+        );
+
+        formData.append(
+            'nonce',
+            supplierImporter.nonce
+        );
+
+        return fetch(
             supplierImporter.ajaxUrl,
             {
                 method: 'POST',
@@ -2383,32 +3090,24 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (!result.success) {
                     throw new Error(
                         result.data?.message
-                        || 'Не удалось сохранить атрибуты.'
+                        || 'Не удалось загрузить атрибуты WooCommerce.'
                     );
                 }
 
-                status.textContent =
-                    'Сохранено сопоставлений: '
-                    + Number(result.data.saved || 0);
-
-                button.disabled = true;
-
-                processImport(importId);
-            })
-            .catch(function (error) {
-
-                console.error(
-                    'Ошибка сохранения атрибутов:',
-                    error
-                );
-
-                status.textContent =
-                    error.message;
-
-                button.disabled = false;
+                return result.data.items || [];
             });
     }
 });
+
+/**
+ * DOM: Сброс статистики импорта
+ *
+ * Обрабатывает кнопку сброса статистики:
+ * - подтверждает действие пользователя;
+ * - отправляет AJAX-запрос;
+ * - сбрасывает статистику;
+ * - перезагружает страницу после успешного выполнения.
+ */
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -2503,10 +3202,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-// ==========================================
-// YML upload и ручной запуск фида
-// ==========================================
-
+/**
+ * DOM: Загрузка YML и ручной запуск фида
+ *
+ * Обрабатывает два сценария:
+ * - загрузка YML-файла с компьютера и запуск импорта;
+ * - ручной запуск импорта фида по URL выбранного поставщика.
+ *
+ * При запуске по URL выполняет пакетную обработку товаров
+ * через AJAX с отображением прогресса.
+ */
 document.addEventListener('DOMContentLoaded', function () {
 
     /**
@@ -2577,6 +3282,7 @@ document.addEventListener('DOMContentLoaded', function () {
  * Пакетная обработка подготовленного YML-фида.
  */
     async function processFeedImport(importId, info) {
+
         let data;
 
         while (true) {
@@ -2609,6 +3315,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    window.supplierImporterProcessFeedImport = processFeedImport;
     // ------------------------------------------
     // Загрузка YML-файла
     // ------------------------------------------
@@ -2647,14 +3354,48 @@ document.addEventListener('DOMContentLoaded', function () {
             try {
                 const data = await sendImportRequest(formData);
 
-                showFeedMessage(
-                    info,
-                    getImportResultMessage(data),
-                    'success'
-                );
+                const importId = Number(data.import_id);
+
+                if (!importId) {
+                    throw new Error(
+                        'Сервер не вернул ID созданного импорта.'
+                    );
+                }
+
+                if (!data.analysis) {
+                    throw new Error(
+                        'Сервер не вернул данные анализа YML-файла.'
+                    );
+                }
+
+                const supplier = data.supplier?.id || 'maytoni';
+
+                if (
+                    typeof window.supplierImporterRenderAnalysis
+                    !== 'function'
+                ) {
+                    throw new Error(
+                        'Не удалось открыть окно сопоставления.'
+                    );
+                }
 
                 fileInput.value = '';
 
+                showFeedMessage(
+                    info,
+                    `YML-файл подготовлен. Найдено товаров: ${Number(data.total || 0)}. Настройте сопоставления и запустите импорт.`,
+                    'success'
+                );
+
+                await window.supplierImporterRenderAnalysis(
+                    data.analysis,
+                    supplier,
+                    importId,
+                    {
+                        type: 'yml',
+                        info: info
+                    }
+                );
             } catch (error) {
                 showFeedMessage(
                     info,
@@ -2698,44 +3439,47 @@ document.addEventListener('DOMContentLoaded', function () {
             showFeedMessage(info, 'Запуск импорта по URL. Дождитесь завершения...', 'info');
 
             try {
-                // Подготавливаем фид и создаём сессию импорта.
                 const prepared = await sendImportRequest(formData);
 
                 const importId = Number(prepared.import_id);
 
                 if (!importId) {
+                    throw new Error('Не удалось получить ID подготовленного импорта.');
+                }
+
+                if (
+                    !prepared.analysis
+                    || typeof prepared.analysis !== 'object'
+                ) {
                     throw new Error(
-                        'Сервер не вернул ID созданного импорта.'
+                        'Сервер не вернул данные анализа фида для сопоставления.'
                     );
                 }
 
+                const supplier = prepared.supplier || supplierId;
+
                 showFeedMessage(
                     info,
-                    `Фид подготовлен. Найдено товаров: ${prepared.total}. Начинаем импорт...`,
+                    `Фид подготовлен. Найдено товаров: ${prepared.total}. Настройте сопоставление.`,
                     'info'
                 );
 
-                // Запускаем пакетную обработку товаров и синхронизацию.
-                const result = await processFeedImport(importId, info);
+                console.log('[FEED URL] перед вызовом renderAnalysis', {
+                    prepared,
+                    renderAnalysisType: typeof window.supplierImporterRenderAnalysis
+                });
 
-                const progress = result.progress || {};
-
-                const message = [
-                    result.status === 'completed'
-                        ? 'Импорт успешно завершён.'
-                        : 'Импорт завершился с ошибкой.',
-                    'Всего: ' + Number(result.total || 0),
-                    'Создано: ' + Number(progress.created || 0),
-                    'Обновлено: ' + Number(progress.updated || 0),
-                    'Пропущено: ' + Number(progress.skipped || 0),
-                    'Ошибок: ' + Number(progress.errors || 0)
-                ].join('\n');
-
-                showFeedMessage(
-                    info,
-                    message,
-                    result.status === 'completed' ? 'success' : 'error'
+                await window.supplierImporterRenderAnalysis(
+                    prepared.analysis,
+                    supplier,
+                    importId,
+                    {
+                        type: 'yml',
+                        info: info
+                    }
                 );
+
+                console.log('[FEED URL] renderAnalysis завершена');
 
             } catch (error) {
                 showFeedMessage(

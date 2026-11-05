@@ -179,6 +179,7 @@ class Import_Session
         $allowed_formats = [
             'csv',
             'yml',
+            'xml',
         ];
 
         if (!in_array($format, $allowed_formats, true)) {

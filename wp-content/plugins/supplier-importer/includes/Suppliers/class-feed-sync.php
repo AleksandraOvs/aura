@@ -19,6 +19,10 @@ use Supplier_Importer\Import\Yml_Category_Reader;
 use Supplier_Importer\Import\Yml_Category_Storage;
 use Supplier_Importer\Import\Yml_Import_Processor;
 use Supplier_Importer\Product\Product_Data;
+use Supplier_Importer\Import\Mapping_Discovery_Repository;
+use Supplier_Importer\Import\Yml_Analyzer;
+use Supplier_Importer\Suppliers\Citilux\Citilux_Yml_Category_Reader;
+use Supplier_Importer\Suppliers\Citilux\Citilux_Xml_Normalizer;
 
 class Feed_Sync
 {
@@ -210,7 +214,22 @@ class Feed_Sync
         $failure_counted = false;
         $failure_details_recorded = false;
 
+        $normalized_file = '';
+
         try {
+
+            /*
+ * Для CITILUX удаляем HTML-теги из description
+ * во временной копии XML-файла.
+ */
+            $normalized_file = $this->prepare_supplier_file(
+                $supplier_id,
+                $file
+            );
+
+            if ($normalized_file !== '') {
+                $file = $normalized_file;
+            }
             /*
              * Проверяем поставщика, формат и структуру фида.
              */
@@ -224,15 +243,41 @@ class Feed_Sync
                 sanitize_key($settings['format'] ?? '')
             );
 
+            Logger::info(
+                'Проверка формата фида.',
+                [
+                    'supplier_id' => $supplier_id,
+                    'settings_format' => $settings['format'] ?? '(пусто)',
+                    'normalized_format' => $format,
+                    'supported_format' => $supported_formats[$supplier_id] ?? '(не задан)',
+                ]
+            );
+
             /*
-             * Создаём mapper поставщика.
-             */
+ * Анализируем YML и сохраняем обнаруженные значения.
+ */
+            $discovery = null;
+
+            if (in_array($format, ['yml', 'xml'], true)) {
+                $discovery = $this->analyze_and_save_discovery(
+                    $supplier_id,
+                    $file
+                );
+            }
+
+            /*
+ * Создаём mapper поставщика.
+ *
+ * Передаём уже прочитанный справочник категорий,
+ * чтобы фабрика не читала его повторно.
+ */
             $factory = new Feed_Mapper_Factory();
 
             $mapper = $factory->create(
                 $supplier_id,
                 $format,
-                $file
+                $file,
+                $discovery['categories'] ?? null
             );
 
             $reader = new Xml_Reader(
@@ -518,8 +563,15 @@ class Feed_Sync
         }
 
         /*
-         * Передаём ошибку вызывающему обработчику.
-         */
+ * Удаляем временный нормализованный файл.
+ */
+        $this->delete_normalized_file(
+            $normalized_file
+        );
+
+        /*
+ * Передаём ошибку вызывающему обработчику.
+ */
         if ($failure_message !== '') {
             throw new \RuntimeException(
                 $failure_message
@@ -595,10 +647,9 @@ class Feed_Sync
         }
     }
 
+
     /**
      * Проверяет возможность обработки фида.
-     *
-     * Пока поддерживается только Maytoni YML.
      *
      * @param string $supplier_id ID поставщика.
      * @param string $file        Путь к файлу.
@@ -641,29 +692,45 @@ class Feed_Sync
             sanitize_key($settings['format'] ?? '')
         );
 
-        /*
-         * Пока поддерживается только Maytoni YML.
-         */
+        $supported_formats = [
+            'maytoni' => 'yml',
+            'citilux' => 'xml',
+        ];
+
+
+        Logger::info(
+            'Проверка формата фида.',
+            [
+                'supplier_id'       => $supplier_id,
+                'settings_format'   => $settings['format'] ?? '(пусто)',
+                'normalized_format' => $format,
+                'supported_format'  => $supported_formats[$supplier_id] ?? '(не задан)',
+            ]
+        );
+
         if (
-            $supplier_id !== 'maytoni'
-            || $format !== 'yml'
+            !isset($supported_formats[$supplier_id])
+            || $supported_formats[$supplier_id] !== $format
         ) {
             throw new \RuntimeException(
                 sprintf(
-                    'Формат %s для поставщика %s пока не поддерживается.',
-                    $format,
+                    'Формат %s для поставщика %s не поддерживается.',
+                    $format ?: '(не указан)',
                     $supplier_id
                 )
             );
         }
 
+
         /*
-         * Проверяем структуру YML один раз.
-         */
+     * Оба фида используют XML-структуру YML:
+     * yml_catalog → shop → offers → offer.
+     */
         $validator = new Yml_Validator();
 
         $validator->validate($file);
     }
+
 
     /**
      * Формирует название источника для истории импорта.
@@ -809,9 +876,22 @@ class Feed_Sync
         $staging_file = '';
         $categories_file = '';
 
+        $normalized_file = '';
+
         $import_id = 0;
 
         try {
+            /*
+ * Нормализуем только фид CITILUX.
+ */
+            $normalized_file = $this->prepare_supplier_file(
+                $supplier_id,
+                $file
+            );
+
+            if ($normalized_file !== '') {
+                $file = $normalized_file;
+            }
             /*
          * Проверяем исходный фид.
          */
@@ -858,32 +938,18 @@ class Feed_Sync
             $categories_file = $staging_file
                 . '.categories.json';
 
-            /*
-         * Читаем категории из исходного YML
-         * только один раз.
-         */
-            $category_reader = new Yml_Category_Reader();
+            $discovery = $this->analyze_and_save_discovery(
+                $supplier_id,
+                $file
+            );
 
-            $categories = $category_reader->read($file);
+            $categories = $discovery['categories'];
+            $analysis = $discovery['analysis'];
 
-            /*
-         * Сохраняем справочник категорий.
-         */
             $category_storage = new Yml_Category_Storage();
 
             $category_storage->save(
                 $categories_file,
-                $categories
-            );
-
-            /*
- * Анализируем категории и атрибуты
- * для интерфейса сопоставлений.
- */
-            $analyzer = new \Supplier_Importer\Import\Yml_Analyzer();
-
-            $analysis = $analyzer->analyze(
-                $file,
                 $categories
             );
 
@@ -913,7 +979,11 @@ class Feed_Sync
             );
 
             $session->set_run_id($run_id);
-            $session->set_format('yml');
+            $format = strtolower(
+                sanitize_key($settings['format'] ?? '')
+            );
+
+            $session->set_format($format);
             $session->set_source($source);
             $session->set_phase('products');
             $session->set_staging_file($staging_file);
@@ -942,6 +1012,10 @@ class Feed_Sync
                 )
             );
 
+            $this->delete_normalized_file(
+                $normalized_file
+            );
+
             return [
                 'import_id' => $import_id,
                 'run_id'    => $run_id,
@@ -967,6 +1041,7 @@ class Feed_Sync
                         $repository->update($failed_session);
                     }
                 } catch (\Throwable $storage_error) {
+
                     Logger::error(
                         'Не удалось закрыть сессию после ошибки подготовки YML.',
                         [
@@ -998,6 +1073,10 @@ class Feed_Sync
             );
 
             throw $e;
+        } finally {
+            $this->delete_normalized_file(
+                $normalized_file
+            );
         }
     }
 
@@ -1024,9 +1103,11 @@ class Feed_Sync
             );
         }
 
-        if ($session->get_format() !== 'yml') {
+        $format = $session->get_format();
+
+        if (!in_array($format, ['yml', 'xml'], true)) {
             throw new \InvalidArgumentException(
-                'Сессия не является YML-импортом.'
+                'Сессия имеет неподдерживаемый формат.'
             );
         }
 
@@ -1073,7 +1154,7 @@ class Feed_Sync
 
         $mapper = $factory->create(
             $session->get_supplier(),
-            'yml',
+            $format,
             $staging_file,
             $categories
         );
@@ -1169,9 +1250,9 @@ class Feed_Sync
             );
         }
 
-        if ($session->get_format() !== 'yml') {
+        if (!in_array($session->get_format(), ['yml', 'xml'], true)) {
             throw new \InvalidArgumentException(
-                'Сессия не является YML-импортом.'
+                'Сессия имеет неподдерживаемый формат.'
             );
         }
 
@@ -1401,6 +1482,92 @@ class Feed_Sync
             );
 
             throw $e;
+        }
+    }
+
+
+    /**
+     * Анализирует фид и сохраняет обнаруженные категории и атрибуты.
+     *
+     * @param string $supplier_id ID поставщика.
+     * @param string $file        Путь к файлу.
+     *
+     * @return array
+     */
+    private function analyze_and_save_discovery(
+        $supplier_id,
+        $file
+    ) {
+        if ($supplier_id === 'citilux') {
+            $category_reader = new Citilux_Yml_Category_Reader();
+        } else {
+            $category_reader = new Yml_Category_Reader();
+        }
+
+        $categories = $category_reader->read($file);
+
+        $analyzer = new Yml_Analyzer();
+
+        $analysis = $analyzer->analyze(
+            $file,
+            $categories
+        );
+
+        $discovery_repository = new Mapping_Discovery_Repository();
+
+        $discovery_repository->save(
+            $supplier_id,
+            $analysis
+        );
+
+        return [
+            'categories' => $categories,
+            'analysis'   => $analysis,
+        ];
+    }
+
+
+    /**
+     * Подготовить файл поставщика к обработке.
+     *
+     * Нормализация применяется только к CITILUX.
+     *
+     * @param string $supplier_id
+     * @param string $file
+     *
+     * @return string Путь к временному файлу или исходному файлу.
+     */
+    private function prepare_supplier_file($supplier_id, $file)
+    {
+        if ($supplier_id !== 'citilux') {
+            return '';
+        }
+
+        $normalizer = new Citilux_Xml_Normalizer();
+
+        return $normalizer->normalize($file);
+    }
+
+    /**
+     * Удалить временный нормализованный файл.
+     *
+     * @param string $file
+     *
+     * @return void
+     */
+    private function delete_normalized_file($file)
+    {
+        if (
+            $file
+            && is_file($file)
+            && !@unlink($file)
+        ) {
+            Logger::warning(
+                'Не удалось удалить временный нормализованный XML-файл.',
+                [
+                    'file' => $file,
+                ]
+            );
         }
     }
 }
