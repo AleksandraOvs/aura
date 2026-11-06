@@ -7,6 +7,7 @@ if (!defined('ABSPATH')) {
 }
 
 use Supplier_Importer\Core\Logger;
+use Supplier_Importer\Import\Staging_Cleaner;
 
 class Supplier_Feed_Scheduler
 {
@@ -294,6 +295,8 @@ class Supplier_Feed_Scheduler
                     if (!$session->is_finished()) {
                         $session->fail();
                         $repository->update($session);
+
+                        Staging_Cleaner::clean($session);
                     }
                 } catch (\Throwable $storage_error) {
                     Logger::error(

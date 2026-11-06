@@ -23,6 +23,7 @@ use Supplier_Importer\Import\Mapping_Discovery_Repository;
 use Supplier_Importer\Import\Yml_Analyzer;
 use Supplier_Importer\Suppliers\Citilux\Citilux_Yml_Category_Reader;
 use Supplier_Importer\Suppliers\Citilux\Citilux_Xml_Normalizer;
+use Supplier_Importer\Import\Staging_Cleaner;
 
 class Feed_Sync
 {
@@ -1023,6 +1024,8 @@ class Feed_Sync
  * Если сессия уже создана, но подготовка завершилась
  * исключением, закрываем её со статусом failed.
  */
+            $session_closed = !$import_id;
+
             if ($import_id) {
                 try {
                     $failed_session = $repository->load_session($import_id);
@@ -1034,8 +1037,12 @@ class Feed_Sync
                         $failed_session->fail();
                         $repository->update($failed_session);
                     }
-                } catch (\Throwable $storage_error) {
 
+                    $session_closed = (
+                        $failed_session instanceof Import_Session
+                        && $failed_session->is_finished()
+                    );
+                } catch (\Throwable $storage_error) {
                     Logger::error(
                         'Не удалось закрыть сессию после ошибки подготовки YML.',
                         [
@@ -1049,12 +1056,14 @@ class Feed_Sync
          * Удаляем временные файлы,
          * если подготовка не завершилась.
          */
-            if ($staging_file && is_file($staging_file)) {
-                @unlink($staging_file);
-            }
+            if ($session_closed) {
+                if ($staging_file && is_file($staging_file)) {
+                    @unlink($staging_file);
+                }
 
-            if ($categories_file && is_file($categories_file)) {
-                @unlink($categories_file);
+                if ($categories_file && is_file($categories_file)) {
+                    @unlink($categories_file);
+                }
             }
 
             Logger::error(
@@ -1291,7 +1300,11 @@ class Feed_Sync
                         'message'   => $storage_error->getMessage(),
                     ]
                 );
+
+                throw $storage_error;
             }
+
+            Staging_Cleaner::clean($session);
 
             throw new \RuntimeException(
                 'Синхронизация отменена: импорт товаров завершился с ошибками или обработан не полностью.'
@@ -1406,27 +1419,7 @@ class Feed_Sync
                 $batch['finished']
                 && $session->get_status() === 'completed'
             ) {
-                $staging_file = $session->get_staging_file();
-
-                $files_to_delete = [
-                    $staging_file,
-                    $staging_file . '.categories.json',
-                ];
-
-                foreach ($files_to_delete as $file) {
-                    if (
-                        is_file($file)
-                        && !@unlink($file)
-                    ) {
-                        Logger::warning(
-                            'Не удалось удалить временный файл YML-импорта.',
-                            [
-                                'import_id' => $session->get_import_id(),
-                                'file'      => $file,
-                            ]
-                        );
-                    }
-                }
+                Staging_Cleaner::clean($session);
             }
 
             Logger::info(
@@ -1455,8 +1448,11 @@ class Feed_Sync
         } catch (\Throwable $e) {
             $session->fail();
 
+            $session_saved = false;
+
             try {
                 $repository->update($session);
+                $session_saved = true;
             } catch (\Throwable $storage_error) {
                 Logger::error(
                     'Не удалось сохранить статус failed после ошибки синхронизации.',
@@ -1465,6 +1461,10 @@ class Feed_Sync
                         'message'   => $storage_error->getMessage(),
                     ]
                 );
+            }
+
+            if ($session_saved) {
+                Staging_Cleaner::clean($session);
             }
 
             Logger::error(

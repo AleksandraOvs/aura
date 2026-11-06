@@ -50,7 +50,16 @@ class Product_Attributes
 
             $taxonomy_name = $this->get_taxonomy_name($taxonomy);
 
-            if (!$this->ensure_attribute_taxonomy($taxonomy_name, $label)) {
+            if ($taxonomy_name === '') {
+                continue;
+            }
+
+            $attribute_data = $this->ensure_attribute_taxonomy(
+                $taxonomy_name,
+                $label
+            );
+
+            if (!$attribute_data) {
                 \Supplier_Importer\Core\Logger::error(
                     'ATTRIBUTE ERROR: не удалось подготовить таксономию '
                         . $taxonomy_name
@@ -60,7 +69,8 @@ class Product_Attributes
             }
 
             $attribute = $this->build_attribute(
-                $taxonomy_name,
+                $attribute_data['taxonomy_name'],
+                $attribute_data['attribute_id'],
                 $value
             );
 
@@ -68,7 +78,7 @@ class Product_Attributes
                 continue;
             }
 
-            $product_attributes[$taxonomy_name] = $attribute;
+            $product_attributes[$attribute_data['taxonomy_name']] = $attribute;
         }
 
         if (!empty($product_attributes)) {
@@ -76,10 +86,7 @@ class Product_Attributes
         }
     }
 
-    /**
-     * Создать глобальный атрибут при необходимости
-     * и зарегистрировать его таксономию в текущем запросе.
-     */
+
     private function ensure_attribute_taxonomy(
         $taxonomy_name,
         $label = ''
@@ -88,46 +95,107 @@ class Product_Attributes
             return false;
         }
 
-        $slug = preg_replace('/^pa_/', '', $taxonomy_name);
-        $slug = wc_sanitize_taxonomy_name($slug);
+        $original_slug = substr($taxonomy_name, 3);
 
-        if ($slug === '') {
+        if ($original_slug === '') {
             return false;
         }
 
-        $attribute_id = wc_attribute_taxonomy_id_by_name($slug);
+        $attribute_name = $label !== ''
+            ? $label
+            : ucwords(str_replace(['-', '_'], ' ', $original_slug));
 
-        if (!$attribute_id) {
-            $attribute_id = wc_create_attribute([
-                'name' => $label !== ''
-                    ? $label
-                    : ucwords(
-                        str_replace(['-', '_'], ' ', $slug)
-                    ),
-                'slug'         => $slug,
-                'type'         => 'select',
-                'order_by'     => 'menu_order',
-                'has_archives' => false,
-            ]);
+        // Сначала ищем существующий атрибут по исходному slug.
+        $attribute_id = wc_attribute_taxonomy_id_by_name(
+            $original_slug
+        );
 
-            if (is_wp_error($attribute_id)) {
-                \Supplier_Importer\Core\Logger::error(
-                    'ATTRIBUTE ERROR: создание атрибута '
-                        . $slug . ': ' . $attribute_id->get_error_message()
-                );
+        if ($attribute_id) {
+            $slug = $original_slug;
+        } else {
+            $max_length = wc_get_attribute_slug_max_byte_length();
 
-                return false;
+            // Для коротких slug сохраняем исходное имя.
+            if (strlen($original_slug) <= $max_length) {
+                $slug = $original_slug;
+            } else {
+                // Для длинных создаём стабильный короткий slug.
+                $slug = $this->generate_short_slug($original_slug);
+
+                $existing_id = wc_attribute_taxonomy_id_by_name($slug);
+
+                // Проверяем, что найденный hash-slug принадлежит
+                // атрибуту с ожидаемым названием.
+                if ($existing_id) {
+                    $existing_label = '';
+
+                    foreach (wc_get_attribute_taxonomies() as $existing_attribute) {
+                        if (
+                            (int) $existing_attribute->attribute_id
+                            === (int) $existing_id
+                        ) {
+                            $existing_label = $existing_attribute->attribute_label;
+                            break;
+                        }
+                    }
+
+                    if ($existing_label !== $attribute_name) {
+                        \Supplier_Importer\Core\Logger::error(
+                            'ATTRIBUTE ERROR: сгенерированный slug занят '
+                                . $slug . ', исходный slug: ' . $original_slug
+                        );
+
+                        return false;
+                    }
+
+                    $attribute_id = $existing_id;
+                }
             }
 
-            // Обновляем кэш списка глобальных атрибутов.
-            delete_transient('wc_attribute_taxonomies');
+            // Общая проверка и создание для коротких и длинных slug.
+            if (!$attribute_id) {
+                $actual_taxonomy_name = 'pa_' . $slug;
+
+                if (taxonomy_exists($actual_taxonomy_name)) {
+                    \Supplier_Importer\Core\Logger::error(
+                        'ATTRIBUTE ERROR: таксономия уже существует: '
+                            . $actual_taxonomy_name
+                    );
+
+                    return false;
+                }
+
+                $attribute_id = wc_create_attribute([
+                    'name'         => $attribute_name,
+                    'slug'         => $slug,
+                    'type'         => 'select',
+                    'order_by'     => 'menu_order',
+                    'has_archives' => false,
+                ]);
+
+                if (is_wp_error($attribute_id)) {
+                    \Supplier_Importer\Core\Logger::error(
+                        'ATTRIBUTE ERROR: создание атрибута '
+                            . $slug . ': '
+                            . $attribute_id->get_error_message()
+                    );
+
+                    return false;
+                }
+
+                if (!$attribute_id) {
+                    return false;
+                }
+
+                delete_transient('wc_attribute_taxonomies');
+            }
         }
 
-        // WooCommerce регистрирует существующие атрибуты при запуске.
-        // Атрибут, созданный в этом запросе, регистрируем сразу.
-        if (!taxonomy_exists($taxonomy_name)) {
+        $actual_taxonomy_name = 'pa_' . $slug;
+
+        if (!taxonomy_exists($actual_taxonomy_name)) {
             register_taxonomy(
-                $taxonomy_name,
+                $actual_taxonomy_name,
                 ['product'],
                 [
                     'hierarchical' => false,
@@ -138,11 +206,43 @@ class Product_Attributes
             );
         }
 
-        return taxonomy_exists($taxonomy_name);
+        if (!taxonomy_exists($actual_taxonomy_name)) {
+            return false;
+        }
+
+        return [
+            'taxonomy_name' => $actual_taxonomy_name,
+            'attribute_id'  => (int) $attribute_id,
+        ];
     }
 
-    private function build_attribute($taxonomy_name, $value)
-    {
+
+    /**
+     * Генерирует детерминированный ASCII slug длиной до 29 байт.
+     */
+    private function generate_short_slug(
+        $source,
+        $attempt = 0
+    ) {
+        $hash_source = $attempt === 0
+            ? $source
+            : $source . ':' . $attempt;
+
+        return 'attr-' . substr(
+            hash('sha256', $hash_source),
+            0,
+            24
+        );
+    }
+
+    /**
+     * Создаёт объект атрибута товара.
+     */
+    private function build_attribute(
+        $taxonomy_name,
+        $attribute_id,
+        $value
+    ) {
         $term_ids = $this->get_or_create_terms(
             $taxonomy_name,
             $value
@@ -154,16 +254,7 @@ class Product_Attributes
 
         $attribute = new WC_Product_Attribute();
 
-        $attribute_slug = preg_replace(
-            '/^pa_/',
-            '',
-            $taxonomy_name
-        );
-
-        $attribute->set_id(
-            wc_attribute_taxonomy_id_by_name($attribute_slug)
-        );
-
+        $attribute->set_id($attribute_id);
         $attribute->set_name($taxonomy_name);
         $attribute->set_options($term_ids);
         $attribute->set_position(0);
@@ -173,6 +264,9 @@ class Product_Attributes
         return $attribute;
     }
 
+    /**
+     * Нормализует исходное имя таксономии.
+     */
     private function get_taxonomy_name($taxonomy)
     {
         $taxonomy = trim((string) $taxonomy);
@@ -183,15 +277,16 @@ class Product_Attributes
             $taxonomy
         );
 
-        $taxonomy = wc_sanitize_taxonomy_name(
-            $taxonomy
-        );
+        $taxonomy = wc_sanitize_taxonomy_name($taxonomy);
 
         return $taxonomy !== ''
             ? 'pa_' . $taxonomy
             : '';
     }
 
+    /**
+     * Получает существующие термины или создаёт новые.
+     */
     private function get_or_create_terms($taxonomy, $value)
     {
         $values = preg_split('/\s*[,;]\s*/', $value);

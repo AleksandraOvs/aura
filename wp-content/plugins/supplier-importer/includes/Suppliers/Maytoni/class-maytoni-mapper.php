@@ -343,14 +343,12 @@ class Maytoni_Mapper
 
             if (
                 $attribute
-                && !empty($attribute->attribute_name)
+                && !empty($attribute->slug)
             ) {
-                $taxonomy = wc_attribute_taxonomy_name(
-                    $attribute->attribute_name
-                );
+                $taxonomy = $attribute->slug;
 
-                $label = !empty($attribute->attribute_label)
-                    ? $attribute->attribute_label
+                $label = !empty($attribute->name)
+                    ? $attribute->name
                     : $source;
             } else {
                 // Если сопоставления нет, используем исходное название.

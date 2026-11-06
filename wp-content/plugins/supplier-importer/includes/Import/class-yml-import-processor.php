@@ -151,6 +151,10 @@ class Yml_Import_Processor
             $this->repository->update(
                 $this->session
             );
+
+            if ($this->session->is_finished()) {
+                Staging_Cleaner::clean($this->session);
+            }
         } catch (\Throwable $e) {
             $this->session->fail();
 
@@ -166,7 +170,13 @@ class Yml_Import_Processor
                         'message'   => $storage_error->getMessage(),
                     ]
                 );
+
+                return $this->get_result([
+                    'fatal_error' => $e->getMessage(),
+                ]);
             }
+
+            Staging_Cleaner::clean($this->session);
 
             return $this->get_result([
                 'fatal_error' => $e->getMessage(),

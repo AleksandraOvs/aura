@@ -9,6 +9,7 @@ if (!defined('ABSPATH')) {
 use Supplier_Importer\Core\Logger;
 use Supplier_Importer\Import\Import_Repository;
 use Supplier_Importer\Import\Import_Session;
+use Supplier_Importer\Import\Staging_Cleaner;
 
 class Yml_Feed_Cron_Worker
 {
@@ -192,6 +193,8 @@ class Yml_Feed_Cron_Worker
                     ) {
                         $session->fail();
                         $repository->update($session);
+
+                        Staging_Cleaner::clean($session);
                     }
                 } catch (\Throwable $storage_error) {
                     Logger::error(
