@@ -304,7 +304,7 @@ class Admin
                             Maytoni
                         </option>
 
-                        <option value="crystal-lux">
+                        <option value="crystal_lux">
                             Crystal Lux
                         </option>
 
