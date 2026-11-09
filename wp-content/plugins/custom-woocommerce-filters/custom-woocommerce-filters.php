@@ -471,7 +471,10 @@ function cwc_get_category_filter_terms_limited(
     $term_ids = $wpdb->get_col($prepared_sql);
 
     if ($taxonomy === 'pa_12') {
-        error_log('CWC EXPLAIN QUERY: ' . $prepared_sql);
+        error_log('CWC SQL RAW: ' . $sql);
+        error_log('CWC SQL PARAMS: ' . print_r($params, true));
+        error_log('CWC SQL PREPARED: ' . var_export($prepared_sql, true));
+        error_log('CWC SQL LAST ERROR: ' . $wpdb->last_error);
     }
 
     error_log(sprintf(
