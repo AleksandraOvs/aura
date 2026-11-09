@@ -107,6 +107,8 @@ if (!class_exists('CWC_Filter_Renderer')) {
                         ? $settings[$taxonomy]
                         : [];
 
+                    $needs_limited_reload = false;
+
                     // Числовой диапазон: границы вычисляются по числовым ИМЕНАМ термов в текущей категории.
                     if ($type === 'range') {
                         $values = self::numeric_values($terms);
