@@ -525,7 +525,14 @@ function cwc_render_attribute_filter($taxonomy, $title, $category_id = 0)
 function cwc_render_price_filter()
 {
     $current_cat_id = is_product_category() ? get_queried_object_id() : 0;
+    $cwc_debug_time = microtime(true);
+
     list($min, $max) = cwc_get_category_price_range($current_cat_id);
+
+    error_log(sprintf(
+        'CWC DEBUG PRICE RANGE: %.4f sec',
+        microtime(true) - $cwc_debug_time
+    ));
 
     ob_start(); ?>
     <div class="filter-price">
@@ -553,17 +560,33 @@ function cwc_render_price_filter()
  * --------------------------------------------------- */
 function cwc_shop_filters_shortcode()
 {
+    $cwc_debug_start = microtime(true);
 
-    error_log('CWC START ' . microtime(true));
+    error_log('CWC DEBUG START');
+
     $current_cat_id = is_product_category() ? get_queried_object_id() : 0;
 
-
-
-    $text_filters = [];
+    $cwc_debug_time = microtime(true);
     $brand_filter = cwc_get_brand_filter($current_cat_id);
-    error_log('CWC BRAND ' . microtime(true));
+
+    error_log(sprintf(
+        'CWC DEBUG BRAND: %.4f sec',
+        microtime(true) - $cwc_debug_time
+    ));
 
     $filters = [];
+
+    $cwc_debug_time = microtime(true);
+
+    $enabled_attributes = cwc_get_enabled_filter_attributes(
+        $current_cat_id
+    );
+
+    error_log(sprintf(
+        'CWC DEBUG ENABLED ATTRIBUTES: %.4f sec; count=%d',
+        microtime(true) - $cwc_debug_time,
+        count($enabled_attributes)
+    ));
 
     $enabled_attributes = cwc_get_enabled_filter_attributes(
         $current_cat_id
@@ -617,11 +640,19 @@ function cwc_shop_filters_shortcode()
 
         $tax = get_taxonomy($taxonomy);
 
+        $cwc_debug_time = microtime(true);
+
         $filters[] = cwc_render_attribute_filter(
             $taxonomy,
             $tax->label ?? $taxonomy,
             $current_cat_id
         );
+
+        error_log(sprintf(
+            'CWC DEBUG FILTER %s: %.4f sec',
+            $taxonomy,
+            microtime(true) - $cwc_debug_time
+        ));
     }
 
     $initial_count_args = [
@@ -641,7 +672,15 @@ function cwc_shop_filters_shortcode()
         ];
     }
 
+    $cwc_debug_time = microtime(true);
+
     $initial_count_query = new WP_Query($initial_count_args);
+
+    error_log(sprintf(
+        'CWC DEBUG COUNT: %.4f sec; found=%d',
+        microtime(true) - $cwc_debug_time,
+        $initial_count_query->found_posts
+    ));
 
     $initial_count = $initial_count_query->found_posts;
     error_log('CWC COUNT ' . microtime(true));
