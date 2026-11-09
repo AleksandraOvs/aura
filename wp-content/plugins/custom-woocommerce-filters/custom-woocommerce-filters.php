@@ -483,7 +483,17 @@ function cwc_get_category_filter_terms_limited(
         error_log('CWC EXPLAIN ATTRIBUTE FIRST: ' . print_r($explain, true));
     }
 
-    $term_ids = $wpdb->get_col($prepared_sql);
+    $query_sql = $prepared_sql;
+
+    if ($taxonomy === 'pa_12' && $category_id > 0) {
+        $query_sql = str_replace(
+            'SELECT DISTINCT',
+            'SELECT /*+ JOIN_ORDER(filter_tt, filter_tr, filter_p, cat_tr, cat_tt, filter_t) */ DISTINCT',
+            $query_sql
+        );
+    }
+
+    $term_ids = $wpdb->get_col($query_sql);
 
     if ($taxonomy === 'pa_12') {
         error_log('CWC SQL RAW: ' . $sql);
