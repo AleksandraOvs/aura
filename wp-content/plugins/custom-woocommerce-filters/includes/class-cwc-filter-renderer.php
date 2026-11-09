@@ -35,6 +35,30 @@ if (!class_exists('CWC_Filter_Renderer')) {
             return $values;
         }
 
+        private static function sort_terms($terms)
+        {
+            usort($terms, static function ($a, $b) {
+                $a_numeric = CWC_Filter_Range_Query::parse_numeric_name($a->name);
+                $b_numeric = CWC_Filter_Range_Query::parse_numeric_name($b->name);
+
+                if ($a_numeric !== null && $b_numeric !== null) {
+                    return $a_numeric <=> $b_numeric;
+                }
+
+                if ($a_numeric !== null) {
+                    return -1;
+                }
+
+                if ($b_numeric !== null) {
+                    return 1;
+                }
+
+                return strnatcasecmp($a->name, $b->name);
+            });
+
+            return $terms;
+        }
+
         private static function render_shell_start($taxonomy, $title, $type)
         {
             ob_start();
@@ -55,27 +79,29 @@ if (!class_exists('CWC_Filter_Renderer')) {
                         return '';
                     }
 
-                    $terms = cwc_get_category_filter_terms($taxonomy, $category_id);
+                    $type = self::get_type($taxonomy);
+
+                    // Для диапазонов нужны все значения, чтобы правильно вычислить min/max.
+                    // Для интервалов сохраняем прежнюю проверку наличия термов.
+                    // Обычным спискам достаточно первых 16 значений.
+                    $use_full_terms = in_array($type, ['range', 'intervals'], true);
+
+                    if ($use_full_terms) {
+                        $terms = cwc_get_category_filter_terms($taxonomy, $category_id);
+                    } else {
+                        $terms = cwc_get_category_filter_terms_limited(
+                            $taxonomy,
+                            $category_id,
+                            16
+                        );
+                    }
+
                     if (empty($terms) || is_wp_error($terms)) {
                         return '';
                     }
 
-                    usort($terms, static function ($a, $b) {
-                        $a_numeric = CWC_Filter_Range_Query::parse_numeric_name($a->name);
-                        $b_numeric = CWC_Filter_Range_Query::parse_numeric_name($b->name);
-                        if ($a_numeric !== null && $b_numeric !== null) {
-                            return $a_numeric <=> $b_numeric;
-                        }
-                        if ($a_numeric !== null) {
-                            return -1;
-                        }
-                        if ($b_numeric !== null) {
-                            return 1;
-                        }
-                        return strnatcasecmp($a->name, $b->name);
-                    });
+                    $terms = self::sort_terms($terms);
 
-                    $type = self::get_type($taxonomy);
                     $settings = get_option(self::OPTION_NAME, []);
                     $saved = isset($settings[$taxonomy]) && is_array($settings[$taxonomy])
                         ? $settings[$taxonomy]
@@ -86,6 +112,7 @@ if (!class_exists('CWC_Filter_Renderer')) {
                         $values = self::numeric_values($terms);
                         if (!$values) {
                             $type = 'legacy';
+                            $needs_limited_reload = true;
                         } else {
                             $min = min($values);
                             $max = max($values);
@@ -152,7 +179,28 @@ if (!class_exists('CWC_Filter_Renderer')) {
                             return ob_get_clean();
                         }
                         $type = 'legacy';
+                        $needs_limited_reload = true;
                     }
+
+                    // Если диапазон или интервалы перешли в обычный список,
+                    // загружаем ограниченную выборку вместо полной.
+                    if ($needs_limited_reload) {
+                        $terms = cwc_get_category_filter_terms_limited(
+                            $taxonomy,
+                            $category_id,
+                            16
+                        );
+
+                        if (empty($terms) || is_wp_error($terms)) {
+                            return '';
+                        }
+
+                        $terms = self::sort_terms($terms);
+                    }
+
+                    // 16-й элемент нужен только для определения наличия дополнительных значений.
+                    $has_more_terms = count($terms) > 15;
+                    $terms = array_slice($terms, 0, 15);
 
                     $colors = isset($saved['colors']) && is_array($saved['colors'])
                         ? $saved['colors']
@@ -173,7 +221,24 @@ if (!class_exists('CWC_Filter_Renderer')) {
                             <div class="filter-item-title__toggle"><span></span><span></span></div>
                         </div>
                         <div class="filter-item__content">
-                            <ul class="sidebar-list cwc-filter-list cwc-filter-list--<?php echo esc_attr($type); ?>" data-taxonomy="<?php echo esc_attr($taxonomy); ?>" data-display-type="<?php echo esc_attr($type); ?>">
+                            <?php if ($has_more_terms) : ?>
+                                <div class="cwc-filter-search">
+                                    <input
+                                        type="search"
+                                        class="cwc-filter-search__input"
+                                        placeholder="Поиск..."
+                                        autocomplete="off"
+                                        data-taxonomy="<?php echo esc_attr($taxonomy); ?>"
+                                        data-category-id="<?php echo esc_attr($category_id); ?>" />
+                                </div>
+                            <?php endif; ?>
+
+                            <ul
+                                class="sidebar-list cwc-filter-list cwc-filter-list--<?php echo esc_attr($type); ?>"
+                                data-taxonomy="<?php echo esc_attr($taxonomy); ?>"
+                                data-category-id="<?php echo esc_attr($category_id); ?>"
+                                data-display-type="<?php echo esc_attr($type); ?>"
+                                data-has-more="<?php echo $has_more_terms ? '1' : '0'; ?>">
                                 <?php foreach ($terms as $term) :
                                     $term_id = (int) $term->term_id;
 

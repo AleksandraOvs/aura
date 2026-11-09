@@ -15,9 +15,9 @@ require_once plugin_dir_path(__FILE__) . 'includes/class-cwc-filter-renderer.php
 
 
 if (!function_exists('cwc_get_enabled_filter_attributes')) {
+
     function cwc_get_enabled_filter_attributes($category_id = 0)
     {
-        // Все зарегистрированные атрибуты WooCommerce.
         $attributes = wc_get_attribute_taxonomies();
         $all_attributes = [];
 
@@ -25,12 +25,31 @@ if (!function_exists('cwc_get_enabled_filter_attributes')) {
             $all_attributes[] = 'pa_' . $attribute->attribute_name;
         }
 
-        // Если категория не выбрана — показываем все атрибуты.
+        // Общая страница магазина.
         if (!$category_id) {
-            return $all_attributes;
+            $shop_settings = get_option('cwc_filter_attributes_shop', null);
+
+            // Если настройки ещё ни разу не сохранялись,
+            // оставляем прежнее поведение: показываем все атрибуты.
+            if ($shop_settings === null) {
+                return $all_attributes;
+            }
+
+            if (!is_array($shop_settings)) {
+                return [];
+            }
+
+            // Возвращаем только выбранные атрибуты.
+            // Пустой массив означает, что фильтры по атрибутам отключены.
+            return array_values(
+                array_intersect(
+                    $all_attributes,
+                    array_map('strval', $shop_settings)
+                )
+            );
         }
 
-        // Находим родительскую категорию верхнего уровня.
+        // Настройки категорий — прежняя логика.
         $ancestors = get_ancestors(
             (int) $category_id,
             'product_cat',
@@ -41,13 +60,11 @@ if (!function_exists('cwc_get_enabled_filter_attributes')) {
             ? (int) end($ancestors)
             : (int) $category_id;
 
-        // Настройки атрибутов из админки плагина.
         $settings = get_option('cwc_filter_attributes_by_category', []);
 
-        // Если настройки ещё не сохранены, не скрываем все фильтры.
         if (
-            !is_array($settings)
-            || !array_key_exists($root_category_id, $settings)
+            !is_array($settings) ||
+            !array_key_exists($root_category_id, $settings)
         ) {
             return $all_attributes;
         }
@@ -58,9 +75,11 @@ if (!function_exists('cwc_get_enabled_filter_attributes')) {
             return [];
         }
 
-        // Возвращаем только существующие атрибуты, разрешённые в настройках.
         return array_values(
-            array_intersect($all_attributes, $enabled)
+            array_intersect(
+                $all_attributes,
+                $enabled
+            )
         );
     }
 }
@@ -336,6 +355,155 @@ function cwc_get_category_filter_terms($taxonomy, $category_id = 0)
     ]);
 
     return is_wp_error($terms) ? [] : $terms;
+}
+
+/**
+ * Получение ограниченного списка терминов для фильтра.
+ *
+ * Используется для первоначального списка и AJAX-поиска.
+ * Не загружает все термины таксономии в PHP.
+ */
+function cwc_get_category_filter_terms_limited(
+    $taxonomy,
+    $category_id = 0,
+    $limit = 15,
+    $search = ''
+) {
+    global $wpdb;
+
+    if (!taxonomy_exists($taxonomy)) {
+        return [];
+    }
+
+    $limit = max(1, min(100, absint($limit)));
+
+    $category_id = absint($category_id);
+    $search = trim((string) $search);
+
+    $term_relationships = $wpdb->term_relationships;
+    $term_taxonomy = $wpdb->term_taxonomy;
+    $terms_table = $wpdb->terms;
+
+    $joins = "
+        INNER JOIN {$term_relationships} AS filter_tr
+            ON filter_tr.term_taxonomy_id = filter_tt.term_taxonomy_id
+
+        INNER JOIN {$terms_table} AS filter_t
+            ON filter_t.term_id = filter_tt.term_id
+    ";
+
+    $where = [
+        'filter_tt.taxonomy = %s',
+    ];
+
+    if (!$category_id) {
+        $where[] = 'filter_tt.count > 0';
+    }
+
+    $params = [$taxonomy];
+
+    if ($category_id) {
+        $children = get_term_children(
+            $category_id,
+            'product_cat'
+        );
+
+        if (is_wp_error($children)) {
+            $children = [];
+        }
+
+        $category_ids = array_unique(
+            array_map(
+                'absint',
+                array_merge([$category_id], $children)
+            )
+        );
+
+        if (!$category_ids) {
+            return [];
+        }
+
+        $placeholders = implode(
+            ', ',
+            array_fill(0, count($category_ids), '%d')
+        );
+
+        $joins .= "
+            INNER JOIN {$wpdb->posts} AS filter_p
+                ON filter_p.ID = filter_tr.object_id
+
+            INNER JOIN {$term_relationships} AS cat_tr
+                ON cat_tr.object_id = filter_p.ID
+
+            INNER JOIN {$term_taxonomy} AS cat_tt
+                ON cat_tt.term_taxonomy_id = cat_tr.term_taxonomy_id
+        ";
+
+        $where[] = "cat_tt.taxonomy = 'product_cat'";
+        $where[] = "cat_tt.term_id IN ({$placeholders})";
+        $where[] = "filter_p.post_type = 'product'";
+        $where[] = "filter_p.post_status = 'publish'";
+
+        $params = array_merge($params, $category_ids);
+    }
+
+    if ($search !== '') {
+        $where[] = 'filter_t.name LIKE %s';
+
+        $params[] = '%' . $wpdb->esc_like($search) . '%';
+    }
+
+    $sql = "
+        SELECT DISTINCT filter_tt.term_id
+        FROM {$term_taxonomy} AS filter_tt
+        {$joins}
+        WHERE " . implode(' AND ', $where) . "
+        ORDER BY filter_t.name ASC, filter_t.term_id ASC
+        LIMIT %d
+    ";
+
+    $params[] = $limit;
+
+    $term_ids = $wpdb->get_col(
+        $wpdb->prepare($sql, $params)
+    );
+
+    if (empty($term_ids)) {
+        return [];
+    }
+
+    $result = get_terms([
+        'taxonomy'   => $taxonomy,
+        'include'    => array_map('absint', $term_ids),
+        'hide_empty' => false,
+        'orderby'    => 'include',
+    ]);
+
+    if (is_wp_error($result)) {
+        return [];
+    }
+
+    // Сохраняем привычную сортировку внутри полученной выборки.
+    usort($result, static function ($a, $b) {
+        $a_numeric = CWC_Filter_Range_Query::parse_numeric_name($a->name);
+        $b_numeric = CWC_Filter_Range_Query::parse_numeric_name($b->name);
+
+        if ($a_numeric !== null && $b_numeric !== null) {
+            return $a_numeric <=> $b_numeric;
+        }
+
+        if ($a_numeric !== null) {
+            return -1;
+        }
+
+        if ($b_numeric !== null) {
+            return 1;
+        }
+
+        return strnatcasecmp($a->name, $b->name);
+    });
+
+    return $result;
 }
 
 /* ---------------------------------------------------

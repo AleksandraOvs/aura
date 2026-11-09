@@ -1,22 +1,34 @@
 <?php
 
 /**
- * Настройки атрибутов фильтра по родительским категориям.
+ * Настройки атрибутов фильтра:
+ * - общая страница магазина;
+ * - родительские категории товаров.
  */
 
 add_action('admin_menu', function () {
     add_menu_page(
-        'Настройки фильтров',                  // Заголовок страницы
-        'Фильтры',                             // Название в основном меню
-        'manage_woocommerce',                  // Необходимые права
-        'cwc-filter-attributes',               // Уникальный slug
-        'cwc_render_filter_attributes_settings', // Функция вывода страницы
-        'dashicons-filter',                    // Иконка меню
-        56                                     // Позиция в меню
+        'Настройки фильтров',
+        'Фильтры',
+        'manage_woocommerce',
+        'cwc-filter-attributes',
+        'cwc_render_filter_attributes_settings',
+        'dashicons-filter',
+        56
     );
 });
 
 add_action('admin_init', function () {
+
+    register_setting(
+        'cwc_filter_attributes_group',
+        'cwc_filter_attributes_shop',
+        [
+            'type'              => 'array',
+            'sanitize_callback' => 'cwc_sanitize_filter_attributes_shop',
+        ]
+    );
+
     register_setting(
         'cwc_filter_attributes_group',
         'cwc_filter_attributes_by_category',
@@ -30,7 +42,6 @@ add_action('admin_init', function () {
 
 add_action('admin_enqueue_scripts', function ($hook_suffix) {
 
-    // Загружаем CSS только на странице «Фильтры».
     if ($hook_suffix !== 'toplevel_page_cwc-filter-attributes') {
         return;
     }
@@ -82,7 +93,37 @@ function cwc_get_filter_parent_categories()
 }
 
 /**
- * Проверяем и очищаем сохранённые настройки.
+ * Очищаем список выбранных атрибутов.
+ */
+function cwc_sanitize_filter_attribute_list($selected)
+{
+    if (!is_array($selected)) {
+        return [];
+    }
+
+    $attributes = cwc_get_filter_attribute_options();
+
+    $selected = array_filter($selected, 'is_scalar');
+    $selected = array_map('strval', $selected);
+
+    return array_values(
+        array_intersect(
+            $selected,
+            array_keys($attributes)
+        )
+    );
+}
+
+/**
+ * Сохраняем атрибуты общей страницы магазина.
+ */
+function cwc_sanitize_filter_attributes_shop($input)
+{
+    return cwc_sanitize_filter_attribute_list($input);
+}
+
+/**
+ * Сохраняем настройки атрибутов категорий.
  */
 function cwc_sanitize_filter_attributes_settings($input)
 {
@@ -90,23 +131,15 @@ function cwc_sanitize_filter_attributes_settings($input)
         return [];
     }
 
-    $attributes = cwc_get_filter_attribute_options();
     $categories = cwc_get_filter_parent_categories();
-    $clean      = [];
+    $clean = [];
 
     foreach ($categories as $category) {
         $category_id = (string) $category->term_id;
-        $selected    = $input[$category_id] ?? [];
+        $selected = $input[$category_id] ?? [];
 
-        if (!is_array($selected)) {
-            $selected = [];
-        }
-
-        $clean[$category_id] = array_values(
-            array_intersect(
-                array_map('sanitize_key', $selected),
-                array_keys($attributes)
-            )
+        $clean[$category_id] = cwc_sanitize_filter_attribute_list(
+            $selected
         );
     }
 
@@ -114,7 +147,7 @@ function cwc_sanitize_filter_attributes_settings($input)
 }
 
 /**
- * Страница настроек в админке.
+ * Вывод административной страницы.
  */
 function cwc_render_filter_attributes_settings()
 {
@@ -125,18 +158,27 @@ function cwc_render_filter_attributes_settings()
     $categories = cwc_get_filter_parent_categories();
     $attributes = cwc_get_filter_attribute_options();
 
+    // Настройки общей страницы магазина.
+    $shop_saved = get_option('cwc_filter_attributes_shop', null);
+    $shop_is_saved = $shop_saved !== null;
+
+    $shop_selected = $shop_is_saved
+        ? (array) $shop_saved
+        : array_keys($attributes);
+
+    // Настройки категорий.
     $saved = get_option('cwc_filter_attributes_by_category', []);
     $saved = is_array($saved) ? $saved : [];
 
 ?>
+
     <div class="wrap cwc-settings">
 
         <div class="cwc-settings__header">
             <h1>Фильтры товаров</h1>
             <p>
-                Выберите атрибуты, которые будут отображаться
-                в фильтрах каждой родительской категории.
-                Настройки также применяются ко всем вложенным категориям.
+                Настройте, какие характеристики товаров будут доступны
+                посетителям в фильтрах общего каталога и отдельных категорий.
             </p>
         </div>
 
@@ -144,98 +186,233 @@ function cwc_render_filter_attributes_settings()
 
             <?php settings_fields('cwc_filter_attributes_group'); ?>
 
-            <?php if (empty($categories)) : ?>
+            <!-- Общая страница магазина -->
 
-                <div class="cwc-settings__empty">
-                    Родительские категории товаров не найдены.
+            <section class="cwc-category-card cwc-settings__shop-card">
+
+                <div class="cwc-category-card__header">
+                    <h2 class="cwc-category-card__title">
+                        1. Общая страница магазина
+                    </h2>
+
+                    <span class="cwc-category-card__count">
+                        <?php
+                        echo esc_html(
+                            count($shop_selected) . ' из ' . count($attributes)
+                        );
+                        ?>
+                    </span>
                 </div>
 
-            <?php else : ?>
+                <div class="cwc-category-card__body">
 
-                <div class="cwc-settings__categories">
+                    <div class="cwc-settings__description">
+                        <p>
+                            Выберите атрибуты, по которым посетители смогут
+                            фильтровать товары на общей странице магазина
+                            <code>/shop/</code>.
+                        </p>
 
-                    <?php foreach ($categories as $category) : ?>
+                        <p>
+                            Эти настройки действуют только на общей странице
+                            каталога и не влияют на настройки отдельных категорий.
+                        </p>
 
-                        <?php
-                        $category_id = (string) $category->term_id;
+                        <p class="cwc-settings__hint">
+                            Если снять все галочки и сохранить настройки,
+                            фильтры по атрибутам на общей странице магазина
+                            отображаться не будут.
+                        </p>
 
-                        // Если настройки ещё не сохранялись,
-                        // считаем включёнными все атрибуты.
-                        $selected = array_key_exists($category_id, $saved)
-                            ? (array) $saved[$category_id]
-                            : array_keys($attributes);
-                        ?>
+                        <?php if (!$shop_is_saved) : ?>
+                            <p class="cwc-settings__notice">
+                                Настройки ещё не сохранялись. Сейчас отображаются
+                                все доступные атрибуты.
+                            </p>
+                        <?php endif; ?>
+                    </div>
 
-                        <section class="cwc-category-card">
+                    <?php if (empty($attributes)) : ?>
 
-                            <div class="cwc-category-card__header">
-                                <h2 class="cwc-category-card__title">
-                                    <?php echo esc_html($category->name); ?>
-                                </h2>
+                        <p class="cwc-settings__empty">
+                            Атрибуты WooCommerce не найдены.
+                        </p>
 
-                                <span class="cwc-category-card__count">
-                                    <?php
-                                    echo esc_html(
-                                        count($selected) . ' из ' . count($attributes)
-                                    );
-                                    ?>
-                                </span>
-                            </div>
+                    <?php else : ?>
 
-                            <div class="cwc-category-card__body">
+                        <input
+                            type="hidden"
+                            name="cwc_filter_attributes_shop[]"
+                            value="">
 
-                                <?php if (empty($attributes)) : ?>
+                        <div class="cwc-settings__bulk-actions">
+                            <button type="button" class="button cwc-select-all">
+                                Отметить всё
+                            </button>
 
-                                    <p class="cwc-settings__empty">
-                                        Атрибуты WooCommerce не найдены.
-                                    </p>
+                            <button type="button" class="button cwc-deselect-all">
+                                Снять всё
+                            </button>
+                        </div>
+                        <div class="cwc-attributes-grid">
 
-                                <?php else : ?>
+                            <?php foreach ($attributes as $taxonomy => $label) : ?>
+
+                                <label class="cwc-attribute-option">
 
                                     <input
-                                        type="hidden"
-                                        name="cwc_filter_attributes_by_category[<?php echo esc_attr($category_id); ?>][]"
-                                        value="">
+                                        type="checkbox"
+                                        name="cwc_filter_attributes_shop[]"
+                                        value="<?php echo esc_attr($taxonomy); ?>"
+                                        <?php checked(in_array($taxonomy, $shop_selected, true)); ?>>
 
-                                    <div class="cwc-attributes-grid">
+                                    <span class="cwc-attribute-option__content">
 
-                                        <?php foreach ($attributes as $taxonomy => $label) : ?>
+                                        <span class="cwc-attribute-option__label">
+                                            <?php echo esc_html($label); ?>
+                                        </span>
 
-                                            <label class="cwc-attribute-option">
+                                        <code class="cwc-attribute-option__taxonomy">
+                                            <?php echo esc_html($taxonomy); ?>
+                                        </code>
 
-                                                <input
-                                                    type="checkbox"
-                                                    name="cwc_filter_attributes_by_category[<?php echo esc_attr($category_id); ?>][]"
-                                                    value="<?php echo esc_attr($taxonomy); ?>"
-                                                    <?php checked(in_array($taxonomy, $selected, true)); ?>>
+                                    </span>
 
-                                                <span class="cwc-attribute-option__content">
-                                                    <span class="cwc-attribute-option__label">
-                                                        <?php echo esc_html($label); ?>
-                                                    </span>
+                                </label>
 
-                                                    <code class="cwc-attribute-option__taxonomy">
-                                                        <?php echo esc_html($taxonomy); ?>
-                                                    </code>
-                                                </span>
+                            <?php endforeach; ?>
 
-                                            </label>
+                        </div>
 
-                                        <?php endforeach; ?>
-
-                                    </div>
-
-                                <?php endif; ?>
-
-                            </div>
-
-                        </section>
-
-                    <?php endforeach; ?>
+                    <?php endif; ?>
 
                 </div>
 
-            <?php endif; ?>
+            </section>
+
+            <!-- Настройки категорий -->
+
+            <section class="cwc-settings__category-section">
+
+                <div class="cwc-settings__section-heading">
+                    <h2>2. Фильтры отдельных категорий</h2>
+
+                    <p>
+                        Здесь можно настроить свой набор фильтров для каждой
+                        корневой категории товаров.
+                    </p>
+
+                    <p>
+                        Настройки распространяются также на все вложенные
+                        подкатегории. Например, если вы настроите фильтры
+                        для категории «Освещение», они будут действовать
+                        и в её подкатегориях.
+                    </p>
+
+                    <p class="cwc-settings__hint">
+                        Если настройки категории ещё не сохранялись,
+                        для неё будут отображаться все доступные атрибуты.
+                        Если снять все галочки и сохранить, фильтры по атрибутам
+                        в этой категории и её подкатегориях отображаться не будут.
+                    </p>
+                </div>
+
+                <?php if (empty($categories)) : ?>
+
+                    <div class="cwc-settings__empty">
+                        Родительские категории товаров не найдены.
+                    </div>
+
+                <?php else : ?>
+
+                    <div class="cwc-settings__categories">
+
+                        <?php foreach ($categories as $category) : ?>
+
+                            <?php
+                            $category_id = (string) $category->term_id;
+
+                            $selected = array_key_exists($category_id, $saved)
+                                ? (array) $saved[$category_id]
+                                : array_keys($attributes);
+                            ?>
+
+                            <section class="cwc-category-card">
+
+                                <div class="cwc-category-card__header">
+
+                                    <h3 class="cwc-category-card__title">
+                                        <?php echo esc_html($category->name); ?>
+                                    </h3>
+
+                                    <span class="cwc-category-card__count">
+                                        <?php
+                                        echo esc_html(
+                                            count($selected) . ' из ' . count($attributes)
+                                        );
+                                        ?>
+                                    </span>
+
+                                </div>
+
+                                <div class="cwc-category-card__body">
+
+                                    <?php if (empty($attributes)) : ?>
+
+                                        <p class="cwc-settings__empty">
+                                            Атрибуты WooCommerce не найдены.
+                                        </p>
+
+                                    <?php else : ?>
+
+                                        <input
+                                            type="hidden"
+                                            name="cwc_filter_attributes_by_category[<?php echo esc_attr($category_id); ?>][]"
+                                            value="">
+
+                                        <div class="cwc-attributes-grid">
+
+                                            <?php foreach ($attributes as $taxonomy => $label) : ?>
+
+                                                <label class="cwc-attribute-option">
+
+                                                    <input
+                                                        type="checkbox"
+                                                        name="cwc_filter_attributes_by_category[<?php echo esc_attr($category_id); ?>][]"
+                                                        value="<?php echo esc_attr($taxonomy); ?>"
+                                                        <?php checked(in_array($taxonomy, $selected, true)); ?>>
+
+                                                    <span class="cwc-attribute-option__content">
+
+                                                        <span class="cwc-attribute-option__label">
+                                                            <?php echo esc_html($label); ?>
+                                                        </span>
+
+                                                        <code class="cwc-attribute-option__taxonomy">
+                                                            <?php echo esc_html($taxonomy); ?>
+                                                        </code>
+
+                                                    </span>
+
+                                                </label>
+
+                                            <?php endforeach; ?>
+
+                                        </div>
+
+                                    <?php endif; ?>
+
+                                </div>
+
+                            </section>
+
+                        <?php endforeach; ?>
+
+                    </div>
+
+                <?php endif; ?>
+
+            </section>
 
             <div class="cwc-settings__footer">
                 <?php submit_button('Сохранить настройки', 'primary', 'submit', false); ?>
@@ -244,5 +421,40 @@ function cwc_render_filter_attributes_settings()
         </form>
 
     </div>
+
 <?php
 }
+
+add_action('admin_footer', function () {
+    $screen = get_current_screen();
+
+    if (!$screen || $screen->id !== 'toplevel_page_cwc-filter-attributes') {
+        return;
+    }
+?>
+    <script>
+        document.addEventListener('click', function(event) {
+            const selectButton = event.target.closest('.cwc-select-all');
+            const deselectButton = event.target.closest('.cwc-deselect-all');
+
+            if (!selectButton && !deselectButton) {
+                return;
+            }
+
+            const button = selectButton || deselectButton;
+            const card = button.closest('.cwc-category-card');
+
+            if (!card) {
+                return;
+            }
+
+            const checked = Boolean(selectButton);
+
+            card.querySelectorAll('.cwc-attribute-option input[type="checkbox"]')
+                .forEach(function(checkbox) {
+                    checkbox.checked = checked;
+                });
+        });
+    </script>
+<?php
+});

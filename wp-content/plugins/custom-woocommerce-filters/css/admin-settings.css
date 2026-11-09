@@ -169,6 +169,122 @@
     line-height: 1.5;
 }
 
+
+/* Описание настроек */
+
+.cwc-settings__description {
+    margin-bottom: 24px;
+}
+
+.cwc-settings__description p,
+.cwc-settings__section-heading p {
+    max-width: 850px;
+    margin: 0 0 10px;
+    color: #646970;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.cwc-settings__description code {
+    padding: 2px 5px;
+    background: #f0edf4;
+    border-radius: 3px;
+    color: #614881;
+}
+
+.cwc-settings__hint {
+    margin-top: 14px !important;
+    padding: 10px 14px;
+    border-left: 3px solid #614881;
+    background: #f7f5fa;
+    color: #4f465a !important;
+}
+
+.cwc-settings__notice {
+    margin-top: 12px !important;
+    padding: 10px 14px;
+    border-left: 3px solid #dba617;
+    background: #fff9e8;
+    color: #66521c !important;
+}
+
+/* Раздел настроек категорий */
+
+.cwc-settings__category-section {
+    margin-top: 36px;
+}
+
+.cwc-settings__section-heading {
+    margin-bottom: 20px;
+    padding: 22px 24px;
+    border: 1px solid #dcdcde;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.cwc-settings__section-heading h2 {
+    margin: 0 0 14px;
+    color: #1d2327;
+    font-size: 18px;
+    line-height: 1.4;
+}
+
+.cwc-settings__section-heading p:last-child {
+    margin-bottom: 0;
+}
+
+/* Карточки настроек */
+
+.cwc-settings__shop-card {
+    margin-bottom: 0;
+}
+
+.cwc-settings__categories {
+    display: grid;
+    gap: 16px;
+}
+
+.cwc-settings__categories .cwc-category-card {
+    margin: 0;
+}
+
+.cwc-settings__footer {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #dcdcde;
+}
+
+.cwc-settings__footer .button-primary {
+    background: #614881;
+    border-color: #614881;
+}
+
+.cwc-settings__footer .button-primary:hover,
+.cwc-settings__footer .button-primary:focus {
+    background: #4d3868;
+    border-color: #4d3868;
+}
+
+/* Массовое выделение атрибутов */
+
+.cwc-settings__bulk-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.cwc-settings__bulk-actions .button {
+    border-color: #d0c7dc;
+    color: #614881;
+}
+
+.cwc-settings__bulk-actions .button:hover {
+    border-color: #614881;
+    color: #4d3868;
+}
+
+
 /* ===============================
    АДАПТИВНОСТЬ
 ================================ */
