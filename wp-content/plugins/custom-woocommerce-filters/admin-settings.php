@@ -364,10 +364,15 @@ function cwc_render_filter_attributes_settings()
 
                                     <?php else : ?>
 
-                                        <input
-                                            type="hidden"
-                                            name="cwc_filter_attributes_by_category[<?php echo esc_attr($category_id); ?>][]"
-                                            value="">
+                                        <div class="cwc-settings__bulk-actions">
+                                            <button type="button" class="button cwc-select-all">
+                                                Отметить всё
+                                            </button>
+
+                                            <button type="button" class="button cwc-deselect-all">
+                                                Снять всё
+                                            </button>
+                                        </div>
 
                                         <div class="cwc-attributes-grid">
 
