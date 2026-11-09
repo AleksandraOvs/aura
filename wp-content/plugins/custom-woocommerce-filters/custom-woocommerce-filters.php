@@ -464,13 +464,24 @@ function cwc_get_category_filter_terms_limited(
 
     $params[] = $limit;
 
+    $cwc_sql_start = microtime(true);
+
     $term_ids = $wpdb->get_col(
         $wpdb->prepare($sql, $params)
     );
 
+    error_log(sprintf(
+        'CWC SQL %s: %.4f sec; rows=%d',
+        $taxonomy,
+        microtime(true) - $cwc_sql_start,
+        count($term_ids)
+    ));
+
     if (empty($term_ids)) {
         return [];
     }
+
+    $cwc_terms_start = microtime(true);
 
     $result = get_terms([
         'taxonomy'   => $taxonomy,
@@ -478,6 +489,12 @@ function cwc_get_category_filter_terms_limited(
         'hide_empty' => false,
         'orderby'    => 'include',
     ]);
+
+    error_log(sprintf(
+        'CWC GET_TERMS %s: %.4f sec',
+        $taxonomy,
+        microtime(true) - $cwc_terms_start
+    ));
 
     if (is_wp_error($result)) {
         return [];
