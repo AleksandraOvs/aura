@@ -227,7 +227,13 @@ class Yml_Import_Processor
  * Преобразуем исходные параметры фида
  * в глобальные атрибуты WooCommerce.
  */
-            if ($product_data->get_supplier() === 'citilux') {
+            if (
+                in_array(
+                    $product_data->get_supplier(),
+                    ['citilux', 'lightstar'],
+                    true
+                )
+            ) {
                 $product_attributes = $this->attribute_mapper->map(
                     $product_data->get_attributes(),
                     $product_data->get_supplier()
