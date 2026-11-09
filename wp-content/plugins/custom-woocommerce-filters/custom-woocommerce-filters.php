@@ -466,9 +466,13 @@ function cwc_get_category_filter_terms_limited(
 
     $cwc_sql_start = microtime(true);
 
-    $term_ids = $wpdb->get_col(
-        $wpdb->prepare($sql, $params)
-    );
+    $prepared_sql = $wpdb->prepare($sql, $params);
+
+    $term_ids = $wpdb->get_col($prepared_sql);
+
+    if ($taxonomy === 'pa_12') {
+        error_log('CWC EXPLAIN QUERY: ' . $prepared_sql);
+    }
 
     error_log(sprintf(
         'CWC SQL %s: %.4f sec; rows=%d',
