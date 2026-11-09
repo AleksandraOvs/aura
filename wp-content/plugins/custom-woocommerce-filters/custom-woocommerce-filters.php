@@ -469,12 +469,18 @@ function cwc_get_category_filter_terms_limited(
     $prepared_sql = $wpdb->prepare($sql, $params);
 
     if ($taxonomy === 'pa_12') {
+        $candidate_sql = str_replace(
+            'SELECT DISTINCT',
+            'SELECT /*+ JOIN_ORDER(filter_tt, filter_tr, filter_p, cat_tr, cat_tt, filter_t) */ DISTINCT',
+            $prepared_sql
+        );
+
         $explain = $wpdb->get_results(
-            'EXPLAIN ANALYZE ' . $prepared_sql,
+            'EXPLAIN ANALYZE ' . $candidate_sql,
             ARRAY_N
         );
 
-        error_log('CWC EXPLAIN ANALYZE: ' . print_r($explain, true));
+        error_log('CWC EXPLAIN ATTRIBUTE FIRST: ' . print_r($explain, true));
     }
 
     $term_ids = $wpdb->get_col($prepared_sql);
