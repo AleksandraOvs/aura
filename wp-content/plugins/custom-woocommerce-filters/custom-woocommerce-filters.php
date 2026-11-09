@@ -470,11 +470,11 @@ function cwc_get_category_filter_terms_limited(
 
     if ($taxonomy === 'pa_12') {
         $explain = $wpdb->get_results(
-            'EXPLAIN ' . $prepared_sql,
-            ARRAY_A
+            'EXPLAIN ANALYZE ' . $prepared_sql,
+            ARRAY_N
         );
 
-        error_log('CWC EXPLAIN RESULT: ' . print_r($explain, true));
+        error_log('CWC EXPLAIN ANALYZE: ' . print_r($explain, true));
     }
 
     $term_ids = $wpdb->get_col($prepared_sql);
