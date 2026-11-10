@@ -29,7 +29,6 @@ if (!function_exists('cwc_get_enabled_filter_attributes')) {
         if (!$category_id) {
             $shop_settings = get_option('cwc_filter_attributes_shop', null);
 
-            // Если настройки ещё не сохранялись — прежнее поведение.
             if ($shop_settings === null) {
                 return $all_attributes;
             }
@@ -44,17 +43,6 @@ if (!function_exists('cwc_get_enabled_filter_attributes')) {
             ));
         }
 
-        // Определяем корневую категорию.
-        $ancestors = get_ancestors(
-            (int) $category_id,
-            'product_cat',
-            'taxonomy'
-        );
-
-        $root_category_id = $ancestors
-            ? (int) end($ancestors)
-            : (int) $category_id;
-
         // Общие фильтры для всех категорий.
         $common_settings = get_option(
             'cwc_filter_attributes_common',
@@ -65,7 +53,7 @@ if (!function_exists('cwc_get_enabled_filter_attributes')) {
             $common_settings = [];
         }
 
-        // Индивидуальные фильтры корневой категории.
+        // Индивидуальные фильтры именно текущей категории.
         $category_settings = get_option(
             'cwc_filter_attributes_by_category',
             []
@@ -75,14 +63,13 @@ if (!function_exists('cwc_get_enabled_filter_attributes')) {
 
         if (
             is_array($category_settings) &&
-            isset($category_settings[$root_category_id]) &&
-            is_array($category_settings[$root_category_id])
+            isset($category_settings[$category_id]) &&
+            is_array($category_settings[$category_id])
         ) {
-            $category_attributes = $category_settings[$root_category_id];
+            $category_attributes = $category_settings[$category_id];
         }
 
         // Объединяем общие и индивидуальные фильтры.
-        // Убираем дубликаты и несуществующие атрибуты.
         $enabled = array_unique(array_merge(
             array_map('strval', $common_settings),
             array_map('strval', $category_attributes)
