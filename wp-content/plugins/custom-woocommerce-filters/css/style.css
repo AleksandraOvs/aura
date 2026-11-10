@@ -803,6 +803,15 @@
   transition: all .5s linear;
 }
 
+.cwc-filter-search input {
+  max-width: 100%;
+  margin-bottom: 1em;
+  font-size: 12px;
+  border: 1px solid #cacaca;
+  width: 100%;
+  padding: .5em;
+}
+
 .filter-item-title__toggle span:first-child {
   transform: rotate(90deg);
   left: 7px;
