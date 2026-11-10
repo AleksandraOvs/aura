@@ -37,6 +37,16 @@ add_action('admin_init', function () {
             'default'           => [],
         ]
     );
+
+    register_setting(
+        'cwc_filter_attributes_group',
+        'cwc_filter_attributes_common',
+        [
+            'type'              => 'array',
+            'sanitize_callback' => 'cwc_sanitize_filter_attributes_common',
+            'default'           => [],
+        ]
+    );
 });
 
 add_action('admin_enqueue_scripts', function ($hook_suffix) {
@@ -122,6 +132,14 @@ function cwc_sanitize_filter_attributes_shop($input)
 }
 
 /**
+ * Сохраняем общие фильтры для всех категорий.
+ */
+function cwc_sanitize_filter_attributes_common($input)
+{
+    return cwc_sanitize_filter_attribute_list($input);
+}
+
+/**
  * Сохраняем настройки атрибутов категорий.
  */
 function cwc_sanitize_filter_attributes_settings($input)
@@ -157,6 +175,11 @@ function cwc_render_filter_attributes_settings()
     $categories = cwc_get_filter_parent_categories();
     $attributes = cwc_get_filter_attribute_options();
 
+    $common_saved = get_option('cwc_filter_attributes_common', []);
+    $common_selected = is_array($common_saved)
+        ? $common_saved
+        : [];
+
     // Настройки общей страницы магазина.
     $shop_saved = get_option('cwc_filter_attributes_shop', null);
     $shop_is_saved = $shop_saved !== null;
@@ -185,13 +208,101 @@ function cwc_render_filter_attributes_settings()
 
             <?php settings_fields('cwc_filter_attributes_group'); ?>
 
+            <!-- Общие фильтры -->
+
+            <section class="cwc-category-card">
+
+                <div class="cwc-category-card__header">
+                    <h2 class="cwc-category-card__title">
+                        1. Общие фильтры
+                    </h2>
+
+                    <span class="cwc-category-card__count">
+                        <?php echo esc_html(count($common_selected) . ' из ' . count($attributes)); ?>
+                    </span>
+                </div>
+
+                <div class="cwc-category-card__body">
+
+                    <div class="cwc-settings__description">
+                        <p>
+                            Выберите атрибуты, которые будут отображаться
+                            в фильтрах товаров во всех категориях по умолчанию.
+                        </p>
+
+                        <p class="cwc-settings__hint">
+                            Все индивидуальные фильтры категорий по умолчанию выключены.
+                            Отметьте дополнительные атрибуты, которые нужны в конкретной категории.
+                            Они будут отображаться вместе с общими фильтрами.
+                        </p>
+                    </div>
+
+                    <?php if (empty($attributes)) : ?>
+
+                        <p class="cwc-settings__empty">
+                            Атрибуты WooCommerce не найдены.
+                        </p>
+
+                    <?php else : ?>
+
+                        <input
+                            type="hidden"
+                            name="cwc_filter_attributes_common[]"
+                            value="">
+
+                        <div class="cwc-settings__bulk-actions">
+                            <button type="button" class="button cwc-select-all">
+                                Отметить всё
+                            </button>
+
+                            <button type="button" class="button cwc-deselect-all">
+                                Снять всё
+                            </button>
+                        </div>
+
+                        <div class="cwc-attributes-grid">
+
+                            <?php foreach ($attributes as $taxonomy => $label) : ?>
+
+                                <label class="cwc-attribute-option">
+
+                                    <input
+                                        type="checkbox"
+                                        name="cwc_filter_attributes_common[]"
+                                        value="<?php echo esc_attr($taxonomy); ?>"
+                                        <?php checked(in_array($taxonomy, $common_selected, true)); ?>>
+
+                                    <span class="cwc-attribute-option__content">
+
+                                        <span class="cwc-attribute-option__label">
+                                            <?php echo esc_html($label); ?>
+                                        </span>
+
+                                        <code class="cwc-attribute-option__taxonomy">
+                                            <?php echo esc_html($taxonomy); ?>
+                                        </code>
+
+                                    </span>
+
+                                </label>
+
+                            <?php endforeach; ?>
+
+                        </div>
+
+                    <?php endif; ?>
+
+                </div>
+
+            </section>
+
             <!-- Общая страница магазина -->
 
             <section class="cwc-category-card cwc-settings__shop-card">
 
                 <div class="cwc-category-card__header">
                     <h2 class="cwc-category-card__title">
-                        1. Общая страница магазина
+                        2. Страница магазина (/shop)
                     </h2>
 
                     <span class="cwc-category-card__count">
@@ -333,12 +444,12 @@ function cwc_render_filter_attributes_settings()
 
                             $selected = array_key_exists($category_id, $saved)
                                 ? (array) $saved[$category_id]
-                                : array_keys($attributes);
+                                : [];
                             ?>
 
-                            <section class="cwc-category-card">
+                            <details class="cwc-category-card cwc-category-card--accordion">
 
-                                <div class="cwc-category-card__header">
+                                <summary class="cwc-category-card__header">
 
                                     <h3 class="cwc-category-card__title">
                                         <?php echo esc_html($category->name); ?>
@@ -352,7 +463,9 @@ function cwc_render_filter_attributes_settings()
                                         ?>
                                     </span>
 
-                                </div>
+                                    <span class="cwc-category-card__arrow" aria-hidden="true"></span>
+
+                                </summary>
 
                                 <div class="cwc-category-card__body">
 
@@ -365,6 +478,7 @@ function cwc_render_filter_attributes_settings()
                                     <?php else : ?>
 
                                         <div class="cwc-settings__bulk-actions">
+
                                             <button type="button" class="button cwc-select-all">
                                                 Отметить всё
                                             </button>
@@ -372,6 +486,7 @@ function cwc_render_filter_attributes_settings()
                                             <button type="button" class="button cwc-deselect-all">
                                                 Снять всё
                                             </button>
+
                                         </div>
 
                                         <div class="cwc-attributes-grid">
@@ -408,7 +523,7 @@ function cwc_render_filter_attributes_settings()
 
                                 </div>
 
-                            </section>
+                            </details>
 
                         <?php endforeach; ?>
 

@@ -237,6 +237,7 @@
 
 .cwc-settings__shop-card {
     margin-bottom: 0;
+    margin-top: 2em;
 }
 
 .cwc-settings__categories {
@@ -284,6 +285,56 @@
     color: #4d3868;
 }
 
+/* Аккордеон категорий */
+
+.cwc-category-card--accordion {
+    overflow: hidden;
+}
+
+.cwc-category-card--accordion>summary {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+
+.cwc-category-card--accordion>summary::-webkit-details-marker {
+    display: none;
+}
+
+.cwc-category-card--accordion>summary::marker {
+    content: "";
+}
+
+.cwc-category-card--accordion .cwc-category-card__title {
+    margin: 0;
+    flex: 1;
+}
+
+.cwc-category-card--accordion .cwc-category-card__arrow {
+    width: 9px;
+    height: 9px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+    margin-right: 5px;
+}
+
+.cwc-category-card--accordion[open] .cwc-category-card__arrow {
+    transform: rotate(225deg);
+}
+
+.cwc-category-card--accordion>summary:hover {
+    background: #f9f7fb;
+}
+
+.cwc-category-card--accordion .cwc-category-card__body {
+    border-top: 1px solid #eee;
+}
 
 /* ===============================
    АДАПТИВНОСТЬ

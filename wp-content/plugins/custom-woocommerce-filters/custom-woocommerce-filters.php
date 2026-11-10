@@ -29,8 +29,7 @@ if (!function_exists('cwc_get_enabled_filter_attributes')) {
         if (!$category_id) {
             $shop_settings = get_option('cwc_filter_attributes_shop', null);
 
-            // Если настройки ещё ни разу не сохранялись,
-            // оставляем прежнее поведение: показываем все атрибуты.
+            // Если настройки ещё не сохранялись — прежнее поведение.
             if ($shop_settings === null) {
                 return $all_attributes;
             }
@@ -39,17 +38,13 @@ if (!function_exists('cwc_get_enabled_filter_attributes')) {
                 return [];
             }
 
-            // Возвращаем только выбранные атрибуты.
-            // Пустой массив означает, что фильтры по атрибутам отключены.
-            return array_values(
-                array_intersect(
-                    $all_attributes,
-                    array_map('strval', $shop_settings)
-                )
-            );
+            return array_values(array_intersect(
+                $all_attributes,
+                array_map('strval', $shop_settings)
+            ));
         }
 
-        // Настройки категорий — прежняя логика.
+        // Определяем корневую категорию.
         $ancestors = get_ancestors(
             (int) $category_id,
             'product_cat',
@@ -60,27 +55,43 @@ if (!function_exists('cwc_get_enabled_filter_attributes')) {
             ? (int) end($ancestors)
             : (int) $category_id;
 
-        $settings = get_option('cwc_filter_attributes_by_category', []);
+        // Общие фильтры для всех категорий.
+        $common_settings = get_option(
+            'cwc_filter_attributes_common',
+            []
+        );
+
+        if (!is_array($common_settings)) {
+            $common_settings = [];
+        }
+
+        // Индивидуальные фильтры корневой категории.
+        $category_settings = get_option(
+            'cwc_filter_attributes_by_category',
+            []
+        );
+
+        $category_attributes = [];
 
         if (
-            !is_array($settings) ||
-            !array_key_exists($root_category_id, $settings)
+            is_array($category_settings) &&
+            isset($category_settings[$root_category_id]) &&
+            is_array($category_settings[$root_category_id])
         ) {
-            return $all_attributes;
+            $category_attributes = $category_settings[$root_category_id];
         }
 
-        $enabled = $settings[$root_category_id];
+        // Объединяем общие и индивидуальные фильтры.
+        // Убираем дубликаты и несуществующие атрибуты.
+        $enabled = array_unique(array_merge(
+            array_map('strval', $common_settings),
+            array_map('strval', $category_attributes)
+        ));
 
-        if (!is_array($enabled)) {
-            return [];
-        }
-
-        return array_values(
-            array_intersect(
-                $all_attributes,
-                $enabled
-            )
-        );
+        return array_values(array_intersect(
+            $all_attributes,
+            $enabled
+        ));
     }
 }
 
