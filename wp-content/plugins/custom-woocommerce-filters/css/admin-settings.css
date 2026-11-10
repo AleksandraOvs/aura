@@ -349,6 +349,14 @@
     border-bottom: 1px solid #eee;
 }
 
+/* Фиксация заголовка общей карточки */
+section.cwc-category-card>.cwc-category-card__header {
+    position: sticky;
+    top: 32px;
+    z-index: 20;
+    background: #fff;
+}
+
 /* ===============================
    АДАПТИВНОСТЬ
 ================================ */
