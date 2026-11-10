@@ -1026,6 +1026,10 @@ function cwc_filter_products_callback()
 
     $query = new WP_Query($query_args);
 
+    error_log('CWC AJAX SQL: ' . $query->request);
+    error_log('CWC AJAX FOUND: ' . $query->found_posts);
+    error_log('CWC AJAX ARGS: ' . print_r($query_args, true));
+
     /*
      * -----------------------------------------------
      * HTML
