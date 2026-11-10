@@ -54,6 +54,19 @@
     border-bottom: 1px solid #e7e4eb;
 }
 
+/* Фиксация заголовка раскрытой категории при прокрутке */
+.cwc-category-card--accordion>.cwc-category-card__header {
+    position: sticky;
+    top: 32px;
+    z-index: 10;
+    background: #fff;
+}
+
+/* Чтобы заголовок оставался визуально отделённым от содержимого */
+.cwc-category-card--accordion[open]>.cwc-category-card__header {
+    border-bottom: 1px solid #eee;
+}
+
 .cwc-category-card__title {
     margin: 0;
     font-size: 14px;
