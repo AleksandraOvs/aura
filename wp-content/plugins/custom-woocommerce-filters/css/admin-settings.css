@@ -349,12 +349,16 @@
     border-bottom: 1px solid #eee;
 }
 
-/* Фиксация заголовка общей карточки */
+/* Sticky-заголовки обычных карточек настроек */
+section.cwc-category-card {
+    overflow: visible;
+}
+
 section.cwc-category-card>.cwc-category-card__header {
     position: sticky;
     top: 32px;
-    z-index: 20;
-    background: #fff;
+    z-index: 30;
+    background: #f7f6f8;
 }
 
 /* ===============================
