@@ -862,9 +862,13 @@ function cwc_filter_products_callback()
 
         $taxonomy = str_replace('filter_', '', $key);
 
+        $sanitize_term_slug = static function ($term) {
+            return sanitize_title(wp_unslash($term));
+        };
+
         $terms = is_array($value)
-            ? array_map('sanitize_text_field', $value)
-            : [sanitize_text_field($value)];
+            ? array_map($sanitize_term_slug, $value)
+            : [$sanitize_term_slug($value)];
 
         if (!$terms) {
             continue;
