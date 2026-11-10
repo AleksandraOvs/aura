@@ -54,19 +54,6 @@
     border-bottom: 1px solid #e7e4eb;
 }
 
-/* Фиксация заголовка раскрытой категории при прокрутке */
-.cwc-category-card--accordion>.cwc-category-card__header {
-    position: sticky;
-    top: 32px;
-    z-index: 10;
-    background: #fff;
-}
-
-/* Чтобы заголовок оставался визуально отделённым от содержимого */
-.cwc-category-card--accordion[open]>.cwc-category-card__header {
-    border-bottom: 1px solid #eee;
-}
-
 .cwc-category-card__title {
     margin: 0;
     font-size: 14px;
@@ -301,7 +288,7 @@
 /* Аккордеон категорий */
 
 .cwc-category-card--accordion {
-    overflow: hidden;
+    overflow: visible;
 }
 
 .cwc-category-card--accordion>summary {
@@ -347,6 +334,19 @@
 
 .cwc-category-card--accordion .cwc-category-card__body {
     border-top: 1px solid #eee;
+}
+
+/* Фиксация заголовка раскрытой категории */
+.cwc-category-card--accordion>summary.cwc-category-card__header {
+    position: sticky;
+    top: 32px;
+    z-index: 20;
+    background: #fff;
+}
+
+/* Разделитель под закреплённым заголовком */
+.cwc-category-card--accordion[open]>summary.cwc-category-card__header {
+    border-bottom: 1px solid #eee;
 }
 
 /* ===============================
