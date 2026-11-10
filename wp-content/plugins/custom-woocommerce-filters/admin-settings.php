@@ -2,9 +2,11 @@
 
 /**
  * Настройки атрибутов фильтра:
+ * - общие фильтры для всех категорий;
  * - общая страница магазина;
- * - родительские категории товаров.
+ * - индивидуальные фильтры категорий.
  */
+
 add_action('admin_menu', function () {
     add_menu_page(
         'Настройки фильтров',
@@ -175,9 +177,14 @@ function cwc_render_filter_attributes_settings()
     $categories = cwc_get_filter_parent_categories();
     $attributes = cwc_get_filter_attribute_options();
 
+    // Общие фильтры.
     $common_saved = get_option('cwc_filter_attributes_common', []);
+
     $common_selected = is_array($common_saved)
-        ? $common_saved
+        ? array_values(array_intersect(
+            array_keys($attributes),
+            array_map('strval', $common_saved)
+        ))
         : [];
 
     // Настройки общей страницы магазина.
@@ -191,6 +198,14 @@ function cwc_render_filter_attributes_settings()
     // Настройки категорий.
     $saved = get_option('cwc_filter_attributes_by_category', []);
     $saved = is_array($saved) ? $saved : [];
+
+    // Атрибуты, доступные для индивидуальных настроек.
+    $category_attributes = array_diff_key(
+        $attributes,
+        array_flip($common_selected)
+    );
+
+    $category_attributes_count = count($category_attributes);
 
 ?>
 
@@ -213,28 +228,36 @@ function cwc_render_filter_attributes_settings()
             <section class="cwc-category-card">
 
                 <div class="cwc-category-card__header">
+
                     <h2 class="cwc-category-card__title">
                         1. Общие фильтры
                     </h2>
 
                     <span class="cwc-category-card__count">
-                        <?php echo esc_html(count($common_selected) . ' из ' . count($attributes)); ?>
+                        <?php
+                        echo esc_html(
+                            count($common_selected) . ' из ' . count($attributes)
+                        );
+                        ?>
                     </span>
+
                 </div>
 
                 <div class="cwc-category-card__body">
 
                     <div class="cwc-settings__description">
+
                         <p>
                             Выберите атрибуты, которые будут отображаться
                             в фильтрах товаров во всех категориях по умолчанию.
                         </p>
 
                         <p class="cwc-settings__hint">
-                            Все индивидуальные фильтры категорий по умолчанию выключены.
-                            Отметьте дополнительные атрибуты, которые нужны в конкретной категории.
-                            Они будут отображаться вместе с общими фильтрами.
+                            Индивидуальные фильтры категорий дополняют общие.
+                            Если атрибут выбран здесь, он автоматически
+                            исключается из списков индивидуальных настроек.
                         </p>
+
                     </div>
 
                     <?php if (empty($attributes)) : ?>
@@ -246,13 +269,12 @@ function cwc_render_filter_attributes_settings()
                     <?php else : ?>
 
                         <input
-                            type="checkbox"
-                            class="cwc-common-attribute"
+                            type="hidden"
                             name="cwc_filter_attributes_common[]"
-                            value="<?php echo esc_attr($taxonomy); ?>"
-                            <?php checked(in_array($taxonomy, $common_selected, true)); ?>>
+                            value="">
 
                         <div class="cwc-settings__bulk-actions">
+
                             <button type="button" class="button cwc-select-all">
                                 Отметить всё
                             </button>
@@ -260,32 +282,21 @@ function cwc_render_filter_attributes_settings()
                             <button type="button" class="button cwc-deselect-all">
                                 Снять всё
                             </button>
+
                         </div>
 
                         <div class="cwc-attributes-grid">
 
                             <?php foreach ($attributes as $taxonomy => $label) : ?>
 
-                                <?php
-                                $is_common_attribute = in_array(
-                                    $taxonomy,
-                                    $common_selected,
-                                    true
-                                );
-                                ?>
-
-                                <label
-                                    class="cwc-attribute-option"
-                                    data-taxonomy="<?php echo esc_attr($taxonomy); ?>"
-                                    <?php echo $is_common_attribute ? 'hidden' : ''; ?>>
+                                <label class="cwc-attribute-option">
 
                                     <input
                                         type="checkbox"
-                                        class="cwc-category-attribute"
-                                        name="cwc_filter_attributes_by_category[<?php echo esc_attr($category_id); ?>][]"
+                                        class="cwc-common-attribute"
+                                        name="cwc_filter_attributes_common[]"
                                         value="<?php echo esc_attr($taxonomy); ?>"
-                                        <?php checked(in_array($taxonomy, $selected, true)); ?>
-                                        <?php disabled($is_common_attribute); ?>>
+                                        <?php checked(in_array($taxonomy, $common_selected, true)); ?>>
 
                                     <span class="cwc-attribute-option__content">
 
@@ -316,6 +327,7 @@ function cwc_render_filter_attributes_settings()
             <section class="cwc-category-card cwc-settings__shop-card">
 
                 <div class="cwc-category-card__header">
+
                     <h2 class="cwc-category-card__title">
                         2. Страница магазина (/shop)
                     </h2>
@@ -327,11 +339,13 @@ function cwc_render_filter_attributes_settings()
                         );
                         ?>
                     </span>
+
                 </div>
 
                 <div class="cwc-category-card__body">
 
                     <div class="cwc-settings__description">
+
                         <p>
                             Выберите атрибуты, по которым посетители смогут
                             фильтровать товары на общей странице магазина
@@ -350,11 +364,14 @@ function cwc_render_filter_attributes_settings()
                         </p>
 
                         <?php if (!$shop_is_saved) : ?>
+
                             <p class="cwc-settings__notice">
                                 Настройки ещё не сохранялись. Сейчас отображаются
                                 все доступные атрибуты.
                             </p>
+
                         <?php endif; ?>
+
                     </div>
 
                     <?php if (empty($attributes)) : ?>
@@ -371,6 +388,7 @@ function cwc_render_filter_attributes_settings()
                             value="">
 
                         <div class="cwc-settings__bulk-actions">
+
                             <button type="button" class="button cwc-select-all">
                                 Отметить всё
                             </button>
@@ -378,7 +396,9 @@ function cwc_render_filter_attributes_settings()
                             <button type="button" class="button cwc-deselect-all">
                                 Снять всё
                             </button>
+
                         </div>
+
                         <div class="cwc-attributes-grid">
 
                             <?php foreach ($attributes as $taxonomy => $label) : ?>
@@ -415,16 +435,17 @@ function cwc_render_filter_attributes_settings()
 
             </section>
 
-            <!-- Настройки категорий -->
+            <!-- Индивидуальные настройки категорий -->
 
             <section class="cwc-settings__category-section">
 
                 <div class="cwc-settings__section-heading">
-                    <h2>2. Фильтры отдельных категорий</h2>
+
+                    <h2>3. Фильтры отдельных категорий</h2>
 
                     <p>
-                        Здесь можно настроить свой набор фильтров для каждой
-                        корневой категории товаров.
+                        Здесь можно настроить дополнительные фильтры
+                        для каждой корневой категории товаров.
                     </p>
 
                     <p>
@@ -435,11 +456,12 @@ function cwc_render_filter_attributes_settings()
                     </p>
 
                     <p class="cwc-settings__hint">
-                        Если настройки категории ещё не сохранялись,
-                        для неё будут отображаться все доступные атрибуты.
-                        Если снять все галочки и сохранить, фильтры по атрибутам
-                        в этой категории и её подкатегориях отображаться не будут.
+                        Индивидуальные фильтры изначально выключены.
+                        Они дополняют общие фильтры, выбранные выше.
+                        Атрибуты, уже включённые в общие фильтры,
+                        в списках категорий не отображаются.
                     </p>
+
                 </div>
 
                 <?php if (empty($categories)) : ?>
@@ -460,6 +482,13 @@ function cwc_render_filter_attributes_settings()
                             $selected = array_key_exists($category_id, $saved)
                                 ? (array) $saved[$category_id]
                                 : [];
+
+                            // Исключаем общие атрибуты из индивидуального списка.
+                            $selected = array_values(array_diff(
+                                $selected,
+                                $common_selected
+                            ));
+
                             ?>
 
                             <details class="cwc-category-card cwc-category-card--accordion">
@@ -473,25 +502,33 @@ function cwc_render_filter_attributes_settings()
                                     <span class="cwc-category-card__count">
                                         <?php
                                         echo esc_html(
-                                            count(array_diff($selected, $common_selected))
-                                                . ' из ' . (count($attributes) - count($common_selected))
+                                            count($selected) . ' из ' . $category_attributes_count
                                         );
                                         ?>
                                     </span>
 
-                                    <span class="cwc-category-card__arrow" aria-hidden="true"></span>
+                                    <span
+                                        class="cwc-category-card__arrow"
+                                        aria-hidden="true">
+                                    </span>
 
                                 </summary>
 
                                 <div class="cwc-category-card__body">
 
-                                    <?php if (empty($attributes)) : ?>
+                                    <?php if (empty($category_attributes)) : ?>
 
                                         <p class="cwc-settings__empty">
-                                            Атрибуты WooCommerce не найдены.
+                                            Все атрибуты уже выбраны в общих фильтрах
+                                            или атрибуты WooCommerce не найдены.
                                         </p>
 
                                     <?php else : ?>
+
+                                        <input
+                                            type="hidden"
+                                            name="cwc_filter_attributes_by_category[<?php echo esc_attr($category_id); ?>][]"
+                                            value="">
 
                                         <div class="cwc-settings__bulk-actions">
 
@@ -507,12 +544,13 @@ function cwc_render_filter_attributes_settings()
 
                                         <div class="cwc-attributes-grid">
 
-                                            <?php foreach ($attributes as $taxonomy => $label) : ?>
+                                            <?php foreach ($category_attributes as $taxonomy => $label) : ?>
 
                                                 <label class="cwc-attribute-option">
 
                                                     <input
                                                         type="checkbox"
+                                                        class="cwc-category-attribute"
                                                         name="cwc_filter_attributes_by_category[<?php echo esc_attr($category_id); ?>][]"
                                                         value="<?php echo esc_attr($taxonomy); ?>"
                                                         <?php checked(in_array($taxonomy, $selected, true)); ?>>
@@ -550,7 +588,9 @@ function cwc_render_filter_attributes_settings()
             </section>
 
             <div class="cwc-settings__footer">
+
                 <?php submit_button('Сохранить настройки', 'primary', 'submit', false); ?>
+
             </div>
 
         </form>
@@ -560,15 +600,23 @@ function cwc_render_filter_attributes_settings()
 <?php
 }
 
+/**
+ * JavaScript административной страницы.
+ */
 add_action('admin_footer', function () {
+
     $screen = get_current_screen();
 
     if (!$screen || $screen->id !== 'toplevel_page_cwc-filter-attributes') {
         return;
     }
+
 ?>
+
     <script>
-        // Скрываем общие атрибуты в индивидуальных настройках категорий.
+        /**
+         * Обновляем доступность атрибутов в индивидуальных категориях.
+         */
         function updateCommonAttributes() {
 
             const commonAttributes = new Set();
@@ -586,13 +634,17 @@ add_action('admin_footer', function () {
 
                     checkbox.disabled = isCommon;
 
+                    if (isCommon) {
+                        checkbox.checked = false;
+                    }
+
                     if (label) {
                         label.hidden = isCommon;
                     }
                 });
         }
 
-        // Первоначальная проверка при загрузке страницы.
+        // Проверка при загрузке страницы.
         updateCommonAttributes();
 
         // Обновление при изменении общих фильтров.
@@ -604,7 +656,11 @@ add_action('admin_footer', function () {
 
         });
 
+        /**
+         * Кнопки массового выбора и снятия атрибутов.
+         */
         document.addEventListener('click', function(event) {
+
             const selectButton = event.target.closest('.cwc-select-all');
             const deselectButton = event.target.closest('.cwc-deselect-all');
 
@@ -621,11 +677,13 @@ add_action('admin_footer', function () {
 
             const checked = Boolean(selectButton);
 
-            card.querySelectorAll('.cwc-attribute-option input[type="checkbox"]')
+            card.querySelectorAll('.cwc-attribute-option input[type="checkbox"]:not(:disabled)')
                 .forEach(function(checkbox) {
                     checkbox.checked = checked;
                 });
+
         });
     </script>
+
 <?php
 });
