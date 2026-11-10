@@ -246,9 +246,11 @@ function cwc_render_filter_attributes_settings()
                     <?php else : ?>
 
                         <input
-                            type="hidden"
+                            type="checkbox"
+                            class="cwc-common-attribute"
                             name="cwc_filter_attributes_common[]"
-                            value="">
+                            value="<?php echo esc_attr($taxonomy); ?>"
+                            <?php checked(in_array($taxonomy, $common_selected, true)); ?>>
 
                         <div class="cwc-settings__bulk-actions">
                             <button type="button" class="button cwc-select-all">
@@ -264,13 +266,26 @@ function cwc_render_filter_attributes_settings()
 
                             <?php foreach ($attributes as $taxonomy => $label) : ?>
 
-                                <label class="cwc-attribute-option">
+                                <?php
+                                $is_common_attribute = in_array(
+                                    $taxonomy,
+                                    $common_selected,
+                                    true
+                                );
+                                ?>
+
+                                <label
+                                    class="cwc-attribute-option"
+                                    data-taxonomy="<?php echo esc_attr($taxonomy); ?>"
+                                    <?php echo $is_common_attribute ? 'hidden' : ''; ?>>
 
                                     <input
                                         type="checkbox"
-                                        name="cwc_filter_attributes_common[]"
+                                        class="cwc-category-attribute"
+                                        name="cwc_filter_attributes_by_category[<?php echo esc_attr($category_id); ?>][]"
                                         value="<?php echo esc_attr($taxonomy); ?>"
-                                        <?php checked(in_array($taxonomy, $common_selected, true)); ?>>
+                                        <?php checked(in_array($taxonomy, $selected, true)); ?>
+                                        <?php disabled($is_common_attribute); ?>>
 
                                     <span class="cwc-attribute-option__content">
 
@@ -458,7 +473,8 @@ function cwc_render_filter_attributes_settings()
                                     <span class="cwc-category-card__count">
                                         <?php
                                         echo esc_html(
-                                            count($selected) . ' из ' . count($attributes)
+                                            count(array_diff($selected, $common_selected))
+                                                . ' из ' . (count($attributes) - count($common_selected))
                                         );
                                         ?>
                                     </span>
@@ -552,6 +568,42 @@ add_action('admin_footer', function () {
     }
 ?>
     <script>
+        // Скрываем общие атрибуты в индивидуальных настройках категорий.
+        function updateCommonAttributes() {
+
+            const commonAttributes = new Set();
+
+            document.querySelectorAll('.cwc-common-attribute:checked')
+                .forEach(function(checkbox) {
+                    commonAttributes.add(checkbox.value);
+                });
+
+            document.querySelectorAll('.cwc-category-attribute')
+                .forEach(function(checkbox) {
+
+                    const isCommon = commonAttributes.has(checkbox.value);
+                    const label = checkbox.closest('.cwc-attribute-option');
+
+                    checkbox.disabled = isCommon;
+
+                    if (label) {
+                        label.hidden = isCommon;
+                    }
+                });
+        }
+
+        // Первоначальная проверка при загрузке страницы.
+        updateCommonAttributes();
+
+        // Обновление при изменении общих фильтров.
+        document.addEventListener('change', function(event) {
+
+            if (event.target.matches('.cwc-common-attribute')) {
+                updateCommonAttributes();
+            }
+
+        });
+
         document.addEventListener('click', function(event) {
             const selectButton = event.target.closest('.cwc-select-all');
             const deselectButton = event.target.closest('.cwc-deselect-all');
