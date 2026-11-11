@@ -425,40 +425,49 @@ class PWQB_Submissions
 
         self::increment_rate_limit();
 
-        // Отправляем уведомление администратору.
-        $admin_email = get_option('admin_email');
+        // Отправляем уведомление, если оно включено.
+        $email_notifications = (bool) get_option('pwqb_email_notifications', 1);
 
-        $subject = 'Новая заявка на квиз';
+        if ($email_notifications) {
+            $admin_email = get_option(
+                'pwqb_notification_email',
+                get_option('admin_email')
+            );
 
-        $quiz_title = get_the_title($data['quiz_id']);
+            $subject = 'Новая заявка на квиз';
 
-        $submission_url = add_query_arg(
-            [
-                'post_type'     => PWQB_Quiz::POST_TYPE,
-                'page'          => 'pwqb-submissions',
-                'submission_id' => $submission_id,
-            ],
-            admin_url('edit.php')
-        );
+            $quiz_title = get_the_title($data['quiz_id']);
 
-        $message = "Поступила новая заявка.\n\n";
-        $message .= "Квиз: {$quiz_title}\n";
-        $message .= "Имя: {$data['name']}\n";
-        $message .= "Email: {$data['email']}\n";
-        $message .= "Телефон: {$data['phone']}\n";
-        $message .= "Способ связи: {$data['send_to']}\n";
-        if (!empty($data['messengers'])) {
-            $message .= "Мессенджеры: " . implode(', ', $data['messengers']) . "\n";
+            $submission_url = add_query_arg(
+                [
+                    'post_type'     => PWQB_Quiz::POST_TYPE,
+                    'page'          => 'pwqb-submissions',
+                    'submission_id' => $submission_id,
+                ],
+                admin_url('edit.php')
+            );
+
+            $message = "Поступил ответ на квиз.\n\n";
+            $message .= "Квиз: {$quiz_title}\n";
+            $message .= "Имя: {$data['name']}\n";
+            $message .= "Email: {$data['email']}\n";
+            $message .= "Телефон: {$data['phone']}\n";
+            $message .= "Способ связи: {$data['send_to']}\n";
+
+            if (!empty($data['messengers'])) {
+                $message .= "Мессенджеры: " . implode(', ', $data['messengers']) . "\n";
+            }
+
+            $message .= "Комментарий: {$data['comment']}\n\n";
+            $message .= "Посмотреть заявку: {$submission_url}";
+
+            wp_mail(
+                $admin_email,
+                $subject,
+                $message,
+                ['Content-Type: text/plain; charset=UTF-8']
+            );
         }
-        $message .= "Комментарий: {$data['comment']}\n\n";
-        $message .= "Посмотреть заявку: {$submission_url}";
-
-        wp_mail(
-            $admin_email,
-            $subject,
-            $message,
-            ['Content-Type: text/plain; charset=UTF-8']
-        );
 
         wp_send_json_success([
             'message' => 'Спасибо! Ваша заявка успешно отправлена.',

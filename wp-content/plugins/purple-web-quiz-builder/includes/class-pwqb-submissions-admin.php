@@ -12,6 +12,7 @@ class PWQB_Submissions_Admin
     {
         add_action('admin_menu', [self::class, 'add_menu']);
         add_action('admin_post_pwqb_clear_submissions', [self::class, 'clear_submissions']);
+        add_action('admin_post_pwqb_save_email_settings', [self::class, 'save_email_settings']);
     }
 
     /**
@@ -62,6 +63,123 @@ class PWQB_Submissions_Admin
             self::PAGE_SLUG,
             [self::class, 'render_page']
         );
+        add_submenu_page(
+            'edit.php?post_type=' . PWQB_Quiz::POST_TYPE,
+            'Настройки',
+            'Настройки',
+            'manage_options',
+            'pwqb-settings',
+            [self::class, 'render_settings']
+        );
+    }
+
+    /**
+     * Сохраняет настройки уведомлений.
+     */
+    public static function save_email_settings(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die('Недостаточно прав для выполнения действия.');
+        }
+
+        check_admin_referer('pwqb_save_email_settings');
+
+        $email = isset($_POST['notification_email'])
+            ? sanitize_email(wp_unslash($_POST['notification_email']))
+            : '';
+
+        if (!is_email($email)) {
+            $email = get_option('admin_email');
+        }
+
+        $enabled = isset($_POST['email_notifications']) ? 1 : 0;
+
+        update_option('pwqb_notification_email', $email);
+        update_option('pwqb_email_notifications', $enabled);
+
+        wp_safe_redirect(add_query_arg(
+            [
+                'post_type' => PWQB_Quiz::POST_TYPE,
+                'page'      => 'pwqb-settings',
+                'saved'     => 1,
+            ],
+            admin_url('edit.php')
+        ));
+
+        exit;
+    }
+
+    /**
+     * Выводит настройки уведомлений.
+     */
+    public static function render_settings(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die('Недостаточно прав для просмотра настроек.');
+        }
+
+        $email = get_option('pwqb_notification_email', get_option('admin_email'));
+        $enabled = (bool) get_option('pwqb_email_notifications', 1);
+?>
+
+        <div class="wrap">
+            <h1>Настройки квизов</h1>
+
+            <?php if (isset($_GET['saved'])) : ?>
+                <div class="notice notice-success is-dismissible">
+                    <p>Настройки сохранены.</p>
+                </div>
+            <?php endif; ?>
+
+            <form
+                method="post"
+                action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+
+                <input type="hidden" name="action" value="pwqb_save_email_settings">
+
+                <?php wp_nonce_field('pwqb_save_email_settings'); ?>
+
+                <table class="form-table">
+                    <tbody>
+                        <tr>
+                            <th scope="row">Email для уведомлений</th>
+                            <td>
+                                <input
+                                    type="email"
+                                    name="notification_email"
+                                    value="<?php echo esc_attr($email); ?>"
+                                    class="regular-text"
+                                    required>
+
+                                <p class="description">
+                                    На этот адрес будут приходить уведомления о новых заявках.
+                                </p>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th scope="row">Email-уведомления</th>
+                            <td>
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        name="email_notifications"
+                                        value="1"
+                                        <?php checked($enabled); ?>>
+
+                                    Отправлять письма о новых заявках
+                                </label>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <?php submit_button('Сохранить настройки'); ?>
+
+            </form>
+        </div>
+
+    <?php
     }
 
     /**
@@ -100,7 +218,7 @@ class PWQB_Submissions_Admin
         ]);
 
         $items = $result['items'];
-?>
+    ?>
         <div class="wrap">
             <h1>Заявки</h1>
 
