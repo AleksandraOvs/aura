@@ -12,8 +12,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const questionTemplate = document.getElementById('tmpl-pwqb-question');
     const answerTemplate = document.getElementById('tmpl-pwqb-answer');
 
-    if (!questionsContainer || !questionTemplate || !answerTemplate) {
+    const attributeRuleTemplate = document.getElementById('tmpl-pwqb-attribute-rule');
+
+    if (!questionsContainer || !questionTemplate || !answerTemplate || !attributeRuleTemplate) {
         return;
+    }
+
+    const builderForm = builder.closest('form');
+
+    if (builderForm) {
+        builderForm.addEventListener('submit', () => {
+            const formData = new FormData(builderForm);
+
+            console.log('PWQB: поля критериев перед отправкой');
+
+            for (const [name, value] of formData.entries()) {
+                if (name.includes('[attributes]')) {
+                    console.log(name, value);
+                }
+            }
+        });
     }
 
     const createId = (prefix) => {
@@ -84,6 +102,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 answer.querySelectorAll('[data-field]').forEach((field) => {
                     field.name = `${answerPrefix}[${field.dataset.field}]`;
                 });
+
+                // Назначаем имена полям критериев подбора.
+                answer.querySelectorAll('[data-pwqb-criterion]').forEach((criterion, criterionIndex) => {
+                    const criterionPrefix = `${answerPrefix}[attributes][${criterionIndex}]`;
+
+                    const attributeInput = criterion.querySelector(
+                        '[data-pwqb-criterion-attribute]'
+                    );
+
+                    if (attributeInput) {
+                        attributeInput.name = `${criterionPrefix}[attribute]`;
+                    }
+
+                    criterion.querySelectorAll('[data-pwqb-criterion-value]').forEach((input) => {
+                        input.name = `${criterionPrefix}[values][]`;
+                    });
+                });
             });
         });
 
@@ -92,6 +127,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         updateQuestionSelects();
+
+        console.log('PWQB: критерии подбора', [...questionsContainer.querySelectorAll('[data-pwqb-answer]')].map((answer, answerIndex) => ({
+            answerIndex,
+            criteria: [...answer.querySelectorAll('[data-pwqb-criterion]')].map((criterion) => ({
+                attribute: criterion.querySelector('[data-pwqb-criterion-attribute]')?.value,
+                values: [...criterion.querySelectorAll('[data-pwqb-criterion-value]')].map((input) => input.value)
+            }))
+        })));
     };
 
     /**
@@ -172,6 +215,385 @@ document.addEventListener('DOMContentLoaded', () => {
         answersContainer.append(answer);
 
         reindex();
+    };
+
+
+
+    const createSearchSelect = (container, items, placeholder, multiple = false) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'pwqb-search-select';
+
+        const search = document.createElement('input');
+        search.type = 'search';
+        search.className = 'widefat';
+        search.placeholder = placeholder;
+        search.autocomplete = 'off';
+
+        const selectedList = document.createElement('div');
+        selectedList.className = 'pwqb-search-select__selected';
+
+        const list = document.createElement('div');
+        list.className = 'pwqb-search-select__list';
+        list.hidden = true;
+
+        const selected = new Set();
+
+        const closeList = () => {
+            list.hidden = true;
+            wrapper.classList.remove('is-open');
+        };
+
+        const openList = () => {
+            list.hidden = false;
+            wrapper.classList.add('is-open');
+            renderItems();
+        };
+
+        const renderSelected = () => {
+            selectedList.replaceChildren();
+
+            selected.forEach((value) => {
+                const item = items.find((item) => item.value === value);
+
+                if (!item) {
+                    return;
+                }
+
+                const tag = document.createElement('span');
+                tag.className = 'pwqb-search-select__tag';
+
+                const text = document.createElement('span');
+                text.textContent = item.name;
+
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.textContent = '×';
+                remove.setAttribute('aria-label', 'Удалить ' + item.name);
+
+                remove.addEventListener('click', () => {
+                    selected.delete(value);
+                    renderSelected();
+                    renderItems();
+
+                    wrapper.dispatchEvent(
+                        new CustomEvent('pwqb:change', { bubbles: true })
+                    );
+                });
+
+                tag.append(text, remove);
+                selectedList.append(tag);
+            });
+        };
+
+        const renderItems = () => {
+            const query = search.value.trim().toLowerCase();
+
+            list.replaceChildren();
+
+            const filtered = items.filter((item) => {
+                return item.name.toLowerCase().includes(query);
+            });
+
+            if (!filtered.length) {
+                const empty = document.createElement('p');
+                empty.textContent = 'Ничего не найдено';
+                list.append(empty);
+                return;
+            }
+
+            filtered.forEach((item) => {
+                const label = document.createElement('label');
+                label.className = 'pwqb-search-select__item';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = selected.has(item.value);
+
+                const text = document.createElement('span');
+                text.textContent = item.name;
+
+                checkbox.addEventListener('change', () => {
+                    if (!multiple) {
+                        selected.clear();
+                    }
+
+                    if (checkbox.checked) {
+                        selected.add(item.value);
+                    } else {
+                        selected.delete(item.value);
+                    }
+
+                    renderSelected();
+                    renderItems();
+
+                    wrapper.dispatchEvent(
+                        new CustomEvent('pwqb:change', { bubbles: true })
+                    );
+
+                    // Закрываем список после выбора.
+                    closeList();
+                    search.value = '';
+                });
+
+                label.append(checkbox, text);
+                list.append(label);
+            });
+        };
+
+        search.addEventListener('focus', openList);
+
+        search.addEventListener('input', () => {
+            openList();
+            renderItems();
+        });
+
+        // Закрываем список при клике за пределами поля.
+        document.addEventListener('click', (event) => {
+            if (!wrapper.contains(event.target)) {
+                closeList();
+            }
+        });
+
+        wrapper.append(search, selectedList, list);
+        container.append(wrapper);
+
+        renderItems();
+
+        return {
+            getSelected: () => [...selected],
+
+            setSelected: (values) => {
+                selected.clear();
+                values.forEach((value) => selected.add(value));
+                renderSelected();
+                renderItems();
+            },
+
+            clear: () => {
+                selected.clear();
+                search.value = '';
+                renderSelected();
+                renderItems();
+                closeList();
+            }
+        };
+    };
+
+    /**
+ * Добавление готового критерия подбора.
+ */
+    const addAttributeRule = (answer) => {
+        const rulesContainer = answer.querySelector('[data-pwqb-attribute-rules]');
+
+        if (!rulesContainer) {
+            return;
+        }
+
+        // Не открываем второй редактор, пока не закрыт первый.
+        if (rulesContainer.querySelector('.pwqb-attribute-editor')) {
+            return;
+        }
+
+        const attributes = Array.isArray(window.pwqbBuilderData?.attributes)
+            ? window.pwqbBuilderData.attributes
+            : [];
+
+        // Исключаем атрибуты, которые уже добавлены к этому ответу.
+        const usedTaxonomies = [
+            ...rulesContainer.querySelectorAll('[data-pwqb-criterion]')
+        ].map((item) => item.dataset.taxonomy);
+
+        const availableAttributes = attributes.filter((attribute) => {
+            return !usedTaxonomies.includes(attribute.taxonomy);
+        });
+
+        const editor = document.createElement('div');
+        editor.className = 'pwqb-attribute-editor';
+
+        const attributeTitle = document.createElement('strong');
+        attributeTitle.textContent = 'Атрибут';
+
+        const attributeContainer = document.createElement('div');
+
+        const valuesTitle = document.createElement('strong');
+        valuesTitle.textContent = 'Значения';
+
+        const valuesContainer = document.createElement('div');
+
+        const actions = document.createElement('div');
+        actions.className = 'pwqb-attribute-editor__actions';
+
+        const addButton = document.createElement('button');
+        addButton.type = 'button';
+        addButton.className = 'button button-primary';
+        addButton.textContent = 'Добавить критерий';
+        addButton.disabled = true;
+
+        const cancelButton = document.createElement('button');
+        cancelButton.type = 'button';
+        cancelButton.className = 'button';
+        cancelButton.textContent = 'Отмена';
+
+        actions.append(addButton, cancelButton);
+
+        editor.append(
+            attributeTitle,
+            attributeContainer,
+            valuesTitle,
+            valuesContainer,
+            actions
+        );
+
+        rulesContainer.append(editor);
+
+        const attributeSearch = createSearchSelect(
+            attributeContainer,
+            availableAttributes.map((attribute) => ({
+                value: attribute.taxonomy,
+                name: attribute.label
+            })),
+            'Найти атрибут'
+        );
+
+        let selectedAttribute = null;
+        let valuesSearch = null;
+
+        const updateAddButton = () => {
+            const selectedValues = valuesSearch
+                ? valuesSearch.getSelected()
+                : [];
+
+            addButton.disabled = !selectedAttribute || !selectedValues.length;
+        };
+
+        // После выбора атрибута показываем его значения.
+        attributeContainer.addEventListener('pwqb:change', () => {
+            selectedAttribute = attributeSearch.getSelected()[0] || null;
+
+            valuesContainer.replaceChildren();
+            valuesSearch = null;
+
+            if (!selectedAttribute) {
+                updateAddButton();
+                return;
+            }
+
+            const attribute = attributes.find((item) => {
+                return item.taxonomy === selectedAttribute;
+            });
+
+            if (!attribute) {
+                updateAddButton();
+                return;
+            }
+
+            valuesSearch = createSearchSelect(
+                valuesContainer,
+                attribute.terms.map((term) => ({
+                    value: term.slug,
+                    name: term.name
+                })),
+                'Найти значения',
+                true
+            );
+
+            const valuesInput = valuesContainer.querySelector('input[type="search"]');
+
+            if (valuesInput) {
+                valuesInput.focus();
+            }
+
+            updateAddButton();
+        });
+
+        // Проверяем, выбрано ли хотя бы одно значение.
+        valuesContainer.addEventListener('pwqb:change', updateAddButton);
+
+        // Добавляем готовый критерий.
+        addButton.addEventListener('click', () => {
+            if (!selectedAttribute || !valuesSearch) {
+                return;
+            }
+
+            const selectedValues = valuesSearch.getSelected();
+
+            if (!selectedValues.length) {
+                return;
+            }
+
+            const attribute = attributes.find((item) => {
+                return item.taxonomy === selectedAttribute;
+            });
+
+            if (!attribute) {
+                return;
+            }
+
+            const criterion = document.createElement('div');
+            criterion.className = 'pwqb-attribute-criterion';
+            criterion.dataset.pwqbCriterion = '';
+            criterion.dataset.taxonomy = attribute.taxonomy;
+
+            // Скрытое поле с таксономией атрибута.
+            const attributeInput = document.createElement('input');
+            attributeInput.type = 'hidden';
+            attributeInput.value = attribute.taxonomy;
+            attributeInput.dataset.pwqbCriterionAttribute = '';
+
+            criterion.append(attributeInput);
+
+            const title = document.createElement('strong');
+            title.textContent = attribute.label;
+
+            const valuesList = document.createElement('div');
+            valuesList.className = 'pwqb-attribute-criterion__values';
+
+            selectedValues.forEach((value) => {
+                const term = attribute.terms.find((item) => {
+                    return item.slug === value;
+                });
+
+                if (!term) {
+                    return;
+                }
+
+                // Скрытое поле со slug выбранного значения.
+                const valueInput = document.createElement('input');
+                valueInput.type = 'hidden';
+                valueInput.value = term.slug;
+                valueInput.dataset.pwqbCriterionValue = '';
+
+                criterion.append(valueInput);
+
+                const tag = document.createElement('span');
+                tag.className = 'pwqb-search-select__tag';
+                tag.textContent = term.name;
+
+                valuesList.append(tag);
+            });
+
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.className = 'button-link-delete';
+            removeButton.textContent = 'Удалить';
+
+            removeButton.addEventListener('click', () => {
+                criterion.remove();
+            });
+
+            criterion.append(title, valuesList, removeButton);
+
+            rulesContainer.insertBefore(criterion, editor);
+            editor.remove();
+
+            // Обновляем имена полей для отправки формы.
+            reindex();
+        });
+
+        // Отмена создания критерия.
+        cancelButton.addEventListener('click', () => {
+            editor.remove();
+        });
     };
 
     /**
@@ -268,6 +690,22 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        if (target.closest('[data-pwqb-add-attribute]')) {
+            addAttributeRule(target.closest('[data-pwqb-answer]'));
+            return;
+        }
+
+        if (target.closest('[data-pwqb-remove-criterion]')) {
+            const criterion = target.closest('[data-pwqb-criterion]');
+
+            if (criterion) {
+                criterion.remove();
+                reindex();
+            }
+
+            return;
+        }
+
         if (target.closest('[data-pwqb-remove-question]')) {
             target.closest('[data-pwqb-question]').remove();
             reindex();
@@ -308,6 +746,69 @@ document.addEventListener('DOMContentLoaded', () => {
             updateQuestionSelects();
         }
     });
+
+    /**
+ * Раскрытие и сворачивание дочерних категорий товаров.
+ */
+    const initCategoryTree = () => {
+        const categoriesContainer = builder.querySelector(
+            '.pwqb-builder__categories'
+        );
+
+        if (!categoriesContainer) {
+            return;
+        }
+
+        const categoryItems = categoriesContainer.querySelectorAll('li');
+
+        categoryItems.forEach((item) => {
+            const children = [...item.children].find((child) => {
+                return child.tagName === 'UL' && child.classList.contains('children');
+            });
+
+            if (!children) {
+                return;
+            }
+
+            // Создаём кнопку раскрытия.
+            const toggle = document.createElement('button');
+
+            toggle.type = 'button';
+            toggle.className = 'pwqb-category-toggle';
+            toggle.setAttribute('aria-label', 'Раскрыть подкатегории');
+            toggle.setAttribute('aria-expanded', 'false');
+
+            // Ставим кнопку перед названием категории.
+            const label = [...item.children].find((child) => {
+                return child.tagName === 'LABEL';
+            });
+
+            if (label) {
+                item.insertBefore(toggle, label);
+            } else {
+                item.insertBefore(toggle, children);
+            }
+
+            // Сворачиваем дочерние категории.
+
+
+            toggle.addEventListener('click', () => {
+                const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+
+                toggle.setAttribute('aria-expanded', String(!isExpanded));
+                toggle.setAttribute(
+                    'aria-label',
+                    isExpanded ? 'Раскрыть подкатегории' : 'Свернуть подкатегории'
+                );
+
+                toggle.classList.toggle('is-expanded', !isExpanded);
+                item.classList.toggle('is-expanded', !isExpanded);
+
+            });
+        });
+    };
+
+    initCategoryTree();
 
     reindex();
 });

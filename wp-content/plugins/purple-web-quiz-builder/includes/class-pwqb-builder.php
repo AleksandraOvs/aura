@@ -68,6 +68,61 @@ class PWQB_Builder
             PWQB_VERSION,
             true
         );
+
+        wp_localize_script(
+            'pwqb-builder',
+            'pwqbBuilderData',
+            [
+                'attributes' => self::get_product_attributes(),
+            ]
+        );
+    }
+
+    /**
+     * Получение атрибутов WooCommerce для конструктора.
+     */
+    private static function get_product_attributes(): array
+    {
+        if (!function_exists('wc_get_attribute_taxonomies')) {
+            return [];
+        }
+
+        $result = [];
+
+        $attributes = wc_get_attribute_taxonomies();
+
+        foreach ($attributes as $attribute) {
+            $taxonomy = wc_attribute_taxonomy_name($attribute->attribute_name);
+
+            if (!taxonomy_exists($taxonomy)) {
+                continue;
+            }
+
+            $terms = get_terms([
+                'taxonomy'   => $taxonomy,
+                'hide_empty' => false,
+            ]);
+
+            if (is_wp_error($terms)) {
+                continue;
+            }
+
+            $result[] = [
+                'taxonomy' => $taxonomy,
+                'label'    => $attribute->attribute_label,
+                'terms'    => array_map(
+                    static function ($term) {
+                        return [
+                            'slug' => $term->slug,
+                            'name' => $term->name,
+                        ];
+                    },
+                    $terms
+                ),
+            ];
+        }
+
+        return $result;
     }
 
     /**
@@ -139,7 +194,7 @@ class PWQB_Builder
             </section>
 
 
-            <section class="pwqb-builder__section">
+            <section class="pwqb-builder__section pwqb-builder__section--results">
                 <h2>Результат квиза</h2>
 
                 <p class="description">
@@ -163,7 +218,7 @@ class PWQB_Builder
             </section>
 
 
-            <section class="pwqb-builder__section">
+            <section class="pwqb-builder__section pwqb-builder__section--categories">
                 <h2>Категории товаров</h2>
 
                 <p class="description">
@@ -357,6 +412,10 @@ class PWQB_Builder
             ? $answer['title']
             : '';
 
+        $description = isset($answer['description'])
+            ? $answer['description']
+            : '';
+
         $image_id = isset($answer['image_id'])
             ? absint($answer['image_id'])
             : 0;
@@ -386,6 +445,15 @@ class PWQB_Builder
                         data-field="title">
                 </p>
 
+                <p>
+                    <label><strong>Пояснение</strong></label>
+                    <textarea
+                        class="widefat"
+                        rows="2"
+                        name="pwqb_settings[questions][<?php echo esc_attr($question_index); ?>][answers][<?php echo esc_attr($answer_index); ?>][description]"
+                        data-field="description"><?php echo esc_textarea($description); ?></textarea>
+                </p>
+
                 <?php
                 self::render_image_field(
                     $image_id,
@@ -408,6 +476,79 @@ class PWQB_Builder
                         ?>
                     </select>
                 </p>
+
+                <div class="pwqb-answer__attributes">
+                    <strong>Критерии подбора товаров</strong>
+
+                    <p class="description">
+                        Выберите атрибуты и значения, которым должны соответствовать товары.
+                    </p>
+
+                    <div class="pwqb-answer__attributes__list" data-pwqb-attribute-rules>
+                        <?php
+                        $attributes = isset($answer['attributes']) && is_array($answer['attributes'])
+                            ? $answer['attributes']
+                            : [];
+
+                        foreach ($attributes as $criterion_index => $criterion) :
+                            $taxonomy = $criterion['attribute'] ?? '';
+                            $values = $criterion['values'] ?? [];
+
+                            if (!$taxonomy || !is_array($values)) {
+                                continue;
+                            }
+
+                            $attribute_label = wc_attribute_label($taxonomy);
+                        ?>
+                            <div
+                                class="pwqb-attribute-criterion"
+                                data-pwqb-criterion
+                                data-taxonomy="<?php echo esc_attr($taxonomy); ?>">
+
+                                <input
+                                    type="hidden"
+                                    value="<?php echo esc_attr($taxonomy); ?>"
+                                    data-pwqb-criterion-attribute>
+
+                                <?php foreach ($values as $value) : ?>
+                                    <input
+                                        type="hidden"
+                                        value="<?php echo esc_attr($value); ?>"
+                                        data-pwqb-criterion-value>
+                                <?php endforeach; ?>
+
+                                <strong><?php echo esc_html($attribute_label); ?></strong>
+
+                                <div class="pwqb-attribute-criterion__values">
+                                    <?php foreach ($values as $value) :
+                                        $term = get_term_by('slug', $value, $taxonomy);
+
+                                        if (!$term || is_wp_error($term)) {
+                                            continue;
+                                        }
+                                    ?>
+                                        <span class="pwqb-attribute-criterion__tag">
+                                            <?php echo esc_html($term->name); ?>
+                                        </span>
+                                    <?php endforeach; ?>
+                                </div>
+
+                                <button type="button" class="button" data-pwqb-remove-criterion>
+                                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M6.8125 6.10156L12.2031 11.5L11.5 12.2031L6.10156 6.8125L0.703125 12.2031L0 11.5L5.39062 6.10156L0 0.703125L0.703125 0L6.10156 5.39062L11.5 0L12.2031 0.703125L6.8125 6.10156Z" fill="#BE4949" />
+                                    </svg>
+                                </button>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="button"
+                        data-pwqb-add-attribute>
+                        Добавить критерий
+                    </button>
+                </div>
 
             </div>
 
@@ -537,6 +678,11 @@ class PWQB_Builder
                         <input type="text" class="widefat" data-field="title">
                     </p>
 
+                    <p>
+                        <label><strong>Описание ответа</strong></label>
+                        <textarea class="widefat" rows="2" data-field="description"></textarea>
+                    </p>
+
                     <div class="pwqb-image-field" data-pwqb-image>
                         <strong>Изображение ответа</strong>
                         <input type="hidden" data-field="image_id" value="0">
@@ -553,11 +699,54 @@ class PWQB_Builder
                             <option value="">Следующий по порядку</option>
                         </select>
                     </p>
+                    <div class="pwqb-answer__attributes">
+                        <strong>Критерии подбора товаров</strong>
+
+                        <p class="description">
+                            Выберите атрибуты и значения, которым должны соответствовать товары.
+                        </p>
+
+                        <div data-pwqb-attribute-rules></div>
+
+                        <button
+                            type="button"
+                            class="button"
+                            data-pwqb-add-attribute>
+                            Добавить критерий (по атрибуту)
+                        </button>
+                    </div>
                 </div>
 
                 <button type="button" class="button" data-pwqb-remove-answer>Удалить ответ</button>
             </div>
         </script>
+
+        <script type="text/html" id="tmpl-pwqb-attribute-rule">
+            <div class="pwqb-attribute-rule" data-pwqb-attribute-rule>
+
+                <p>
+                    <label><strong>Атрибут</strong></label>
+                    <select data-field="attribute">
+                        <option value="">Выберите атрибут</option>
+                    </select>
+                </p>
+
+                <p>
+                    <label><strong>Значения</strong></label>
+                    <select data-field="values" multiple disabled>
+                    </select>
+                </p>
+
+                <button
+                    type="button"
+                    class="button"
+                    data-pwqb-remove-attribute>
+                    Удалить критерий
+                </button>
+
+            </div>
+        </script>
+
 <?php
     }
 
@@ -683,6 +872,66 @@ class PWQB_Builder
                         continue;
                     }
 
+                    $attributes = [];
+
+                    if (
+                        isset($answer['attributes']) &&
+                        is_array($answer['attributes']) &&
+                        function_exists('wc_attribute_taxonomy_id_by_name')
+                    ) {
+                        foreach ($answer['attributes'] as $criterion) {
+                            if (!is_array($criterion)) {
+                                continue;
+                            }
+
+                            $taxonomy = isset($criterion['attribute'])
+                                ? sanitize_text_field($criterion['attribute'])
+                                : '';
+
+                            // Проверяем, что это существующий атрибут WooCommerce.
+                            if (
+                                !$taxonomy ||
+                                !taxonomy_exists($taxonomy) ||
+                                strpos($taxonomy, 'pa_') !== 0
+                            ) {
+                                continue;
+                            }
+
+                            $attribute_name = substr($taxonomy, 3);
+
+                            if (!wc_attribute_taxonomy_id_by_name($attribute_name)) {
+                                continue;
+                            }
+
+                            $values = [];
+
+                            if (isset($criterion['values']) && is_array($criterion['values'])) {
+                                foreach ($criterion['values'] as $value) {
+                                    $value = sanitize_title($value);
+
+                                    $term = $value ? get_term_by('slug', $value, $taxonomy) : false;
+
+                                    if (!$term || is_wp_error($term)) {
+                                        continue;
+                                    }
+
+                                    if (!in_array($value, $values, true)) {
+                                        $values[] = $value;
+                                    }
+                                }
+                            }
+
+                            if (!$values) {
+                                continue;
+                            }
+
+                            $attributes[] = [
+                                'attribute' => $taxonomy,
+                                'values'    => $values,
+                            ];
+                        }
+                    }
+
                     $answer_id = isset($answer['id'])
                         ? sanitize_key($answer['id'])
                         : '';
@@ -698,10 +947,14 @@ class PWQB_Builder
                         'title'         => isset($answer['title'])
                             ? sanitize_text_field($answer['title'])
                             : '',
+                        'description' => isset($answer['description'])
+                            ? sanitize_textarea_field($answer['description'])
+                            : '',
                         'image_id'      => self::sanitize_image_id($answer['image_id'] ?? 0),
                         'next_question' => isset($answer['next_question'])
                             ? sanitize_key($answer['next_question'])
                             : '',
+                        'attributes'    => $attributes,
                     ];
                 }
             }

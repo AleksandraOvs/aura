@@ -13,6 +13,7 @@ class PWQB_Submissions_Admin
         add_action('admin_menu', [self::class, 'add_menu']);
         add_action('admin_post_pwqb_clear_submissions', [self::class, 'clear_submissions']);
         add_action('admin_post_pwqb_save_email_settings', [self::class, 'save_email_settings']);
+        add_action('admin_post_pwqb_export_submissions', [self::class, 'export_submissions']);
     }
 
     /**
@@ -47,6 +48,103 @@ class PWQB_Submissions_Admin
         );
 
         wp_safe_redirect($redirect_url);
+        exit;
+    }
+
+    /**
+     * Экспортирует все заявки в CSV.
+     */
+    public static function export_submissions(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die('Недостаточно прав для выполнения действия.');
+        }
+
+        check_admin_referer('pwqb_export_submissions');
+
+        global $wpdb;
+
+        $table = $wpdb->prefix . 'pwqb_submissions';
+
+        $items = $wpdb->get_results(
+            "SELECT s.*, p.post_title AS quiz_title
+        FROM {$table} s
+        LEFT JOIN {$wpdb->posts} p ON p.ID = s.quiz_id
+        ORDER BY s.created_at DESC",
+            ARRAY_A
+        );
+
+        if ($items === null) {
+            wp_die('Не удалось получить заявки для экспорта.');
+        }
+
+        nocache_headers();
+
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="quiz-submissions-' . date('Y-m-d') . '.csv"');
+
+        $output = fopen('php://output', 'w');
+
+        // BOM для корректного отображения кириллицы в Excel.
+        fwrite($output, "\xEF\xBB\xBF");
+
+        // Защита от выполнения формул из пользовательских данных.
+        $safe_cell = static function ($value): string {
+            $value = (string) $value;
+
+            if (preg_match('/^[\s]*[=+\-@]/u', $value)) {
+                $value = "'" . $value;
+            }
+
+            return $value;
+        };
+
+        fputcsv($output, [
+            'ID заявки',
+            'Дата',
+            'Квиз',
+            'Имя',
+            'Email',
+            'Телефон',
+            'Способ связи',
+            'Мессенджеры',
+            'Комментарий',
+            'Ответы',
+        ], ';');
+
+        $send_to_labels = [
+            'email'     => 'На Email',
+            'messenger' => 'В мессенджер',
+            'both'      => 'На Email и в мессенджер',
+        ];
+
+        foreach ($items as $item) {
+            $messengers = json_decode($item['messengers'] ?? '', true);
+            $answers = json_decode($item['answers'] ?? '', true);
+
+            $messengers = is_array($messengers)
+                ? implode(', ', $messengers)
+                : '';
+
+            $answers = is_array($answers)
+                ? wp_json_encode($answers, JSON_UNESCAPED_UNICODE)
+                : '';
+
+            fputcsv($output, [
+                $safe_cell($item['id']),
+                $safe_cell(mysql2date('d.m.Y H:i', $item['created_at'])),
+                $safe_cell($item['quiz_title'] ?: 'Квиз удалён'),
+                $safe_cell($item['name']),
+                $safe_cell($item['email']),
+                $safe_cell($item['phone']),
+                $safe_cell($send_to_labels[$item['send_to']] ?? 'Не указано'),
+                $safe_cell($messengers),
+                $safe_cell($item['comment']),
+                $safe_cell($answers),
+            ], ';');
+        }
+
+        fclose($output);
         exit;
     }
 
@@ -245,6 +343,21 @@ class PWQB_Submissions_Admin
                     class="button button-secondary"
                     onclick="return confirm('Вы действительно хотите удалить ВСЕ заявки? Это действие нельзя отменить.');">
                     Очистить таблицу
+                </button>
+
+            </form>
+
+            <form
+                method="post"
+                action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
+                style="margin: 15px 0;">
+
+                <input type="hidden" name="action" value="pwqb_export_submissions">
+
+                <?php wp_nonce_field('pwqb_export_submissions'); ?>
+
+                <button type="submit" class="button button-primary">
+                    Экспортировать в CSV
                 </button>
 
             </form>

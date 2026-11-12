@@ -9,12 +9,94 @@ class PWQB_Shortcode
     public static function init(): void
     {
         add_shortcode('pw_quiz', [self::class, 'render']);
+        add_action('wp_ajax_pwqb_load_quiz', [self::class, 'ajax_load_quiz']);
+        add_action('wp_ajax_nopriv_pwqb_load_quiz', [self::class, 'ajax_load_quiz']);
+        add_action('wp_footer', [self::class, 'render_popup']);
+        add_action('wp_enqueue_scripts', [self::class, 'enqueue_assets']);
+    }
+
+    /**
+     * AJAX-загрузка квиза для попапа.
+     */
+    public static function ajax_load_quiz(): void
+    {
+        $quiz_id = isset($_POST['quiz_id'])
+            ? absint($_POST['quiz_id'])
+            : 0;
+
+        if (!$quiz_id) {
+            wp_send_json_error([
+                'message' => 'Не указан ID квиза.',
+            ], 400);
+        }
+
+        $quiz = get_post($quiz_id);
+
+        if (
+            !$quiz ||
+            $quiz->post_type !== PWQB_Quiz::POST_TYPE ||
+            $quiz->post_status !== 'publish'
+        ) {
+            wp_send_json_error([
+                'message' => 'Квиз не найден.',
+            ], 404);
+        }
+
+        $html = self::render([
+            'id' => $quiz_id,
+        ]);
+
+        if ($html === '') {
+            wp_send_json_error([
+                'message' => 'Не удалось загрузить квиз.',
+            ], 500);
+        }
+
+        wp_send_json_success([
+            'html' => $html,
+        ]);
+    }
+
+    /**
+     * Вывод общего попапа для квизов.
+     */
+    public static function render_popup(): void
+    {
+?>
+        <div class="pwqb-popup" data-pwqb-popup hidden>
+
+            <div class="pwqb-popup__overlay" data-pwqb-popup-close></div>
+
+            <div
+                class="pwqb-popup__dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Квиз">
+
+                <button
+                    type="button"
+                    class="pwqb-popup__close"
+                    data-pwqb-popup-close
+                    aria-label="Закрыть">
+                    &times;
+                </button>
+
+                <div class="pwqb-popup__content" data-pwqb-popup-content>
+                    <div class="pwqb-popup__loading" hidden>
+                        Загрузка...
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    <?php
     }
 
     /**
      * Подключение ресурсов фронтенда.
      */
-    private static function enqueue_assets(): void
+    public static function enqueue_assets(): void
     {
         wp_enqueue_style(
             'pwqb-quiz',
@@ -36,6 +118,7 @@ class PWQB_Shortcode
             'PWQBQuiz',
             [
                 'ajaxUrl' => admin_url('admin-ajax.php'),
+                'loadQuizAction' => 'pwqb_load_quiz',
             ]
         );
     }
@@ -119,13 +202,13 @@ class PWQB_Shortcode
 
 
         ob_start();
-?>
+    ?>
 
         <div
             class="pwqb-quiz"
             data-quiz-id="<?php echo esc_attr($quiz_id); ?>">
 
-            <div class="pwqb-quiz__intro">
+            <div class="pwqb-quiz__intro" data-pwqb-intro>
                 <h2 class="pwqb-quiz__title">
                     <?php echo esc_html(get_the_title($quiz_id)); ?>
                 </h2>
@@ -135,26 +218,27 @@ class PWQB_Shortcode
                         <?php echo wpautop(esc_html($description)); ?>
                     </div>
                 <?php endif; ?>
-            </div>
 
-            <div class="pwqb-quiz__progress" hidden>
-                <div class="pwqb-quiz__progress-info">
-                    <span data-pwqb-progress-label></span>
-                    <span data-pwqb-progress-percent></span>
+                <div class="intro-buttons">
+
+
+                    <button
+                        type="button"
+                        class="pwqb-quiz__button pwqb-quiz__button--next"
+                        data-pwqb-start>
+                        Подобрать решение
+                    </button>
+
+                    <a href="#" class="button quiz-help">
+                        Нужна помощь эксперта
+                    </a>
+
                 </div>
 
-                <div
-                    class="pwqb-quiz__progress-track"
-                    role="progressbar"
-                    aria-valuemin="0"
-                    aria-valuemax="100"
-                    aria-valuenow="0"
-                    data-pwqb-progress-bar>
-                    <div class="pwqb-quiz__progress-fill"></div>
-                </div>
+
             </div>
 
-            <div class="pwqb-quiz__questions" data-pwqb-frontend-questions>
+            <div class="pwqb-quiz__questions" data-pwqb-frontend-questions hidden>
 
                 <?php foreach ($questions as $question_index => $question) : ?>
 
@@ -180,7 +264,7 @@ class PWQB_Shortcode
                     ?>
 
                     <section
-                        class="pwqb-quiz__question"
+                        class="pwqb-quiz__question <?php echo $question_index === 0 ? 'pwqb-quiz__question--intro-step' : ''; ?>"
                         data-pwqb-frontend-question
                         data-question-id="<?php echo esc_attr($question_id); ?>"
                         data-question-index="<?php echo esc_attr($question_index); ?>"
@@ -189,9 +273,10 @@ class PWQB_Shortcode
 
                         <div class="pwqb-quiz__question-heading">
 
-                            <span class="pwqb-quiz__question-number">
-                                Вопрос <?php echo esc_html($question_index + 1); ?>
-                            </span>
+                            <!-- <span class="pwqb-quiz__question-number">
+                                Вопрос <?php //echo esc_html($question_index + 1); 
+                                        ?>
+                            </span> -->
 
                             <h3 class="pwqb-quiz__question-title">
                                 <?php echo esc_html($question['title'] ?? ''); ?>
@@ -211,89 +296,137 @@ class PWQB_Shortcode
                             ?>
 
                         </div>
+                        <div class="pwqb-quiz__question-inner">
 
-                        <div class="pwqb-quiz__answers">
+                            <div class="pwqb-quiz__answers">
 
-                            <?php foreach ($answers as $answer) : ?>
+                                <?php foreach ($answers as $answer) : ?>
 
-                                <?php
-                                if (!is_array($answer)) {
-                                    continue;
-                                }
+                                    <?php
+                                    if (!is_array($answer)) {
+                                        continue;
+                                    }
 
-                                $answer_id = sanitize_key($answer['id'] ?? '');
+                                    $answer_id = sanitize_key($answer['id'] ?? '');
 
-                                if ($answer_id === '') {
-                                    continue;
-                                }
+                                    if ($answer_id === '') {
+                                        continue;
+                                    }
 
-                                $next_question = sanitize_key(
-                                    $answer['next_question'] ?? ''
-                                );
-                                ?>
+                                    $next_question = sanitize_key(
+                                        $answer['next_question'] ?? ''
+                                    );
 
-                                <label
-                                    class="pwqb-quiz__answer"
-                                    data-pwqb-frontend-answer
-                                    data-answer-id="<?php echo esc_attr($answer_id); ?>"
-                                    data-next-question="<?php echo esc_attr($next_question); ?>">
 
-                                    <input
-                                        type="<?php echo $is_multiple ? 'checkbox' : 'radio'; ?>"
-                                        name="pwqb_answer_<?php echo esc_attr($quiz_id . '_' . $question_id); ?>"
-                                        value="<?php echo esc_attr($answer_id); ?>"
-                                        data-pwqb-answer-input>
+                                    $answer_image_id = absint($answer['image_id'] ?? 0);
 
-                                    <span class="pwqb-quiz__answer-content">
+                                    $answer_classes = ['pwqb-quiz__answer'];
 
+                                    if ($answer_image_id) {
+                                        $answer_classes[] = 'pwqb-quiz__answer--has-image';
+                                    }
+
+                                    if ($question_index === 0) {
+                                        $answer_classes[] = 'pwqb-quiz__answer--intro-step';
+                                    }
+                                    ?>
+                                    <label
+                                        class="<?php echo esc_attr(implode(' ', $answer_classes)); ?>"
+                                        data-pwqb-frontend-answer
+                                        data-answer-id="<?php echo esc_attr($answer_id); ?>"
+                                        data-next-question="<?php echo esc_attr($next_question); ?>">
                                         <?php
                                         echo self::render_image(
-                                            absint($answer['image_id'] ?? 0),
+                                            $answer_image_id,
                                             'pwqb-quiz__answer-image'
                                         );
                                         ?>
 
-                                        <span class="pwqb-quiz__answer-title">
-                                            <?php echo esc_html($answer['title'] ?? ''); ?>
+
+
+                                        <span class="pwqb-quiz__answer-content">
+
+                                            <input
+                                                type="<?php echo $is_multiple ? 'checkbox' : 'radio'; ?>"
+                                                name="pwqb_answer_<?php echo esc_attr($quiz_id . '_' . $question_id); ?>"
+                                                value="<?php echo esc_attr($answer_id); ?>"
+                                                data-pwqb-answer-input>
+
+                                            <div class="pwqb-quiz__answer-content__inner">
+                                                <span class="pwqb-quiz__answer-title">
+                                                    <?php echo esc_html($answer['title'] ?? ''); ?>
+                                                </span>
+
+                                                <?php if (!empty($answer['description'])) : ?>
+                                                    <span class="pwqb-quiz__answer-description">
+                                                        <?php echo esc_html($answer['description']); ?>
+                                                    </span>
+                                                <?php endif; ?>
+                                            </div>
+
+
                                         </span>
 
-                                    </span>
+                                    </label>
 
-                                </label>
+                                <?php endforeach; ?>
+                            </div>
 
-                            <?php endforeach; ?>
+                            <?php echo $question_index === 0 ? '<a href="#" class="button quiz-help">Нужна помощь эксперта</a>' : ''; ?>
 
+                            <?php if ($is_multiple) : ?>
+                                <p class="pwqb-quiz__hint">
+                                    Можно выбрать несколько вариантов.
+                                </p>
+                            <?php endif; ?>
+
+                            <div class="pwqb-quiz__controls">
+
+                                <div class="pwqb-quiz__progress" data-pwqb-progress hidden>
+                                    <div class="pwqb-quiz__progress-info">
+                                        <span data-pwqb-progress-label></span>
+                                    </div>
+
+                                    <div
+                                        class="pwqb-quiz__progress-track"
+                                        role="progressbar"
+                                        aria-valuemin="0"
+                                        aria-valuemax="100"
+                                        aria-valuenow="0"
+                                        data-pwqb-progress-bar>
+                                        <div class="pwqb-quiz__progress-fill"></div>
+                                    </div>
+                                </div>
+
+                                <div class="pwqb-quiz__navigation" data-pwqb-navigation hidden>
+                                    <button
+                                        type="button"
+                                        class="pwqb-quiz__button pwqb-quiz__button--next"
+                                        data-pwqb-next
+                                        disabled>
+                                        Далее
+                                    </button>
+                                </div>
+
+                            </div>
                         </div>
-
-                        <?php if ($is_multiple) : ?>
-                            <p class="pwqb-quiz__hint">
-                                Можно выбрать несколько вариантов.
-                            </p>
-                        <?php endif; ?>
 
                     </section>
 
                 <?php endforeach; ?>
 
-            </div>
+                <div class="pwqb-quiz__progress" hidden>
 
-            <div class="pwqb-quiz__navigation" data-pwqb-navigation hidden>
-
-                <button
-                    type="button"
-                    class="pwqb-quiz__button pwqb-quiz__button--back"
-                    data-pwqb-back
-                    hidden>
-                    Назад
-                </button>
-
-                <button
-                    type="button"
-                    class="pwqb-quiz__button pwqb-quiz__button--next"
-                    data-pwqb-next
-                    disabled>
-                    Далее
-                </button>
+                    <div
+                        class="pwqb-quiz__progress-track"
+                        role="progressbar"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                        aria-valuenow="0"
+                        data-pwqb-progress-bar>
+                        <div class="pwqb-quiz__progress-fill"></div>
+                    </div>
+                </div>
 
             </div>
 
