@@ -290,6 +290,7 @@ section.pwqb-quiz__question--intro-step .pwqb-quiz__question-inner {
     align-items: center;
     gap: 14px;
     min-width: 0;
+    width: 100%;
     padding: 0;
     cursor: pointer;
     transition:
