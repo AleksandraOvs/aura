@@ -9,7 +9,7 @@ class PWQB_Activator
     /**
      * Версия структуры базы данных.
      */
-    private const DB_VERSION = '1.1.0';
+    private const DB_VERSION = '1.2.1';
 
     /**
      * Ключ версии БД в wp_options.
@@ -36,11 +36,6 @@ class PWQB_Activator
         flush_rewrite_rules();
     }
 
-    /**
-     * Проверка необходимости обновления структуры БД.
-     *
-     * Вызывается при загрузке WordPress.
-     */
     public static function maybe_upgrade(): void
     {
         $installed_version = get_option(self::DB_VERSION_OPTION, '');
@@ -50,6 +45,31 @@ class PWQB_Activator
         }
 
         self::create_submissions_table();
+
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'pwqb_submissions';
+
+        $columns = $wpdb->get_col(
+            "SHOW COLUMNS FROM {$table_name}",
+            0
+        );
+
+        if (!in_array('product_links', $columns, true)) {
+            $wpdb->query(
+                "ALTER TABLE {$table_name}
+            ADD product_links longtext NOT NULL"
+            );
+        }
+
+        if (!in_array('attributes', $columns, true)) {
+            $wpdb->query(
+                "ALTER TABLE {$table_name}
+            ADD attributes longtext NOT NULL"
+            );
+        }
+
+        update_option(self::DB_VERSION_OPTION, self::DB_VERSION);
     }
 
     /**
@@ -75,7 +95,9 @@ class PWQB_Activator
             messengers longtext NOT NULL,
             comment text NOT NULL,
             answers longtext NOT NULL,
-            created_at datetime NOT NULL,
+product_links longtext NOT NULL,
+attributes longtext NOT NULL,
+created_at datetime NOT NULL,
             PRIMARY KEY  (id),
             KEY quiz_id (quiz_id),
             KEY user_id (user_id),

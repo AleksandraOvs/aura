@@ -39,61 +39,14 @@ class PWQB_Submissions
             );
         }
 
+        $is_open = !empty($data['is_open']);
+
         $name = sanitize_text_field($data['name'] ?? '');
         $email = sanitize_email($data['email'] ?? '');
-
-        if ($name === '') {
-            return new WP_Error(
-                'empty_name',
-                'Укажите имя.'
-            );
-        }
-
-        if (!is_email($email)) {
-            return new WP_Error(
-                'invalid_email',
-                'Укажите корректный email.'
-            );
-        }
-
-        $send_to = sanitize_key($data['send_to'] ?? 'email');
-
-        $allowed_send_to = ['email', 'messenger', 'both'];
-
-        if (!in_array($send_to, $allowed_send_to, true)) {
-            return new WP_Error(
-                'invalid_send_to',
-                'Выберите способ отправки подборки.'
-            );
-        }
-
-        $messengers = $data['messengers'] ?? [];
-
-        if (!is_array($messengers)) {
-            $messengers = [];
-        }
-
-        $allowed_messengers = ['telegram', 'whatsapp', 'viber'];
-
-        $messengers = array_values(array_unique(array_filter(
-            array_map('sanitize_key', $messengers),
-            static function ($messenger) use ($allowed_messengers) {
-                return in_array($messenger, $allowed_messengers, true);
-            }
-        )));
-
         $phone = sanitize_text_field($data['phone'] ?? '');
 
-        $needs_messenger = in_array($send_to, ['messenger', 'both'], true);
+        if ($is_open) {
 
-        if ($needs_messenger && empty($messengers)) {
-            return new WP_Error(
-                'empty_messengers',
-                'Выберите хотя бы один мессенджер.'
-            );
-        }
-
-        if ($needs_messenger) {
             $phone_digits = preg_replace('/\D+/', '', $phone);
 
             if (strlen($phone_digits) < 7 || strlen($phone_digits) > 15) {
@@ -102,9 +55,73 @@ class PWQB_Submissions
                     'Укажите корректный номер телефона.'
                 );
             }
-        } else {
+
+            $send_to = '';
             $messengers = [];
-            $phone = '';
+        } else {
+
+            if ($name === '') {
+                return new WP_Error(
+                    'empty_name',
+                    'Укажите имя.'
+                );
+            }
+
+            if (!is_email($email)) {
+                return new WP_Error(
+                    'invalid_email',
+                    'Укажите корректный email.'
+                );
+            }
+
+            $send_to = sanitize_key($data['send_to'] ?? 'email');
+
+            $allowed_send_to = ['email', 'messenger', 'both'];
+
+            if (!in_array($send_to, $allowed_send_to, true)) {
+                return new WP_Error(
+                    'invalid_send_to',
+                    'Выберите способ отправки подборки.'
+                );
+            }
+
+            $messengers = $data['messengers'] ?? [];
+
+            if (!is_array($messengers)) {
+                $messengers = [];
+            }
+
+            $allowed_messengers = ['telegram', 'whatsapp', 'viber'];
+
+            $messengers = array_values(array_unique(array_filter(
+                array_map('sanitize_key', $messengers),
+                static function ($messenger) use ($allowed_messengers) {
+                    return in_array($messenger, $allowed_messengers, true);
+                }
+            )));
+
+            $needs_messenger = in_array($send_to, ['messenger', 'both'], true);
+
+            if ($needs_messenger && empty($messengers)) {
+                return new WP_Error(
+                    'empty_messengers',
+                    'Выберите хотя бы один мессенджер.'
+                );
+            }
+
+            if ($needs_messenger) {
+                $phone_digits = preg_replace('/\D+/', '', $phone);
+
+                if (strlen($phone_digits) < 7 || strlen($phone_digits) > 15) {
+                    return new WP_Error(
+                        'invalid_phone',
+                        'Укажите корректный номер телефона.'
+                    );
+                }
+            } else {
+                $messengers = [];
+                $phone = '';
+            }
         }
 
         $answers = $data['answers'] ?? [];
@@ -112,6 +129,46 @@ class PWQB_Submissions
         if (!is_array($answers)) {
             $answers = [];
         }
+
+        // Ссылки на найденные товары.
+        $product_links = $data['product_links'] ?? [];
+
+        if (!is_array($product_links)) {
+            $product_links = [];
+        }
+
+        $product_links = array_values(array_unique(array_filter(
+            array_map('esc_url_raw', $product_links)
+        )));
+
+        // Атрибуты, собранные по ответам квиза.
+        $attributes = $data['attributes'] ?? [];
+
+        if (!is_array($attributes)) {
+            $attributes = [];
+        }
+
+        $clean_attributes = [];
+
+        foreach ($attributes as $taxonomy => $values) {
+            if (
+                !is_string($taxonomy) ||
+                !preg_match('/^pa_[a-z0-9_-]+$/', $taxonomy) ||
+                !is_array($values)
+            ) {
+                continue;
+            }
+
+            $values = array_values(array_unique(array_filter(
+                array_map('sanitize_title', $values)
+            )));
+
+            if (!empty($values)) {
+                $clean_attributes[$taxonomy] = $values;
+            }
+        }
+
+        $attributes = $clean_attributes;
 
         $user_id = get_current_user_id();
 
@@ -128,8 +185,10 @@ class PWQB_Submissions
                 'comment'    => sanitize_textarea_field(
                     $data['comment'] ?? ''
                 ),
-                'answers'    => wp_json_encode($answers),
-                'created_at' => current_time('mysql'),
+                'answers'      => wp_json_encode($answers),
+                'product_links' => wp_json_encode($product_links),
+                'attributes'   => wp_json_encode($attributes),
+                'created_at'   => current_time('mysql'),
             ],
             [
                 '%d',
@@ -142,10 +201,14 @@ class PWQB_Submissions
                 '%s',
                 '%s',
                 '%s',
+                '%s',
+                '%s',
             ]
         );
 
         if ($inserted === false) {
+            error_log('PWQB DB ERROR: ' . $wpdb->last_error);
+
             return new WP_Error(
                 'submission_save_failed',
                 'Не удалось сохранить заявку.'
@@ -250,6 +313,24 @@ class PWQB_Submissions
 
         if (!is_array($submission['answers'])) {
             $submission['answers'] = [];
+        }
+
+        $submission['product_links'] = json_decode(
+            $submission['product_links'] ?? '',
+            true
+        );
+
+        $submission['attributes'] = json_decode(
+            $submission['attributes'] ?? '',
+            true
+        );
+
+        if (!is_array($submission['product_links'])) {
+            $submission['product_links'] = [];
+        }
+
+        if (!is_array($submission['attributes'])) {
+            $submission['attributes'] = [];
         }
 
         $submission['quiz_title'] = get_the_title(
@@ -474,6 +555,162 @@ class PWQB_Submissions
             'submission_id' => $submission_id,
         ]);
     }
+
+    /**
+     * AJAX-обработка отправки заявки из открытого квиза.
+     */
+    public static function ajax_submit_open(): void
+    {
+        // Проверка nonce.
+        $nonce = isset($_POST['pwqb_submission_nonce'])
+            ? sanitize_text_field(wp_unslash($_POST['pwqb_submission_nonce']))
+            : '';
+
+        if (!wp_verify_nonce($nonce, 'pwqb_submit_open_quiz')) {
+            wp_send_json_error([
+                'message' => 'Сессия истекла. Обновите страницу и попробуйте снова.',
+            ], 403);
+        }
+
+        // Проверка honeypot.
+        $honeypot = isset($_POST['pwqb_website'])
+            ? wp_unslash($_POST['pwqb_website'])
+            : '';
+
+        if (!is_string($honeypot) || trim($honeypot) !== '') {
+            self::increment_blocked_requests();
+
+            wp_send_json_error([
+                'message' => 'Не удалось отправить заявку.',
+            ], 400);
+        }
+
+        // Проверка времени прохождения квиза.
+        $started_at = isset($_POST['pwqb_started_at'])
+            ? absint($_POST['pwqb_started_at'])
+            : 0;
+
+        $start_token = isset($_POST['pwqb_start_token'])
+            ? sanitize_text_field(wp_unslash($_POST['pwqb_start_token']))
+            : '';
+
+        $quiz_id = absint($_POST['quiz_id'] ?? 0);
+
+        $expected_token = hash_hmac(
+            'sha256',
+            $quiz_id . '|' . $started_at,
+            wp_salt('auth')
+        );
+
+        $elapsed = time() - $started_at;
+
+        if (
+            !$started_at ||
+            !$quiz_id ||
+            !hash_equals($expected_token, $start_token) ||
+            $elapsed < 5
+        ) {
+            self::increment_blocked_requests();
+
+            wp_send_json_error([
+                'message' => 'Не удалось отправить заявку. Обновите страницу и попробуйте снова.',
+            ], 400);
+        }
+
+        // Ограничение частоты отправки.
+        if (!self::check_rate_limit()) {
+            wp_send_json_error([
+                'message' => 'Вы отправили слишком много заявок. Попробуйте через 10 минут.',
+            ], 429);
+        }
+
+        // Проверка согласия.
+        $consent = isset($_POST['consent'])
+            ? sanitize_text_field(wp_unslash($_POST['consent']))
+            : '';
+
+        if ($consent !== '1') {
+            wp_send_json_error([
+                'message' => 'Необходимо подтвердить согласие на обработку персональных данных.',
+            ], 400);
+        }
+
+        // Получаем атрибуты.
+        $attributes_json = isset($_POST['attributes'])
+            ? wp_unslash($_POST['attributes'])
+            : '';
+
+        $attributes = json_decode($attributes_json, true);
+
+        if (!is_array($attributes)) {
+            wp_send_json_error([
+                'message' => 'Не удалось получить параметры подбора.',
+            ], 400);
+        }
+
+        // Получаем ID найденных товаров.
+        $product_ids_json = isset($_POST['product_ids'])
+            ? wp_unslash($_POST['product_ids'])
+            : '';
+
+        $product_ids = json_decode($product_ids_json, true);
+
+        if (!is_array($product_ids)) {
+            wp_send_json_error([
+                'message' => 'Не удалось получить список товаров.',
+            ], 400);
+        }
+
+        // Получаем ответы квиза.
+        $answers_json = isset($_POST['answers'])
+            ? wp_unslash($_POST['answers'])
+            : '';
+
+        $answers = json_decode($answers_json, true);
+
+        if (!is_array($answers)) {
+            $answers = [];
+        }
+
+        // Получаем ссылки только на существующие опубликованные товары.
+        $product_links = [];
+
+        foreach (array_unique(array_map('absint', $product_ids)) as $product_id) {
+            if (
+                !$product_id ||
+                get_post_type($product_id) !== 'product' ||
+                get_post_status($product_id) !== 'publish'
+            ) {
+                continue;
+            }
+
+            $product_links[] = get_permalink($product_id);
+        }
+
+        $data = [
+            'quiz_id'      => $quiz_id,
+            'is_open'      => true,
+            'phone'        => sanitize_text_field(wp_unslash($_POST['phone'] ?? '')),
+            'answers'      => $answers,
+            'attributes'   => $attributes,
+            'product_links' => $product_links,
+        ];
+
+        $submission_id = self::create($data);
+
+        if (is_wp_error($submission_id)) {
+            wp_send_json_error([
+                'message' => $submission_id->get_error_message(),
+            ], 400);
+        }
+
+        self::increment_rate_limit();
+
+        wp_send_json_success([
+            'message' => 'Спасибо! Ваша заявка успешно отправлена.',
+            'submission_id' => $submission_id,
+        ]);
+    }
 }
 
 /**
@@ -481,3 +718,6 @@ class PWQB_Submissions
  */
 add_action('wp_ajax_pwqb_submit_quiz', ['PWQB_Submissions', 'ajax_submit']);
 add_action('wp_ajax_nopriv_pwqb_submit_quiz', ['PWQB_Submissions', 'ajax_submit']);
+
+add_action('wp_ajax_pwqb_submit_open_quiz', ['PWQB_Submissions', 'ajax_submit_open']);
+add_action('wp_ajax_nopriv_pwqb_submit_open_quiz', ['PWQB_Submissions', 'ajax_submit_open']);

@@ -84,9 +84,15 @@ li.product h2.woocommerce-loop-product__title {
 
 
 .product-quantity .quantity {
-    width: calc(100% - 80px);
+    max-width: calc(100% - 80px);
     border-top: 1px solid var(--theme-color-grey);
     border-bottom: 1px solid var(--theme-color-grey);
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }
 
 

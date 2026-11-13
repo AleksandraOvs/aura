@@ -105,6 +105,7 @@ class PWQB_Shortcode
             PWQB_VERSION
         );
 
+        // Основной файл.
         wp_enqueue_script(
             'pwqb-quiz',
             PWQB_URL . 'public/js/quiz.js',
@@ -113,14 +114,51 @@ class PWQB_Shortcode
             true
         );
 
+        // Передаём настройки AJAX.
         wp_localize_script(
             'pwqb-quiz',
             'PWQBQuiz',
             [
                 'ajaxUrl' => admin_url('admin-ajax.php'),
                 'loadQuizAction' => 'pwqb_load_quiz',
+                'productsNonce' => wp_create_nonce('pwqb_get_products'),
+                'openSubmissionNonce' => wp_create_nonce('pwqb_submit_open_quiz'),
             ]
         );
+
+        // Дополнительные модули.
+        $scripts = [
+            'quiz-answers',
+            'quiz-attributes',
+            'quiz-navigation',
+            'quiz-result',
+            'quiz-form',
+            'quiz-products',
+            'quiz-contact',
+            'quiz-popup',
+        ];
+
+        $dependency = 'pwqb-quiz';
+
+        foreach ($scripts as $script) {
+            $handle = 'pwqb-' . $script;
+
+            $dependencies = [$dependency];
+
+            if ($script === 'quiz-products') {
+                $dependencies[] = 'tr-swiper';
+            }
+
+            wp_enqueue_script(
+                $handle,
+                PWQB_URL . 'public/js/' . $script . '.js',
+                $dependencies,
+                PWQB_VERSION,
+                true
+            );
+
+            $dependency = $handle;
+        }
     }
 
     /**
@@ -201,12 +239,21 @@ class PWQB_Shortcode
             : 'open';
 
 
+        $started_at = time();
+
+        $start_token = hash_hmac(
+            'sha256',
+            $quiz_id . '|' . $started_at,
+            wp_salt('auth')
+        );
         ob_start();
     ?>
 
         <div
             class="pwqb-quiz"
-            data-quiz-id="<?php echo esc_attr($quiz_id); ?>">
+            data-quiz-id="<?php echo esc_attr($quiz_id); ?>"
+            data-started-at="<?php echo esc_attr($started_at); ?>"
+            data-start-token="<?php echo esc_attr($start_token); ?>">
 
             <div class="pwqb-quiz__intro" data-pwqb-intro>
                 <h2 class="pwqb-quiz__title">
@@ -278,21 +325,25 @@ class PWQB_Shortcode
                                         ?>
                             </span> -->
 
-                            <h3 class="pwqb-quiz__question-title">
-                                <?php echo esc_html($question['title'] ?? ''); ?>
-                            </h3>
+                            <div class="pwqb-quiz__question-heading__content">
+                                <h3 class="pwqb-quiz__question-title">
+                                    <?php echo esc_html($question['title'] ?? ''); ?>
+                                </h3>
 
-                            <?php if (!empty($question['description'])) : ?>
-                                <div class="pwqb-quiz__question-description">
-                                    <?php echo wpautop(esc_html($question['description'])); ?>
-                                </div>
-                            <?php endif; ?>
+                                <?php if (!empty($question['description'])) : ?>
+                                    <div class="pwqb-quiz__question-description">
+                                        <?php echo wpautop(esc_html($question['description'])); ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <a href="#" class="button quiz-help">Нужна помощь эксперта</a>
 
                             <?php
-                            echo self::render_image(
-                                absint($question['image_id'] ?? 0),
-                                'pwqb-quiz__question-image'
-                            );
+                            // echo self::render_image(
+                            //     absint($question['image_id'] ?? 0),
+                            //     'pwqb-quiz__question-image'
+                            // );
                             ?>
 
                         </div>
@@ -317,6 +368,12 @@ class PWQB_Shortcode
                                         $answer['next_question'] ?? ''
                                     );
 
+                                    $answer_attributes = isset($answer['attributes']) && is_array($answer['attributes'])
+                                        ? $answer['attributes']
+                                        : [];
+
+                                    $answer_attributes_json = wp_json_encode($answer_attributes);
+
 
                                     $answer_image_id = absint($answer['image_id'] ?? 0);
 
@@ -334,7 +391,8 @@ class PWQB_Shortcode
                                         class="<?php echo esc_attr(implode(' ', $answer_classes)); ?>"
                                         data-pwqb-frontend-answer
                                         data-answer-id="<?php echo esc_attr($answer_id); ?>"
-                                        data-next-question="<?php echo esc_attr($next_question); ?>">
+                                        data-next-question="<?php echo esc_attr($next_question); ?>"
+                                        data-attributes="<?php echo esc_attr($answer_attributes_json); ?>">
                                         <?php
                                         echo self::render_image(
                                             $answer_image_id,
@@ -363,22 +421,21 @@ class PWQB_Shortcode
                                                     </span>
                                                 <?php endif; ?>
                                             </div>
-
-
                                         </span>
 
                                     </label>
 
                                 <?php endforeach; ?>
+                                <?php if ($is_multiple) : ?>
+                                    <p class="pwqb-quiz__hint">
+                                        Можно выбрать несколько вариантов.
+                                    </p>
+                                <?php endif; ?>
                             </div>
 
                             <?php echo $question_index === 0 ? '<a href="#" class="button quiz-help">Нужна помощь эксперта</a>' : ''; ?>
 
-                            <?php if ($is_multiple) : ?>
-                                <p class="pwqb-quiz__hint">
-                                    Можно выбрать несколько вариантов.
-                                </p>
-                            <?php endif; ?>
+
 
                             <div class="pwqb-quiz__controls">
 
@@ -586,12 +643,134 @@ class PWQB_Shortcode
 
                     </div>
 
+
                 <?php else : ?>
 
-                    <h3>Спасибо за ответы!</h3>
-                    <p>Вы прошли все вопросы.</p>
+                    <div class="pwqb-quiz__open-result">
+
+                        <div class="pwqb-quiz__contact-offer">
+
+                            <div class="pwqb-quiz__contact-offer__inner">
+                                <h3 class="pwqb-quiz__result-title">
+                                    Нет подходящего варианта?
+                                </h3>
+
+                                <p class="pwqb-quiz__result-description">
+                                    Оставьте ваши контакты, поможем выбрать нужное.
+                                </p>
+
+                                <form
+                                    class="pwqb-quiz__contact-form"
+                                    data-pwqb-contact-form>
+
+                                    <div class="pwqb-quiz__form-field">
+                                        <label for="pwqb-contact-phone-<?php echo esc_attr($quiz_id); ?>">
+                                            <input
+                                                type="tel"
+                                                id="pwqb-contact-phone-<?php echo esc_attr($quiz_id); ?>"
+                                                name="phone"
+                                                placeholder="Телефон*"
+                                                autocomplete="tel"
+                                                required
+                                                data-pwqb-contact-phone>
+                                        </label>
+
+
+                                    </div>
+
+                                    <label class="pwqb-quiz__consent">
+                                        <input
+                                            type="checkbox"
+                                            name="consent"
+                                            value="1"
+                                            required
+                                            data-pwqb-contact-consent>
+
+                                        <span>
+                                            Я выражаю согласие на передачу и обработку
+                                            персональных данных, в соответствии с
+                                            <a href="/privacy-policy/" target="_blank">
+                                                Политикой конфиденциальности
+                                            </a>.
+                                        </span>
+                                    </label>
+
+                                    <button
+                                        type="submit"
+                                        class="pwqb-quiz__button pwqb-quiz__button--next"
+                                        data-pwqb-contact-submit
+                                        disabled>
+                                        Отправить
+                                    </button>
+
+                                    <div
+                                        class="pwqb-quiz__contact-message"
+                                        data-pwqb-contact-message
+                                        role="status"
+                                        aria-live="polite"
+                                        hidden>
+                                    </div>
+
+                                </form>
+                            </div>
+                            <div class="pwqb-quiz__contact-alternative">
+                                <span>или свяжитесь с нами</span>
+
+                                <a href="tel:+70000000000">
+                                    +7 (000) 000-00-00
+                                </a>
+                            </div>
+
+                        </div>
+
+                        <div
+                            class="pwqb-quiz__products-result"
+                            data-pwqb-products-result>
+
+                            <div class="products-loader" hidden>
+                                <span class="loading-dots" aria-label="Загрузка">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </span>
+                            </div>
+
+                            <h3 class="pwqb-quiz__products-title">
+                                Найдено
+                                <span data-pwqb-products-count>0</span>
+                                <span data-pwqb-products-label>товаров</span>
+                                по вашему запросу
+                            </h3>
+
+                            <div class="pwqb-quiz__products-slider swiper">
+                                <button
+                                    type="button"
+                                    class="pwqb-quiz__products-prev"
+                                    aria-label="Предыдущие товары">
+                                    <svg width="21" height="35" viewBox="0 0 21 35" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path fill-rule="evenodd" clip-rule="evenodd" d="M17.6194 0.107826L20.2597 2.70776C20.4086 2.85592 20.4094 3.09479 20.2628 3.24219L6.22408 17.3886L20.2435 31.6211C20.3871 31.7674 20.3879 32.0029 20.2435 32.1495L17.6424 34.7926C17.495 34.9392 17.2561 34.9384 17.1095 34.791L0.109559 17.7087C-0.0363307 17.5621 -0.0367086 17.3243 0.109559 17.1773L17.0861 0.112739C17.2338 -0.0357963 17.4716 -0.037686 17.6194 0.107826Z" fill="#1D1D1F" />
+                                    </svg>
+                                </button>
+                                <div
+                                    class="swiper-wrapper"
+                                    data-pwqb-products-list>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="pwqb-quiz__products-next"
+                                    aria-label="Следующие товары">
+                                    <svg width="21" height="35" viewBox="0 0 21 35" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path fill-rule="evenodd" clip-rule="evenodd" d="M2.75273 0.107826L0.112349 2.70776C-0.0365641 2.85592 -0.0373207 3.09479 0.109325 3.24219L14.148 17.3886L0.128601 31.6211C-0.0150211 31.7674 -0.015777 32.0029 0.128601 32.1495L2.72967 34.7926C2.87707 34.9392 3.11594 34.9384 3.26259 34.791L20.2625 17.7087C20.4084 17.5621 20.4088 17.3243 20.2625 17.1773L3.28602 0.112739C3.13824 -0.0357963 2.90051 -0.037686 2.75273 0.107826Z" fill="#1D1D1F" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                        </div>
+
+                    </div>
 
                 <?php endif; ?>
+
 
                 <button
                     type="button"

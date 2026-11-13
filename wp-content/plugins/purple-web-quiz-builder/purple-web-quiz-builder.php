@@ -24,6 +24,7 @@ require_once PWQB_PATH . 'includes/class-pwqb-admin.php';
 require_once PWQB_PATH . 'includes/class-pwqb-shortcode.php';
 require_once PWQB_PATH . 'includes/class-pwqb-submissions.php';
 require_once PWQB_PATH . 'includes/class-pwqb-submissions-admin.php';
+require_once PWQB_PATH . 'includes/class-pwqb-products.php';
 
 // Конструктор квизов.
 require_once PWQB_PATH . 'includes/class-pwqb-builder.php';
@@ -51,4 +52,6 @@ add_action('plugins_loaded', static function () {
     PWQB_Shortcode::init();
 
     PWQB_Submissions_Admin::init();
+
+    PWQB_Products::init();
 });

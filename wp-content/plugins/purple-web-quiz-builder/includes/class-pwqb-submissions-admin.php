@@ -414,10 +414,10 @@ class PWQB_Submissions_Admin
                                 </td>
 
                                 <td>
+                                    <?php echo esc_html($item['name'] ?: '—'); ?>
+                                    <br>
                                     <a href="<?php echo esc_url($details_url); ?>">
-                                        <strong>
-                                            <?php echo esc_html($item['name']); ?>
-                                        </strong>
+                                        Подробности
                                     </a>
                                 </td>
 
@@ -646,6 +646,14 @@ class PWQB_Submissions_Admin
                 </tbody>
             </table>
 
+            <h2>Подобранные товары</h2>
+
+            <?php self::render_product_links($submission); ?>
+
+            <h2>Подобранные характеристики</h2>
+
+            <?php self::render_attributes($submission); ?>
+
             <h2>Ответы пользователя</h2>
 
             <?php self::render_answers($submission); ?>
@@ -653,6 +661,86 @@ class PWQB_Submissions_Admin
             <?php self::render_back_link(); ?>
         </div>
 <?php
+    }
+
+    /**
+     * Выводит ссылки на подобранные товары.
+     */
+    private static function render_product_links(array $submission): void
+    {
+        $product_links = $submission['product_links'] ?? [];
+
+        if (empty($product_links)) {
+            echo '<p>Подобранные товары не сохранены.</p>';
+            return;
+        }
+
+        echo '<ul>';
+
+        foreach ($product_links as $link) {
+            $link = esc_url($link);
+
+            if (!$link) {
+                continue;
+            }
+
+            $product_id = url_to_postid($link);
+
+            $product_title = $product_id && get_post_type($product_id) === 'product'
+                ? get_the_title($product_id)
+                : 'Открыть товар';
+
+            echo '<li>';
+            echo '<a href="' . $link . '" target="_blank" rel="noopener noreferrer">';
+            echo esc_html($product_title);
+            echo '</a>';
+            echo '</li>';
+        }
+
+        echo '</ul>';
+    }
+
+    /**
+     * Выводит подобранные характеристики товаров.
+     */
+    private static function render_attributes(array $submission): void
+    {
+        $attributes = $submission['attributes'] ?? [];
+
+        if (empty($attributes)) {
+            echo '<p>Характеристики не сохранены.</p>';
+            return;
+        }
+
+        echo '<table class="widefat striped" style="max-width: 800px;">';
+        echo '<tbody>';
+
+        foreach ($attributes as $taxonomy => $values) {
+            if (!is_array($values)) {
+                $values = [$values];
+            }
+
+            $attribute_label = function_exists('wc_attribute_label')
+                ? wc_attribute_label($taxonomy)
+                : $taxonomy;
+
+            $value_labels = [];
+
+            foreach ($values as $value) {
+                $term = get_term_by('slug', (string) $value, $taxonomy);
+
+                $value_labels[] = $term && !is_wp_error($term)
+                    ? $term->name
+                    : (string) $value;
+            }
+
+            echo '<tr>';
+            echo '<th style="width: 200px;">' . esc_html($attribute_label) . '</th>';
+            echo '<td>' . esc_html(implode(', ', $value_labels)) . '</td>';
+            echo '</tr>';
+        }
+
+        echo '</tbody></table>';
     }
 
     /**

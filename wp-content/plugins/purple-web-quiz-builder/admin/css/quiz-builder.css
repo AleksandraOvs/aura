@@ -432,3 +432,7 @@
         flex-direction: column;
     }
 }
+
+.pwqb-builder section.pwqb-builder__section.pwqb-builder__section--results {
+    display: none;
+}
