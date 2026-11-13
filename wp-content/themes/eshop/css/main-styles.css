@@ -2597,6 +2597,10 @@ footer.footer * .menu {
         margin-top: 0;
     }
 
+    .products-categories__list._grid-template {
+        margin-bottom: .5em;
+    }
+
     .products-categories__list {
         grid-template-columns: 1fr;
     }
@@ -2668,6 +2672,7 @@ footer.footer * .menu {
         height: 0;
         margin-top: 0;
         overflow: hidden;
+        margin-bottom: 0.5em;
     }
 
     .products-categories .fixed-container h2:not(:first-child) {
