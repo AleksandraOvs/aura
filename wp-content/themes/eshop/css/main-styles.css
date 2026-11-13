@@ -348,6 +348,18 @@ section.page-title-block {
     line-height: 1.5;
 }
 
+.page-title-block.catalog-title-block {
+    padding-top: 12vh;
+}
+
+h1.page-title.catalog-title {
+    text-align: left;
+}
+
+.products-categories {
+    padding-top: 0;
+}
+
 /* =========================================
    Header
 ========================================= */
@@ -2582,6 +2594,7 @@ footer.footer * .menu {
         position: relative;
         overflow: hidden;
         min-height: 180px;
+        margin-top: 0;
     }
 
     .products-categories__list {
@@ -2650,6 +2663,26 @@ footer.footer * .menu {
         display: flex;
         gap: 2em;
     }
+
+    .products-categories .fixed-container h2 {
+        height: 0;
+        margin-top: 0;
+        overflow: hidden;
+    }
+
+    .products-categories .fixed-container h2:not(:first-child) {
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+
+    .products-categories__list {
+        margin-top: 0;
+    }
+
+    h1.page-title.catalog-title {
+        text-align: center;
+    }
+
 }
 
 @media (max-width: 375px) {

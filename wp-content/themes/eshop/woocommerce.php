@@ -28,7 +28,24 @@ do_action('woocommerce_before_main_content');
 <?php
 if (is_shop()) {
 
-    get_template_part('woocommerce/shop-page-hero');
+    $shop_page_id = wc_get_page_id('shop');
+    if (get_field('hero_show', $shop_page_id)) {
+        get_template_part('woocommerce/shop-page-hero');
+    } else {
+?>
+        <section class="page-title-block catalog-title-block">
+            <div class="fixed-container">
+                <?php //site_breadcrumbs() 
+                ?>
+                <h1 class="page-title catalog-title" data-scroll-animation="fade-down">
+                    Каталог
+                </h1>
+            </div>
+        </section>
+
+
+        <?php
+    }
 
     /*
      * Настройка WooCommerce:
@@ -120,7 +137,7 @@ if (is_shop()) {
             if (!$columns) {
                 $columns = 4;
             }
-?>
+        ?>
 
             <ul
                 class="products products-<?php echo esc_attr($columns); ?> js-products-list"
