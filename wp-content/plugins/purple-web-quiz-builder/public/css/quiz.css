@@ -220,7 +220,7 @@ section.pwqb-quiz__question--intro-step .pwqb-quiz__question-inner {
     display: flex;
     gap: 20px;
     flex-wrap: wrap;
-    justify-content: space-between;
+    justify-content: flex-start;
 }
 
 .pwqb-quiz__hint {
@@ -1003,7 +1003,7 @@ a.quiz-help:hover {
     }
 
     .pwqb-quiz__answers .pwqb-quiz__answer.pwqb-quiz__answer--has-image {
-        width: calc(100% / 3 - 10px);
+        width: calc(100% / 3 - 0.333333333em);
     }
 
     .pwqb-quiz__answer-image {

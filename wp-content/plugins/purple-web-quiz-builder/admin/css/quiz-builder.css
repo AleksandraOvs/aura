@@ -99,14 +99,19 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
+    width: 24px;
     height: 24px;
-    margin-right: 4px;
+    margin-right: 0;
     padding: 0;
     border: 0;
     background: transparent;
     cursor: pointer;
     vertical-align: middle;
+    position: absolute;
+    right: 0;
+    border: 1px solid #cacaca;
+    border-radius: 100%;
+    padding: 2px;
 }
 
 .pwqb-category-toggle::before {
