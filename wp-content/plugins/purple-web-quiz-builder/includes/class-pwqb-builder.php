@@ -307,7 +307,7 @@ class PWQB_Builder
             : [];
 
     ?>
-        <div class="pwqb-question" data-pwqb-question>
+        <div class="pwqb-question is-collapsed" data-pwqb-question>
 
             <input
                 type="hidden"
@@ -554,9 +554,12 @@ class PWQB_Builder
 
             <button
                 type="button"
-                class="button"
+                class="button remove-answer"
                 data-pwqb-remove-answer>
-                Удалить ответ
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6.8125 6.10156L12.2031 11.5L11.5 12.2031L6.10156 6.8125L0.703125 12.2031L0 11.5L5.39062 6.10156L0 0.703125L0.703125 0L6.10156 5.39062L11.5 0L12.2031 0.703125L6.8125 6.10156Z" fill="#FFFFFF" />
+                </svg>
+
             </button>
 
         </div>
@@ -616,7 +619,7 @@ class PWQB_Builder
     {
     ?>
         <script type="text/html" id="tmpl-pwqb-question">
-            <div class="pwqb-question" data-pwqb-question>
+            <div class="pwqb-question is-collapsed" data-pwqb-question>
                 <input type="hidden" data-field="id">
 
                 <div class="pwqb-question__header">
@@ -710,14 +713,14 @@ class PWQB_Builder
 
                         <button
                             type="button"
-                            class="button"
+                            class="button add-criteria"
                             data-pwqb-add-attribute>
                             Добавить критерий (по атрибуту)
                         </button>
                     </div>
                 </div>
 
-                <button type="button" class="button" data-pwqb-remove-answer>Удалить ответ</button>
+                <button type="button delete-criteria" class="button" data-pwqb-remove-answer>Удалить ответ</button>
             </div>
         </script>
 

@@ -9,6 +9,10 @@
     flex-wrap: wrap;
 }
 
+.pwqb-answers * {
+    box-sizing: border-box;
+}
+
 #pwqb_quiz_builder div.inside .pwqb-builder__section h2 {
     padding: 0;
     margin-bottom: 1em;
@@ -184,6 +188,10 @@
     padding: 18px;
 }
 
+.pwqb-question.is-collapsed .pwqb-question__body {
+    display: none;
+}
+
 .pwqb-question__body>p {
     margin: 0 0 18px;
 }
@@ -199,9 +207,10 @@
     max-width: 100%;
 }
 
+/* 
 .pwqb-question__body select {
     min-width: 200px;
-}
+} */
 
 /* Ответы */
 
@@ -221,19 +230,38 @@
 
 .pwqb-answers [data-pwqb-answers] {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 12px;
+    flex-wrap: wrap;
 }
 
 .pwqb-answer {
     display: flex;
     align-items: flex-start;
+    padding: 2em .5em;
+    position: relative;
     justify-content: space-between;
     gap: 16px;
     padding: 16px;
     background: #f9f9fa;
     border: 1px solid #e2e2e5;
     border-radius: 6px;
+    width: calc(100% / 3 - 8px);
+}
+
+.button.remove-answer {
+    position: absolute;
+    border-color: #BE4949;
+    background: #BE4949;
+    top: .5em;
+    right: .4em;
+    padding: .3em;
+    height: 20px;
+    width: 20px;
+    min-height: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .pwqb-answer__content {
@@ -255,29 +283,68 @@
     border-radius: 5px;
     background: #ededed;
     width: 100%;
-    padding-right: 3em;
+    padding-right: 1.5em;
     display: flex;
     justify-content: space-between;
+    flex-wrap: wrap;
 }
 
 .pwqb-attribute-criterion strong {
     font-size: 12px;
+    width: 100%;
 }
 
 .pwqb-attribute-criterion button.button {
     padding: 2px;
-    height: 20px;
-    width: 20px;
+    height: 14px;
+    width: 14px;
     display: block;
     position: absolute;
     top: 0;
-    min-height: 20px;
+    min-height: 14px;
     display: flex;
     justify-content: center;
     align-items: center;
     border-color: #BE4949;
     right: .5em;
+    top: .5em;
+    background: #be4949;
+}
+
+.pwqb-attribute-editor__actions {
+    margin-top: 1em;
+    display: flex;
+    position: relative;
+    padding-right: 2em;
+    box-sizing: border-box;
+}
+
+.pwqb-attribute-editor {
+    width: 100%;
+}
+
+.pwqb-attribute-editor__actions button.button:nth-child(2) {
+    position: absolute;
+    padding: 2px;
+    height: 20px;
+    min-height: 20px;
+    background: #be4949;
+    border-color: #be4949;
+    right: 0;
     top: calc(50% - 10px);
+    display: block;
+    line-height: unset;
+}
+
+.pwqb-attribute-editor__actions button.button:nth-child(2) svg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+}
+
+.pwqb-answer__attributes>.button {
+    margin-top: 1em;
 }
 
 .pwqb-attribute-criterion button.button svg {
@@ -299,6 +366,7 @@
     align-items: center;
     gap: 8px;
     margin: 14px 0 18px;
+    flex-direction: column;
 }
 
 .pwqb-image-field>strong {

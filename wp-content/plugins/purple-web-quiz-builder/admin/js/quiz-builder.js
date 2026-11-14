@@ -7,6 +7,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const questionsContainer = builder.querySelector('[data-pwqb-questions]');
+    questionsContainer.addEventListener('click', (event) => {
+        const header = event.target.closest('.pwqb-question__header');
+
+        if (!header || event.target.closest('.pwqb-question__actions')) {
+            return;
+        }
+
+        const question = header.closest('[data-pwqb-question]');
+
+        question.classList.toggle('is-collapsed');
+    });
     const emptyMessage = builder.querySelector('[data-pwqb-empty]');
 
     const questionTemplate = document.getElementById('tmpl-pwqb-question');
@@ -70,8 +81,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const questions = [...questionsContainer.querySelectorAll('[data-pwqb-question]')];
 
         questions.forEach((question, questionIndex) => {
+            const titleInput = question.querySelector('[data-field="title"]');
+
             question.querySelector('.pwqb-question__number').textContent =
-                `Вопрос ${questionIndex + 1}`;
+                titleInput?.value.trim() || `Вопрос ${questionIndex + 1}`;
 
             const questionPrefix = `pwqb_settings[questions][${questionIndex}]`;
 
@@ -331,8 +344,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     );
 
                     // Закрываем список после выбора.
-                    closeList();
                     search.value = '';
+                    openList();
                 });
 
                 label.append(checkbox, text);
@@ -432,7 +445,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const cancelButton = document.createElement('button');
         cancelButton.type = 'button';
         cancelButton.className = 'button';
-        cancelButton.textContent = 'Отмена';
+        cancelButton.innerHTML = `
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6.8125 6.10156L12.2031 11.5L11.5 12.2031L6.10156 6.8125L0.703125 12.2031L0 11.5L5.39062 6.10156L0 0.703125L0.703125 0L6.10156 5.39062L11.5 0L12.2031 0.703125L6.8125 6.10156Z" fill="#FFFFFF"/>
+    </svg>
+`;
 
         actions.append(addButton, cancelButton);
 
@@ -495,6 +512,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 })),
                 'Найти значения',
                 true
+            );
+
+            valuesSearch.setSelected(
+                attribute.terms.map((term) => term.slug)
             );
 
             const valuesInput = valuesContainer.querySelector('input[type="search"]');
@@ -575,7 +596,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const removeButton = document.createElement('button');
             removeButton.type = 'button';
             removeButton.className = 'button-link-delete';
-            removeButton.textContent = 'Удалить';
+            removeButton.innerHTML = `
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6.8125 6.10156L12.2031 11.5L11.5 12.2031L6.10156 6.8125L0.703125 12.2031L0 11.5L5.39062 6.10156L0 0.703125L0.703125 0L6.10156 5.39062L11.5 0L12.2031 0.703125L6.8125 6.10156Z" fill="#FFFFFF"/>
+    </svg>
+`;
 
             removeButton.addEventListener('click', () => {
                 criterion.remove();
@@ -739,10 +764,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     /**
-     * Обновление подписей переходов при изменении текста вопроса.
-     */
+  * Обновление подписей переходов и заголовков вопросов.
+  */
     builder.addEventListener('input', (event) => {
         if (event.target.matches('[data-field="title"]')) {
+            const question = event.target.closest('[data-pwqb-question]');
+
+            if (question) {
+                const questionIndex = [...questionsContainer.querySelectorAll('[data-pwqb-question]')]
+                    .indexOf(question);
+
+                question.querySelector('.pwqb-question__number').textContent =
+                    event.target.value.trim() || `Вопрос ${questionIndex + 1}`;
+            }
+
             updateQuestionSelects();
         }
     });
