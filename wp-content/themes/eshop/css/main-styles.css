@@ -356,9 +356,6 @@ h1.page-title.catalog-title {
     text-align: left;
 }
 
-.products-categories {
-    padding-top: 0;
-}
 
 /* =========================================
    Header
@@ -2686,6 +2683,11 @@ footer.footer * .menu {
 
     h1.page-title.catalog-title {
         text-align: center;
+    }
+
+
+    .products-categories {
+        padding-top: 0;
     }
 
 }
