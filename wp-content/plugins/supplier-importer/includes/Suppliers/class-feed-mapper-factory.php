@@ -113,7 +113,7 @@ class Feed_Mapper_Factory
                 );
             }
 
-            return new Citilux_Mapper($categories);
+            return new Citilux_Mapper($categories, true);
         }
 
         throw new \InvalidArgumentException(

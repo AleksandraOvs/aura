@@ -9,14 +9,25 @@ if (!defined('ABSPATH')) {
 use InvalidArgumentException;
 use Supplier_Importer\Product\Product_Data;
 use Supplier_Importer\Import\Mapping_Repository;
+use Supplier_Importer\Import\Mapping_Resolver;
+use Supplier_Importer\Import\Feed_Attribute_Mapper;
 
 class Denkirs_Mapper
 {
-    private $mapping_repository;
+    private $mapping_resolver;
+    private $attribute_mapper;
 
     public function __construct()
     {
-        $this->mapping_repository = new Mapping_Repository();
+        $repository = new Mapping_Repository();
+
+        $this->mapping_resolver = new Mapping_Resolver(
+            $repository
+        );
+
+        $this->attribute_mapper = new Feed_Attribute_Mapper(
+            $this->mapping_resolver
+        );
     }
 
     public function map($row)
@@ -96,7 +107,7 @@ class Denkirs_Mapper
     }
 
     /**
-     * Получает категорию с учётом mapping.
+     * Получает категорию с учётом индивидуальных и глобальных mappings.
      */
     private function get_category($row)
     {
@@ -109,11 +120,9 @@ class Denkirs_Mapper
             return '';
         }
 
-        $mapping = $this->mapping_repository->find(
+        $mapping = $this->mapping_resolver->resolve_category(
             'denkirs',
-            'category',
-            $category,
-            ''
+            $category
         );
 
         if (
@@ -131,7 +140,6 @@ class Denkirs_Mapper
 
         return $category;
     }
-
     /**
      * Получает полный путь категории WooCommerce по её ID.
      */
@@ -211,15 +219,13 @@ class Denkirs_Mapper
     }
 
     /**
-     * Собирает характеристики товара.
+     * Собирает характеристики товара через общую систему сопоставлений.
      */
     private function get_attributes($row)
     {
-        $mapping = $this->get_attribute_mapping();
+        $params = [];
 
-        $attributes = [];
-
-        foreach ($mapping as $source => $taxonomy) {
+        foreach ($this->get_attribute_fields() as $source) {
             if (!isset($row[$source])) {
                 continue;
             }
@@ -230,51 +236,50 @@ class Denkirs_Mapper
                 continue;
             }
 
-            $value = $this->get_mapped_attribute_value(
-                $source,
-                $value,
-                'pa_' . $taxonomy
-            );
-
-            $attributes[$taxonomy] = $value;
+            $params[] = [
+                'name' => $source,
+                'value' => $value,
+            ];
         }
 
-        return $attributes;
+        return $this->attribute_mapper->map(
+            $params,
+            'denkirs'
+        );
     }
 
     /**
-     * Преобразует значение характеристики через mapping.
+     * Список характеристик из CSV Denkirs.
      */
-    private function get_mapped_attribute_value(
-        $source,
-        $value,
-        $taxonomy
-    ) {
-        $mapping = $this->mapping_repository->find(
-            'denkirs',
-            'attribute_value',
-            $value,
-            $source
-        );
-
-        if (
-            !is_array($mapping)
-            || empty($mapping['target_id'])
-        ) {
-            return $value;
-        }
-
-        $term = get_term(
-            (int) $mapping['target_id'],
-            $taxonomy
-        );
-
-        if (!$term || is_wp_error($term)) {
-            return $value;
-        }
-
-        return $term->name;
+    private function get_attribute_fields()
+    {
+        return [
+            'стиль',
+            'форма',
+            'цвет арматуры',
+            'материал арматуры',
+            'цвет плафона',
+            'материал плафона',
+            'ширина/диаметр',
+            'длина',
+            'высота',
+            'тип лампы',
+            'мощность общая',
+            'напряжение',
+            'тип цоколя',
+            'степень защиты ip',
+            'цвет свечения',
+            'место установки',
+            'страна происхождения',
+            'коллекция',
+            'Назначение помещения',
+            'форма плафона',
+            'площадь освещения',
+            'световой поток',
+        ];
     }
+
+
 
     /**
      * Дополнительные данные поставщика.
@@ -301,41 +306,6 @@ class Denkirs_Mapper
                 $row,
                 'Видео'
             ),
-        ];
-    }
-
-    /**
-     * Соответствие полей поставщика таксономиям сайта.
-     */
-    private function get_attribute_mapping()
-    {
-        return [
-            'стиль' => 'style',
-            'форма' => 'forma',
-            'цвет арматуры' => 'armature-color',
-            'материал арматуры' => 'armature-material',
-            'цвет плафона' => 'shade-color',
-            'материал плафона' => 'shade-material',
-            'ширина/диаметр' => 'shirina-diametr',
-            'длина' => 'dlina-mm',
-            'высота' => 'vysota-mm',
-            'тип лампы' => 'tip-lampochki',
-            'мощность общая' => 'obshhaya-moshhnost',
-            'напряжение' => 'napryazhenie',
-            'тип цоколя' => 'base',
-            'степень защиты ip' => 'ip',
-            'цвет свечения' => 'color-temperature',
-            'место установки' => 'tip-krepleniya',
-            'страна происхождения' => 'strana-proishozhdenia',
-            'коллекция' => 'collection',
-            'Назначение помещения' => 'room-purpose',
-            'форма плафона' => 'shade-shape',
-
-            // «Лампы в комплекте» не является характеристикой LED.
-            // Добавить сюда после создания отдельной таксономии.
-
-            'площадь освещения' => 'light-area',
-            'световой поток' => 'light-flux',
         ];
     }
 }

@@ -14,23 +14,17 @@ use Supplier_Importer\Import\Mapping_Resolver;
 class Crystal_Lux_Yml_Mapper implements Feed_Mapper
 {
     private $categories = [];
-    private $mapping_repository;
     private $mapping_resolver;
-    private $use_global_mappings = false;
 
     public function __construct(
         array $categories = [],
-        $use_global_mappings = false
+        $use_global_mappings = true
     ) {
         $this->categories = $categories;
 
-        $this->mapping_repository = new Mapping_Repository();
-
         $this->mapping_resolver = new Mapping_Resolver(
-            $this->mapping_repository
+            new Mapping_Repository()
         );
-
-        $this->use_global_mappings = (bool) $use_global_mappings;
     }
 
     public function get_format()
@@ -195,9 +189,6 @@ class Crystal_Lux_Yml_Mapper implements Feed_Mapper
         return array_values(array_unique($pictures));
     }
 
-    /**
-     * Получить категорию с учётом сопоставлений.
-     */
     private function get_category($category_id)
     {
         $category_id = $this->scalar($category_id);
@@ -218,19 +209,10 @@ class Crystal_Lux_Yml_Mapper implements Feed_Mapper
 
         $category = (string) $category;
 
-        if ($this->use_global_mappings) {
-            $mapping = $this->mapping_resolver->resolve_category(
-                'crystal_lux',
-                $category
-            );
-        } else {
-            $mapping = $this->mapping_repository->find(
-                'crystal_lux',
-                'category',
-                $category,
-                ''
-            );
-        }
+        $mapping = $this->mapping_resolver->resolve_category(
+            'crystal_lux',
+            $category
+        );
 
         if (
             is_array($mapping)

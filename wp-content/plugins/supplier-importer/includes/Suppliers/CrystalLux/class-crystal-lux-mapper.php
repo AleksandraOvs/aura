@@ -8,14 +8,26 @@ if (!defined('ABSPATH')) {
 
 use Supplier_Importer\Product\Product_Data;
 use Supplier_Importer\Import\Mapping_Repository;
+use Supplier_Importer\Import\Mapping_Resolver;
+use Supplier_Importer\Import\Feed_Attribute_Mapper;
 
 class Crystal_Lux_Mapper
 {
-    private $mapping_repository;
+
+    private $mapping_resolver;
+    private $attribute_mapper;
 
     public function __construct()
     {
-        $this->mapping_repository = new Mapping_Repository();
+        $repository = new Mapping_Repository();
+
+        $this->mapping_resolver = new Mapping_Resolver(
+            $repository
+        );
+
+        $this->attribute_mapper = new Feed_Attribute_Mapper(
+            $this->mapping_resolver
+        );
     }
 
     public function map($row)
@@ -117,11 +129,9 @@ class Crystal_Lux_Mapper
             return '';
         }
 
-        $mapping = $this->mapping_repository->find(
+        $mapping = $this->mapping_resolver->resolve_category(
             'crystal_lux',
-            'category',
-            $category,
-            ''
+            $category
         );
 
         if (
@@ -137,7 +147,6 @@ class Crystal_Lux_Mapper
             }
         }
 
-        // Если сопоставления нет, сохраняем исходный путь.
         return $category;
     }
 
@@ -236,101 +245,69 @@ class Crystal_Lux_Mapper
     }
 
     /**
-     * Получить атрибуты с учётом сопоставлений.
+     * Получить атрибуты через общий механизм сопоставлений.
      */
     private function get_attributes($row)
     {
-        $mapping = $this->get_attribute_mapping();
-        $attributes = [];
+        $params = [];
 
-        foreach ($mapping as $source => $taxonomy) {
-            if (!isset($row[$source])) {
-                continue;
-            }
-
+        foreach ($this->get_attribute_fields() as $source) {
             $value = $this->value($row, $source);
 
             if ($value === '') {
                 continue;
             }
 
-            $value = $this->get_mapped_attribute_value(
-                $source,
-                $value,
-                'pa_' . $taxonomy
-            );
-
-            $attributes[$taxonomy] = $value;
+            $params[] = [
+                'name' => $source,
+                'value' => $value,
+            ];
         }
 
-        return $attributes;
+        return $this->attribute_mapper->map(
+            $params,
+            'crystal_lux'
+        );
     }
 
     /**
-     * Получить значение атрибута с учётом mapping.
+     * Исходные поля характеристик Crystal Lux.
      */
-    private function get_mapped_attribute_value(
-        $source,
-        $value,
-        $taxonomy
-    ) {
-        $mapping = $this->mapping_repository->find(
-            'crystal_lux',
-            'attribute_value',
-            $value,
-            $source
-        );
-
-        if (
-            !is_array($mapping)
-            || empty($mapping['target_id'])
-        ) {
-            return $value;
-        }
-
-        $term = get_term(
-            (int) $mapping['target_id'],
-            $taxonomy
-        );
-
-        if (!$term || is_wp_error($term)) {
-            return $value;
-        }
-
-        return $term->name;
-    }
-
-    /**
-     * Соответствие полей Crystal Lux таксономиям WooCommerce.
-     *
-     * Используются таксономии, уже встречающиеся
-     * в Maytoni_Mapper. Перед импортом нужно проверить,
-     * что они зарегистрированы на сайте.
-     */
-    private function get_attribute_mapping()
+    private function get_attribute_fields()
     {
         return [
-            'Стиль [STYLE]' => 'style',
-            'Коллекция [COLLECTION]' => 'collection',
-
-            'Цоколь []' => 'base',
-            'Количество лампочек: []' => 'lamp-count',
-            'Мощность лампочек, Вт []' => 'moshhnost-lampochki-vt',
-            'Световой поток []' => 'light-flux',
-            'Цветовая температура []' => 'color-temperature',
-            'IP []' => 'ip',
-
-            'Высота изделия, мм []' => 'vysota-mm',
-            'Длина, мм []' => 'dlina-mm',
-            'Диаметр, мм []' => 'shirina-diametr',
-
-            'Материал арматуры []' => 'armature-material',
-            'Цвет арматуры []' => 'armature-color',
-            'Материал абажура/плафона []' => 'shade-material',
-            'Цвет абажура/плафона []' => 'shade-color',
-
-            'Страна производитель []' => 'strana-proishozhdenia',
-            'Напряжение [voltage]' => 'napryazhenie',
+            'Стиль [STYLE]',
+            'Коллекция [COLLECTION]',
+            'Тип [TYPE]',
+            'Новинка [NEW]',
+            'Высота изделия, мм []',
+            'Высота цепи/троса, мм []',
+            'Высота с цепью/тросом, мм []',
+            'Диаметр, мм []',
+            'Ширина, мм []',
+            'Отступ от стены, мм []',
+            'Цоколь []',
+            'Количество лампочек: []',
+            'Мощность лампочек, Вт []',
+            'Длина, мм []',
+            'Световой поток []',
+            'Цветовая температура []',
+            'В комплекте []',
+            'IP []',
+            'Вес []',
+            'Объём []',
+            'Материал арматуры []',
+            'Цвет арматуры []',
+            'Покрытие арматуры []',
+            'Материал абажура/плафона []',
+            'Цвет абажура/плафона []',
+            'Материал подвески []',
+            'Цвет подвески []',
+            'Декоративный элемент []',
+            'Пульт []',
+            'Страна производитель []',
+            'Напряжение [voltage]',
+            'Особенности модели [osobennosti_modeli]',
         ];
     }
 

@@ -340,9 +340,6 @@ class Yml_Import_Processor
         }
     }
 
-    /**
-     * Сохранить ошибку.
-     */
     private function save_error(
         $row_number,
         array $record,
@@ -350,7 +347,7 @@ class Yml_Import_Processor
         $error_type,
         \Throwable $e
     ) {
-        $this->error_repository->add(
+        $error_id = $this->error_repository->add(
             $this->session->get_import_id(),
             $row_number,
             $sku,
@@ -358,6 +355,19 @@ class Yml_Import_Processor
             $e->getMessage(),
             $record
         );
+
+        if (!$error_id) {
+            Logger::error(
+                'Не удалось сохранить подробности ошибки импорта.',
+                [
+                    'import_id' => $this->session->get_import_id(),
+                    'row'       => $row_number,
+                    'sku'       => $sku,
+                    'type'      => $error_type,
+                    'message'   => $e->getMessage(),
+                ]
+            );
+        }
 
         Logger::error(
             'Ошибка обработки товара YML.',

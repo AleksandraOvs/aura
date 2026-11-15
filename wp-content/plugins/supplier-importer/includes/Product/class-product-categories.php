@@ -115,31 +115,26 @@ class Product_Categories
         $parent_id = 0,
         $supplier = ''
     ) {
-        $term = get_term_by(
-            'name',
-            $name,
-            'product_cat'
-        );
+        $terms = get_terms([
+            'taxonomy'   => 'product_cat',
+            'hide_empty' => false,
+            'name'       => $name,
+            'parent'     => (int) $parent_id,
+            'number'     => 1,
+        ]);
 
-        if (
-            $term
-            && (int) $term->parent === (int) $parent_id
-        ) {
-            return $term;
+        if (is_wp_error($terms)) {
+            throw new \RuntimeException(
+                sprintf(
+                    'Ошибка поиска категории "%s": %s',
+                    $name,
+                    $terms->get_error_message()
+                )
+            );
         }
 
-        if ($term) {
-            $children = get_terms([
-                'taxonomy'   => 'product_cat',
-                'hide_empty' => false,
-                'name'       => $name,
-                'parent'     => $parent_id,
-                'number'     => 1,
-            ]);
-
-            if (!is_wp_error($children) && !empty($children)) {
-                return $children[0];
-            }
+        if (!empty($terms)) {
+            return $terms[0];
         }
 
         $args = [
@@ -209,9 +204,20 @@ class Product_Categories
             );
         }
 
-        return get_term(
+        $term = get_term(
             $result['term_id'],
             'product_cat'
         );
+
+        if (!$term || is_wp_error($term)) {
+            throw new \RuntimeException(
+                sprintf(
+                    'Категория "%s" создана, но не удалось получить её объект.',
+                    $name
+                )
+            );
+        }
+
+        return $term;
     }
 }

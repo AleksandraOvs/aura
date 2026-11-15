@@ -55,12 +55,6 @@ class Citilux_Xml_Normalizer
             );
         }
 
-        if ($normalized === $content) {
-            throw new \RuntimeException(
-                'В XML-файле CITILUX не найдены блоки description.'
-            );
-        }
-
         $temp_path = tempnam(
             sys_get_temp_dir(),
             'citilux_xml_'

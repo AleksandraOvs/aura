@@ -23,6 +23,8 @@ class Yml_Feed_Cron_Worker
 
     private const LOCK_PREFIX = 'supplier_import_';
 
+    private const LOCK_RETRY_DELAY = 15;
+
     public function __construct()
     {
         add_action(
@@ -50,12 +52,34 @@ class Yml_Feed_Cron_Worker
 
         if (!$this->acquire_lock($import_id)) {
             Logger::info(
-                'YML CRON BATCH SKIPPED: импорт уже обрабатывается.',
+                'YML CRON BATCH: блокировка занята или недоступна, повторяем попытку.',
                 [
                     'import_id' => $import_id,
                     'sequence'  => $sequence,
                 ]
             );
+
+            $scheduled = wp_schedule_single_event(
+                time() + self::LOCK_RETRY_DELAY,
+                self::CRON_HOOK,
+                [
+                    $import_id,
+                    $sequence,
+                ]
+            );
+
+            if ($scheduled === false || is_wp_error($scheduled)) {
+                Logger::error(
+                    'Не удалось повторно запланировать YML-порцию после занятой блокировки.',
+                    [
+                        'import_id' => $import_id,
+                        'sequence'  => $sequence,
+                        'error'     => is_wp_error($scheduled)
+                            ? $scheduled->get_error_message()
+                            : 'wp_schedule_single_event вернул false.',
+                    ]
+                );
+            }
 
             return;
         }

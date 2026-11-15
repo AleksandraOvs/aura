@@ -95,11 +95,13 @@ class Yml_Validator
                     }
 
                     if (
-                        $name === 'offer'
-                        && $offers_depth !== null
-                        && $depth === $offers_depth + 1
+                        $name === 'offers'
+                        && $shop_depth !== null
+                        && $depth === $shop_depth + 1
                     ) {
-                        $offer_count++;
+                        $offers_found = true;
+                        $offers_depth = $depth;
+                        continue;
                     }
                 }
 

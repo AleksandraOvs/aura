@@ -24,20 +24,21 @@ class Citilux_Mapper implements Feed_Mapper
 
     private $mapping_resolver;
 
-    private $use_global_mappings = false;
+    private $use_global_mappings = true;
 
     /**
      * @param array $categories Справочник категорий.
+     * @param bool  $use_global_mappings Использовать глобальные сопоставления.
      */
     public function __construct(
         array $categories = [],
-        $use_global_mappings = false
+        $use_global_mappings = true
     ) {
         $this->categories = $categories;
 
-        $this->mapping_repository = new \Supplier_Importer\Import\Mapping_Repository();
+        $this->mapping_repository = new Mapping_Repository();
 
-        $this->mapping_resolver = new \Supplier_Importer\Import\Mapping_Resolver(
+        $this->mapping_resolver = new Mapping_Resolver(
             $this->mapping_repository
         );
 
@@ -188,7 +189,12 @@ class Citilux_Mapper implements Feed_Mapper
     }
 
     /**
-     * Получить категорию с учётом сохранённого сопоставления.
+     * Получить категорию с учётом индивидуальных и глобальных сопоставлений.
+     *
+     * Приоритет:
+     * 1. Индивидуальное сопоставление CITILUX.
+     * 2. Глобальное сопоставление (*).
+     * 3. Исходный путь категории из фида.
      *
      * @param mixed $category_id ID категории из фида.
      *
@@ -196,27 +202,24 @@ class Citilux_Mapper implements Feed_Mapper
      */
     private function get_category($category_id)
     {
-        // Сначала получаем исходный путь категории CITILUX.
+        // Получаем исходный путь категории CITILUX.
         $category = $this->resolve_category($category_id);
 
         if ($category === '') {
             return '';
         }
 
-        // Ищем сопоставление категории.
-        if ($this->use_global_mappings) {
-            $mapping = $this->mapping_resolver->resolve_category(
+        $mapping = $this->use_global_mappings
+            ? $this->mapping_resolver->resolve_category(
                 'citilux',
                 $category
-            );
-        } else {
-            $mapping = $this->mapping_repository->find(
+            )
+            : $this->mapping_repository->find(
                 'citilux',
                 'category',
                 $category,
                 ''
             );
-        }
 
         if (
             is_array($mapping)
@@ -231,7 +234,8 @@ class Citilux_Mapper implements Feed_Mapper
             }
         }
 
-        // Если сопоставления нет, используем исходную категорию.
+        // Нет сопоставления или целевая категория удалена.
+        // Используем исходный путь из фида.
         return $category;
     }
 

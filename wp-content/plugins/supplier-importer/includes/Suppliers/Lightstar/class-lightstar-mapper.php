@@ -10,27 +10,29 @@ use Supplier_Importer\Suppliers\Feed_Mapper;
 use Supplier_Importer\Product\Product_Data;
 use Supplier_Importer\Import\Mapping_Repository;
 use Supplier_Importer\Import\Mapping_Resolver;
+use Supplier_Importer\Import\Feed_Attribute_Mapper;
 
 class Lightstar_Mapper implements Feed_Mapper
 {
     private $categories = [];
-    private $mapping_repository;
     private $mapping_resolver;
-    private $use_global_mappings = false;
+    private $attribute_mapper;
 
     public function __construct(
         array $categories = [],
-        $use_global_mappings = false
+        $use_global_mappings = true
     ) {
         $this->categories = $categories;
 
-        $this->mapping_repository = new Mapping_Repository();
+        $repository = new Mapping_Repository();
 
         $this->mapping_resolver = new Mapping_Resolver(
-            $this->mapping_repository
+            $repository
         );
 
-        $this->use_global_mappings = (bool) $use_global_mappings;
+        $this->attribute_mapper = new Feed_Attribute_Mapper(
+            $this->mapping_resolver
+        );
     }
 
     public function get_format()
@@ -104,7 +106,10 @@ class Lightstar_Mapper implements Feed_Mapper
             'price'       => $this->scalar($record['price'] ?? null),
             'stock'       => $this->get_stock($offer_attributes, $record),
             'images'      => $this->extract_pictures($record['picture'] ?? []),
-            'attributes'  => $attributes,
+            'attributes'  => $this->attribute_mapper->map(
+                $attributes,
+                'lightstar'
+            ),
         ];
 
         return Product_Data::from_array($data);
@@ -203,7 +208,7 @@ class Lightstar_Mapper implements Feed_Mapper
     }
 
     /**
-     * Получить категорию с учётом сопоставлений.
+     * Получить категорию с учётом индивидуальных и глобальных сопоставлений.
      */
     private function get_category($category_id)
     {
@@ -213,19 +218,10 @@ class Lightstar_Mapper implements Feed_Mapper
             return '';
         }
 
-        if ($this->use_global_mappings) {
-            $mapping = $this->mapping_resolver->resolve_category(
-                'lightstar',
-                $category
-            );
-        } else {
-            $mapping = $this->mapping_repository->find(
-                'lightstar',
-                'category',
-                $category,
-                ''
-            );
-        }
+        $mapping = $this->mapping_resolver->resolve_category(
+            'lightstar',
+            $category
+        );
 
         if (
             is_array($mapping)

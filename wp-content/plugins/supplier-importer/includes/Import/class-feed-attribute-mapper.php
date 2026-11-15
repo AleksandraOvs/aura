@@ -72,12 +72,14 @@ class Feed_Attribute_Mapper
             $taxonomy = $attribute['taxonomy'];
             $label = $attribute['label'];
 
-            $value = $this->resolve_attribute_value(
-                $supplier,
-                $source_name,
-                $source_value,
-                $taxonomy
-            );
+            $value = $attribute['is_mapped']
+                ? $this->resolve_attribute_value(
+                    $supplier,
+                    $source_name,
+                    $source_value,
+                    $taxonomy
+                )
+                : $source_value;
 
             if ($value === '') {
                 continue;
@@ -115,10 +117,7 @@ class Feed_Attribute_Mapper
     /**
      * Определить целевой WooCommerce-атрибут.
      *
-     * Если сопоставления нет, используем
-     * исходное название параметра.
-     *
-     * @return array|null
+     * @return array
      */
     private function resolve_attribute(
         $supplier,
@@ -152,6 +151,7 @@ class Feed_Attribute_Mapper
                         'label' => !empty($target_attribute->name)
                             ? $target_attribute->name
                             : $source_name,
+                        'is_mapped' => true,
                     ];
                 }
             }
@@ -160,6 +160,7 @@ class Feed_Attribute_Mapper
         return [
             'taxonomy' => $source_name,
             'label' => $source_name,
+            'is_mapped' => false,
         ];
     }
 
@@ -192,7 +193,11 @@ class Feed_Attribute_Mapper
             'pa_' . $taxonomy
         );
 
-        if (!$term || is_wp_error($term)) {
+        if (
+            !$term
+            || is_wp_error($term)
+            || $term->taxonomy !== 'pa_' . $taxonomy
+        ) {
             return $source_value;
         }
 

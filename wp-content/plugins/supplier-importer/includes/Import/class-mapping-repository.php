@@ -124,7 +124,7 @@ class Mapping_Repository
             );
 
             if ($result === false) {
-                return 0;
+                return false;
             }
 
             return (int) $existing['id'];
@@ -155,7 +155,7 @@ class Mapping_Repository
         );
 
         if ($result === false) {
-            return 0;
+            return false;
         }
 
         return (int) $wpdb->insert_id;
@@ -186,49 +186,6 @@ class Mapping_Repository
             )
         );
     }
-
-    /**
-     * Получить сопоставления значений атрибутов поставщика.
-     *
-     * Результат:
-     * [
-     *     'source_parent' => [
-     *         'исходное значение' => ID термина WooCommerce,
-     *     ],
-     * ]
-     *
-     * @param string $supplier
-     *
-     * @return array
-     */
-    public function get_attribute_value_mappings($supplier)
-    {
-        $rows = $this->get_by_supplier(
-            $supplier,
-            'attribute_value'
-        );
-
-        $mappings = [];
-
-        foreach ($rows as $row) {
-            $source_parent = (string) $row['source_parent'];
-            $source_value  = (string) $row['source_value'];
-            $target_id     = (int) $row['target_id'];
-
-            if ($target_id <= 0) {
-                continue;
-            }
-
-            if (!isset($mappings[$source_parent])) {
-                $mappings[$source_parent] = [];
-            }
-
-            $mappings[$source_parent][$source_value] = $target_id;
-        }
-
-        return $mappings;
-    }
-
 
     /**
      * Найти сопоставление с учётом глобальных правил.

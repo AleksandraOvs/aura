@@ -2537,12 +2537,12 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
+
     function initMappingSave(
         mappingBlock,
         importId,
         importContext = { type: 'csv' }
     ) {
-
         const button = mappingBlock.querySelector(
             '#supplier-import-mapping-save'
         );
@@ -2555,68 +2555,58 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        button.addEventListener(
-            'click',
-            function () {
+        button.addEventListener('click', function () {
+            const supplier = mappingBlock.dataset.supplier;
 
-                const supplier =
-                    mappingBlock.dataset.supplier;
+            const items = mappingBlock.querySelectorAll(
+                '.supplier-importer__mapping-categories > .supplier-importer__mapping-item'
+            );
 
-                const items =
-                    mappingBlock.querySelectorAll(
-                        '.supplier-importer__mapping-categories > .supplier-importer__mapping-item'
-                    );
+            const mappings = [];
+            const sources = [];
 
-                const mappings = [];
-
-                items.forEach(function (item) {
-
-                    const sourceElement =
-                        item.querySelector(
-                            '.supplier-importer__mapping-source strong'
-                        );
-
-                    const selected =
-                        item.querySelector(
-                            '.supplier-importer__mapping-selected'
-                        );
-
-                    if (
-                        !sourceElement
-                        || !selected
-                    ) {
-                        return;
-                    }
-
-                    const targetId =
-                        Number(
-                            selected.dataset.targetId
-                        );
-
-                    if (!targetId) {
-                        return;
-                    }
-
-                    mappings.push({
-                        source_value:
-                            sourceElement.textContent.trim(),
-
-                        target_id:
-                            targetId
-                    });
-                });
-
-                saveMappings(
-                    supplier,
-                    mappings,
-                    mappingBlock,
-                    importId,
-                    button,
-                    status,
-                    importContext
+            items.forEach(function (item) {
+                const sourceElement = item.querySelector(
+                    '.supplier-importer__mapping-source strong'
                 );
-            }
-        );
+
+                const selected = item.querySelector(
+                    '.supplier-importer__mapping-selected'
+                );
+
+                if (!sourceElement || !selected) {
+                    return;
+                }
+
+                const sourceValue = sourceElement.textContent.trim();
+
+                if (!sourceValue) {
+                    return;
+                }
+
+                sources.push(sourceValue);
+
+                const targetId = Number(selected.dataset.targetId);
+
+                if (targetId > 0) {
+                    mappings.push({
+                        source_value: sourceValue,
+                        target_id: targetId
+                    });
+                }
+            });
+
+            saveMappings(
+                supplier,
+                mappings,
+                mappingBlock,
+                importId,
+                button,
+                status,
+                importContext,
+                sources
+            );
+        });
     }
 
     function saveMappings(
@@ -2626,8 +2616,15 @@ document.addEventListener('DOMContentLoaded', function () {
         importId,
         button,
         status,
-        importContext = { type: 'csv' }
+        importContext = { type: 'csv' },
+        sources = []
     ) {
+
+        if (!Array.isArray(sources)) {
+            console.error('Некорректный список исходных категорий.');
+            button.disabled = false;
+            return;
+        }
 
         if (!status) {
             button.disabled = false;
@@ -2640,6 +2637,11 @@ document.addEventListener('DOMContentLoaded', function () {
         formData.append(
             'action',
             'supplier_mapping_save'
+        );
+
+        formData.append(
+            'sources',
+            JSON.stringify(sources)
         );
 
         formData.append(
@@ -2661,6 +2663,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         status.hidden = false;
         status.textContent = 'Сохраняем...';
+
+
 
         fetch(
             supplierImporter.ajaxUrl,
@@ -2801,7 +2805,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 selected.dataset.taxonomy || '';
 
             const sourceParent =
-                item.dataset.attribute || '';
+                (item.dataset.attribute || '').trim();
 
             if (
                 !targetId
@@ -2827,21 +2831,30 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
 
-        /*
-         * Если пользователь ничего
-         * не сопоставил — просто запускаем импорт.
-         */
-        if (!mappings.length) {
+        const sources = [];
 
-            status.textContent =
-                'Сопоставления сохранены. Запускаем импорт...';
-
-            return startImportByContext(
-                importId,
-                importContext,
-                status
+        items.forEach(function (item) {
+            const sourceValue = item.querySelector(
+                '.supplier-importer__mapping-source strong'
             );
-        }
+
+            const sourceParent = (
+                item.dataset.attribute || ''
+            ).trim();
+
+            const value = sourceValue
+                ? sourceValue.textContent.trim()
+                : '';
+
+            if (!sourceParent || !value) {
+                return;
+            }
+
+            sources.push({
+                source_parent: sourceParent,
+                source_value: sourceValue.textContent.trim(),
+            });
+        });
 
         const formData = new FormData();
 
@@ -2863,6 +2876,11 @@ document.addEventListener('DOMContentLoaded', function () {
         formData.append(
             'mappings',
             JSON.stringify(mappings)
+        );
+
+        formData.append(
+            'sources',
+            JSON.stringify(sources)
         );
 
         status.textContent =
@@ -2906,8 +2924,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 status.textContent =
-                    'Сохранено сопоставлений: '
+                    'Сохранено: '
                     + Number(result.data.saved || 0)
+                    + ', удалено: '
+                    + Number(result.data.deleted || 0)
                     + '. Запускаем импорт...';
 
                 return startImportByContext(
@@ -2996,7 +3016,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const mappings = [];
 
         items.forEach(function (item) {
-            const source = item.dataset.source || '';
+            const source = (item.dataset.source || '').trim();
 
             const selected = item.querySelector(
                 '.supplier-importer__attribute-name-selected'
@@ -3020,6 +3040,12 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
 
+        const sources = Array.from(items)
+            .map(function (item) {
+                return (item.dataset.source || '').trim();
+            })
+            .filter(Boolean);
+
         const formData = new FormData();
 
         formData.append(
@@ -3042,12 +3068,35 @@ document.addEventListener('DOMContentLoaded', function () {
             JSON.stringify(mappings)
         );
 
+        formData.append(
+            'sources',
+            JSON.stringify(sources)
+        );
+
         return fetch(supplierImporter.ajaxUrl, {
             method: 'POST',
             body: formData
         })
-            .then(function (response) {
-                return response.json();
+            .then(async function (response) {
+                let result;
+
+                try {
+                    result = await response.json();
+                } catch (error) {
+                    throw new Error(
+                        'Сервер вернул некорректный JSON. HTTP: '
+                        + response.status
+                    );
+                }
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.data?.message
+                        || 'Ошибка HTTP: ' + response.status
+                    );
+                }
+
+                return result;
             })
             .then(function (result) {
                 if (!result.success) {

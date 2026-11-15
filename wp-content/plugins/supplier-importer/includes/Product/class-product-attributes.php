@@ -120,7 +120,10 @@ class Product_Attributes
                 $slug = $original_slug;
             } else {
                 // Для длинных создаём стабильный короткий slug.
-                $slug = $this->generate_short_slug($original_slug);
+                $slug = $this->generate_short_slug(
+                    $original_slug,
+                    $max_length
+                );
 
                 $existing_id = wc_attribute_taxonomy_id_by_name($slug);
 
@@ -218,20 +221,29 @@ class Product_Attributes
 
 
     /**
-     * Генерирует детерминированный ASCII slug длиной до 29 байт.
+     * Генерирует детерминированный ASCII slug
+     * в пределах допустимой длины WooCommerce.
+     *
+     * @param string $source
+     * @param int    $max_length
+     *
+     * @return string
      */
     private function generate_short_slug(
         $source,
-        $attempt = 0
+        $max_length
     ) {
-        $hash_source = $attempt === 0
-            ? $source
-            : $source . ':' . $attempt;
+        $prefix = 'attr-';
 
-        return 'attr-' . substr(
-            hash('sha256', $hash_source),
+        $hash_length = max(
+            1,
+            (int) $max_length - strlen($prefix)
+        );
+
+        return $prefix . substr(
+            hash('sha256', (string) $source),
             0,
-            24
+            $hash_length
         );
     }
 
