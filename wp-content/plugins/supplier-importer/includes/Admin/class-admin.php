@@ -636,9 +636,6 @@ class Admin
         <?php
     }
 
-
-
-
     private function format_date($date)
     {
         if (empty($date)) {
@@ -652,8 +649,6 @@ class Admin
 
         return $date->format('d.m.Y H:i');
     }
-
-
 
     private function get_status_label($status)
     {
