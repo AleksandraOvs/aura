@@ -636,13 +636,16 @@ class Admin
         <?php
     }
 
+
     private function format_date($date)
     {
         if (empty($date)) {
             return '—';
         }
 
-        $timestamp = strtotime($date);
+        $timestamp = strtotime(
+            $date . ' UTC'
+        );
 
         if (!$timestamp) {
             return $date;
