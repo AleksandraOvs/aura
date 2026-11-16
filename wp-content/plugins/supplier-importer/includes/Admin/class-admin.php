@@ -637,25 +637,23 @@ class Admin
     }
 
 
+
+
     private function format_date($date)
     {
         if (empty($date)) {
             return '—';
         }
 
-        $timestamp = strtotime(
-            $date . ' UTC'
+        $date = new \DateTimeImmutable(
+            $date,
+            wp_timezone()
         );
 
-        if (!$timestamp) {
-            return $date;
-        }
-
-        return wp_date(
-            'd.m.Y H:i',
-            $timestamp
-        );
+        return $date->format('d.m.Y H:i');
     }
+
+
 
     private function get_status_label($status)
     {
