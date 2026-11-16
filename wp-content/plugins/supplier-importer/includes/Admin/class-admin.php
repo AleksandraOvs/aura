@@ -31,6 +31,11 @@ class Admin
         );
 
         add_action(
+            'wp_ajax_supplier_importer_get_logs',
+            [$this, 'get_import_logs']
+        );
+
+        add_action(
             'admin_post_supplier_importer_save_feed_settings',
             [$this, 'save_feed_settings']
         );
@@ -492,6 +497,10 @@ class Admin
                                     Статус
                                 </th>
 
+                                <th>
+                                    Журнал
+                                </th>
+
                             </tr>
                         </thead>
 
@@ -601,6 +610,15 @@ class Admin
                                         ?>
                                     </td>
 
+                                    <td>
+                                        <button
+                                            type="button"
+                                            class="button button-small js-importer-show-logs"
+                                            data-import-id="<?php echo esc_attr($item['id']); ?>">
+                                            Подробности
+                                        </button>
+                                    </td>
+
                                 </tr>
 
                             <?php endforeach; ?>
@@ -685,6 +703,103 @@ class Admin
                 500
             );
         }
+    }
+
+    public function get_import_logs()
+    {
+        if (!current_user_can('manage_woocommerce')) {
+            wp_send_json_error(
+                [
+                    'message' => 'Недостаточно прав.',
+                ],
+                403
+            );
+        }
+
+        check_ajax_referer(
+            'supplier_import',
+            'nonce'
+        );
+
+        global $wpdb;
+
+        $import_id = isset($_POST['import_id'])
+            ? absint($_POST['import_id'])
+            : 0;
+
+        if (!$import_id) {
+            wp_send_json_error(
+                [
+                    'message' => 'Некорректный ID импорта.',
+                ],
+                400
+            );
+        }
+
+        $repository = new Import_Repository();
+
+        if (!$repository->get($import_id)) {
+            wp_send_json_error(
+                [
+                    'message' => 'Импорт не найден.',
+                ],
+                404
+            );
+        }
+
+        $table_name = $wpdb->prefix . 'supplier_import_logs';
+
+        $logs = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT
+                id,
+                level,
+                message,
+                context,
+                created_at
+            FROM {$table_name}
+            WHERE import_id = %d
+            ORDER BY id ASC",
+                $import_id
+            ),
+            ARRAY_A
+        );
+
+        if ($wpdb->last_error) {
+            wp_send_json_error(
+                [
+                    'message' => 'Не удалось получить журнал: '
+                        . $wpdb->last_error,
+                ],
+                500
+            );
+        }
+
+        foreach ($logs as &$log) {
+            if (empty($log['context'])) {
+                $log['context'] = null;
+                continue;
+            }
+
+            $decoded_context = json_decode(
+                $log['context'],
+                true
+            );
+
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $log['context'] = $decoded_context;
+            }
+        }
+
+        unset($log);
+
+        unset($log);
+
+        wp_send_json_success(
+            [
+                'logs' => $logs,
+            ]
+        );
     }
 
     public function save_feed_settings()

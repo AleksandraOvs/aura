@@ -51,6 +51,22 @@ class Import_Session
     private $sync_unpublished = 0;
     private $sync_republished = 0;
 
+    /**
+     * ID товаров, которые нельзя снимать с публикации
+     * в рамках текущего импорта.
+     *
+     * @var int[]
+     */
+    private $sync_protected_ids = [];
+
+    /**
+     * Количество ошибок импорта,
+     * при которых товар не удалось безопасно защитить.
+     *
+     * @var int
+     */
+    private $sync_unprotected_errors = 0;
+
     private $progress;
 
     private $started_at = null;
@@ -344,6 +360,93 @@ class Import_Session
         $this->sync_republished += max(0, (int) $count);
     }
 
+    /**
+     * Добавить товар в список защищённых.
+     *
+     * @param int $product_id
+     *
+     * @return void
+     */
+    public function add_sync_protected_id($product_id)
+    {
+        $product_id = absint($product_id);
+
+        if (!$product_id) {
+            return;
+        }
+
+        if (!in_array($product_id, $this->sync_protected_ids, true)) {
+            $this->sync_protected_ids[] = $product_id;
+        }
+    }
+
+    /**
+     * Получить ID защищённых товаров.
+     *
+     * @return int[]
+     */
+    public function get_sync_protected_ids()
+    {
+        return $this->sync_protected_ids;
+    }
+
+    /**
+     * Восстановить ID защищённых товаров.
+     *
+     * @param array $ids
+     *
+     * @return void
+     */
+    public function set_sync_protected_ids($ids)
+    {
+        if (!is_array($ids)) {
+            $this->sync_protected_ids = [];
+            return;
+        }
+
+        $this->sync_protected_ids = array_values(
+            array_unique(
+                array_filter(
+                    array_map('absint', $ids)
+                )
+            )
+        );
+    }
+
+    /**
+     * Получить количество незащищённых ошибок.
+     *
+     * @return int
+     */
+    public function get_sync_unprotected_errors()
+    {
+        return $this->sync_unprotected_errors;
+    }
+
+    /**
+     * Установить количество незащищённых ошибок.
+     *
+     * @param int $count
+     *
+     * @return void
+     */
+    public function set_sync_unprotected_errors($count)
+    {
+        $this->sync_unprotected_errors = max(0, (int) $count);
+    }
+
+    /**
+     * Увеличить количество незащищённых ошибок.
+     *
+     * @param int $count
+     *
+     * @return void
+     */
+    public function increment_sync_unprotected_errors($count = 1)
+    {
+        $this->sync_unprotected_errors += max(0, (int) $count);
+    }
+
     /*
      * Прогресс импорта.
      */
@@ -452,9 +555,12 @@ class Import_Session
             'sync_republished'  => $this->sync_republished,
 
             'progress'          => $this->progress->to_array(),
+            'sync_protected_ids' => $this->sync_protected_ids,
+            'sync_unprotected_errors' => $this->sync_unprotected_errors,
 
             'started_at'        => $this->started_at,
             'finished_at'       => $this->finished_at,
+
         ];
     }
 
@@ -521,6 +627,23 @@ class Import_Session
             $data['sync_republished'] ?? 0
         );
 
+        $protected_ids = $data['sync_protected_ids'] ?? [];
+
+        if (is_string($protected_ids)) {
+            $protected_ids = json_decode(
+                $protected_ids,
+                true
+            );
+        }
+
+        $session->set_sync_protected_ids(
+            is_array($protected_ids) ? $protected_ids : []
+        );
+
+        $session->set_sync_unprotected_errors(
+            $data['sync_unprotected_errors'] ?? 0
+        );
+
         $session->set_started_at(
             $data['started_at'] ?? null
         );
@@ -545,5 +668,13 @@ class Import_Session
     public function restore_progress($data)
     {
         $this->progress->set_values($data);
+    }
+
+    /**
+     * Устанавливает общее количество записей импорта.
+     */
+    public function set_total($total)
+    {
+        $this->total = max(0, (int) $total);
     }
 }

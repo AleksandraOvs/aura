@@ -3543,3 +3543,192 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
 });
+
+
+/**
+ * DOM: Подробный журнал импорта
+ *
+ * Загружает все записи журнала выбранного импорта
+ * и отображает их в модальном окне.
+ */
+document.addEventListener('DOMContentLoaded', function () {
+
+    // Создаём окно один раз.
+    const dialog = document.createElement('dialog');
+    dialog.className = 'supplier-importer__logs-dialog';
+
+    const header = document.createElement('div');
+    header.className = 'supplier-importer__logs-header';
+
+    const title = document.createElement('h2');
+    title.textContent = 'Журнал импорта';
+
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'button';
+    closeButton.textContent = 'Закрыть';
+
+    const content = document.createElement('div');
+    content.className = 'supplier-importer__logs-content';
+
+    header.append(title, closeButton);
+    dialog.append(header, content);
+    document.body.append(dialog);
+
+    function closeDialog() {
+        if (dialog.open) {
+            dialog.close();
+        }
+    }
+
+    closeButton.addEventListener('click', closeDialog);
+
+    // Закрытие при клике на фон.
+    dialog.addEventListener('click', function (event) {
+        if (event.target === dialog) {
+            closeDialog();
+        }
+    });
+
+    function renderLogs(logs) {
+        content.replaceChildren();
+
+        if (!Array.isArray(logs) || !logs.length) {
+            const empty = document.createElement('p');
+            empty.textContent = 'Записей в журнале пока нет.';
+            content.append(empty);
+            return;
+        }
+
+        logs.forEach(function (log) {
+            const item = document.createElement('article');
+            item.className = 'supplier-importer__log-item';
+
+            const meta = document.createElement('div');
+            meta.className = 'supplier-importer__log-meta';
+
+            const date = document.createElement('time');
+            date.textContent = log.created_at || 'Дата не указана';
+
+            const level = document.createElement('span');
+            const safeLevel = String(log.level || 'INFO')
+                .toUpperCase()
+                .replace(/[^A-Z0-9_-]/g, '');
+
+            level.className =
+                'supplier-importer__log-level supplier-importer__log-level--'
+                + safeLevel.toLowerCase();
+
+            level.textContent = safeLevel || 'INFO';
+
+            const message = document.createElement('div');
+            message.className = 'supplier-importer__log-message';
+            message.textContent = log.message || '';
+
+            meta.append(date, level);
+            item.append(meta, message);
+
+            if (
+                log.context
+                && (
+                    typeof log.context === 'object'
+                    || String(log.context).trim() !== ''
+                )
+            ) {
+                const details = document.createElement('details');
+                details.className = 'supplier-importer__log-context';
+
+                const summary = document.createElement('summary');
+                summary.textContent = 'Контекст';
+
+                const pre = document.createElement('pre');
+
+                pre.textContent =
+                    typeof log.context === 'object'
+                        ? JSON.stringify(log.context, null, 2)
+                        : String(log.context);
+
+                details.append(summary, pre);
+                item.append(details);
+            }
+
+            content.append(item);
+        });
+    }
+
+    async function loadLogs(importId, button) {
+        const formData = new FormData();
+
+        formData.append(
+            'action',
+            'supplier_importer_get_logs'
+        );
+
+        formData.append(
+            'nonce',
+            supplierImporter.nonce
+        );
+
+        formData.append(
+            'import_id',
+            importId
+        );
+
+        button.disabled = true;
+        button.textContent = 'Загрузка...';
+
+        title.textContent = 'Журнал импорта #' + importId;
+        content.textContent = 'Загружаем записи...';
+
+        if (!dialog.open) {
+            dialog.showModal();
+        }
+
+        try {
+            const response = await fetch(supplierImporter.ajaxUrl, {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin'
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(
+                    result.data?.message
+                    || 'Не удалось загрузить журнал импорта.'
+                );
+            }
+
+            renderLogs(result.data.logs || []);
+
+        } catch (error) {
+            console.error('Ошибка загрузки журнала:', error);
+
+            content.textContent = error.message;
+
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Подробности';
+        }
+    }
+
+    // Делегирование: работает и для кнопок в динамически обновлённой таблице.
+    document.addEventListener('click', function (event) {
+        const button = event.target.closest(
+            '.js-importer-show-logs'
+        );
+
+        if (!button) {
+            return;
+        }
+
+        const importId = Number(button.dataset.importId);
+
+        if (!importId || button.disabled) {
+            return;
+        }
+
+        loadLogs(importId, button);
+    });
+});

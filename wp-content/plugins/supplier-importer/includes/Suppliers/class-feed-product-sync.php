@@ -41,7 +41,8 @@ class Feed_Product_Sync
         $supplier_id,
         $run_id,
         $last_product_id = 0,
-        $batch_size = null
+        $batch_size = null,
+        $protected_ids = []
     ) {
         $supplier_id = sanitize_key($supplier_id);
         $run_id = trim((string) $run_id);
@@ -61,6 +62,11 @@ class Feed_Product_Sync
                 'Для синхронизации необходимы ID поставщика и запуска.'
             );
         }
+
+        $protected_ids = array_fill_keys(
+            array_map('absint', (array) $protected_ids),
+            true
+        );
 
         $result = [
             'checked'     => 0,
@@ -123,6 +129,15 @@ class Feed_Product_Sync
              * вместе с результатом.
              */
             $result['last_product_id'] = $product_id;
+
+            /*
+ * Не трогаем товары, импорт которых завершился
+ * ошибкой, но принадлежность поставщику
+ * подтверждена по точному supplier_id.
+ */
+            if (isset($protected_ids[$product_id])) {
+                continue;
+            }
 
             $product = wc_get_product($product_id);
 

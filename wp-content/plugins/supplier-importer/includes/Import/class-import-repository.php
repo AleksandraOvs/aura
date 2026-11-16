@@ -12,6 +12,7 @@ class Import_Repository
 {
     private $table_name;
     private $errors_table_name;
+    private $logs_table_name;
 
     public function __construct()
     {
@@ -22,6 +23,9 @@ class Import_Repository
 
         $this->errors_table_name =
             $wpdb->prefix . 'supplier_import_errors';
+
+        $this->logs_table_name =
+            $wpdb->prefix . 'supplier_import_logs';
     }
 
     /**
@@ -64,6 +68,12 @@ class Import_Repository
                 'sync_unpublished'  => $session->get_sync_unpublished(),
                 'sync_republished'  => $session->get_sync_republished(),
 
+                'sync_protected_ids' => wp_json_encode(
+                    $session->get_sync_protected_ids()
+                ),
+
+                'sync_unprotected_errors' => $session->get_sync_unprotected_errors(),
+
                 'started_at'        => $session->get_started_at(),
                 'finished_at'       => $session->get_finished_at(),
 
@@ -94,6 +104,9 @@ class Import_Repository
                 '%d',
                 '%d',
                 '%d',
+                '%d',
+
+                '%s',
                 '%d',
 
                 '%s',
@@ -437,6 +450,12 @@ class Import_Repository
                 'sync_unpublished'  => $session->get_sync_unpublished(),
                 'sync_republished'  => $session->get_sync_republished(),
 
+                'sync_protected_ids' => wp_json_encode(
+                    $session->get_sync_protected_ids()
+                ),
+
+                'sync_unprotected_errors' => $session->get_sync_unprotected_errors(),
+
                 'started_at'        => $session->get_started_at(),
                 'finished_at'       => $session->get_finished_at(),
             ],
@@ -470,6 +489,8 @@ class Import_Repository
                 '%d',
                 '%d',
 
+                '%s',
+                '%d',
                 '%s',
                 '%s',
             ],
@@ -609,13 +630,26 @@ class Import_Repository
     }
 
     /**
-     * Очищает историю импортов и ошибки.
+     * Очищает историю импортов, ошибки и журналы.
      */
     public function reset_history()
     {
         global $wpdb;
 
         $wpdb->query('START TRANSACTION');
+
+        $logs_result = $wpdb->query(
+            "DELETE FROM {$this->logs_table_name}"
+        );
+
+        if ($logs_result === false) {
+            $wpdb->query('ROLLBACK');
+
+            throw new InvalidArgumentException(
+                'Не удалось очистить журналы импорта: '
+                    . $wpdb->last_error
+            );
+        }
 
         $errors_result = $wpdb->query(
             "DELETE FROM {$this->errors_table_name}"

@@ -199,6 +199,42 @@ class Product_Finder
         return $product;
     }
 
+    /**
+     * Безопасно найти существующий товар
+     * по точной паре поставщик + ID поставщика.
+     *
+     * Используется только для защиты товара
+     * от снятия с публикации при ошибке импорта.
+     *
+     * Не даёт права на обновление товара.
+     *
+     * @param string $supplier
+     * @param string $supplier_id
+     *
+     * @return WC_Product|null
+     */
+    public function find_confirmed_supplier_product(
+        $supplier,
+        $supplier_id
+    ) {
+        try {
+            return $this->find_by_supplier(
+                $supplier,
+                $supplier_id
+            );
+        } catch (\Throwable $e) {
+            \Supplier_Importer\Core\Logger::warning(
+                'Не удалось однозначно определить товар для защиты от синхронизации.',
+                [
+                    'supplier'    => $supplier,
+                    'supplier_id' => $supplier_id,
+                    'message'     => $e->getMessage(),
+                ]
+            );
+
+            return null;
+        }
+    }
 
     /**
      * Проверить, принадлежит ли товар поставщику

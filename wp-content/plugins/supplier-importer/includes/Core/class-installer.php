@@ -13,7 +13,7 @@ class Installer
      *
      * Увеличивать при изменении структуры таблиц.
      */
-    private const DB_VERSION = '5';
+    private const DB_VERSION = '8';
 
     private const DB_VERSION_OPTION = 'supplier_importer_db_version';
 
@@ -76,46 +76,39 @@ class Installer
             $wpdb->prefix . 'supplier_imports';
 
         $sql_imports = "CREATE TABLE {$imports_table} (
-            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-            supplier VARCHAR(100) NOT NULL,
-            file TEXT NOT NULL,
-
-            status VARCHAR(20) NOT NULL DEFAULT 'pending',
-
-            total INT UNSIGNED NOT NULL DEFAULT 0,
-            processed INT UNSIGNED NOT NULL DEFAULT 0,
-            created INT UNSIGNED NOT NULL DEFAULT 0,
-            updated INT UNSIGNED NOT NULL DEFAULT 0,
-            skipped INT UNSIGNED NOT NULL DEFAULT 0,
-            errors INT UNSIGNED NOT NULL DEFAULT 0,
-
-            offset INT UNSIGNED NOT NULL DEFAULT 0,
-
-            run_id VARCHAR(64) NOT NULL DEFAULT '',
-            format VARCHAR(10) NOT NULL DEFAULT 'csv',
-            source VARCHAR(20) NOT NULL DEFAULT 'upload',
-            phase VARCHAR(20) NOT NULL DEFAULT 'products',
-
-            staging_file TEXT NULL,
-            cursor BIGINT UNSIGNED NOT NULL DEFAULT 0,
-
-            sync_cursor BIGINT UNSIGNED NOT NULL DEFAULT 0,
-            sync_checked BIGINT UNSIGNED NOT NULL DEFAULT 0,
-            sync_unpublished BIGINT UNSIGNED NOT NULL DEFAULT 0,
-            sync_republished BIGINT UNSIGNED NOT NULL DEFAULT 0,
-
-            started_at DATETIME NULL,
-            finished_at DATETIME NULL,
-
-            created_by BIGINT UNSIGNED NOT NULL DEFAULT 0,
-
-            PRIMARY KEY  (id),
-            KEY supplier (supplier),
-            KEY status (status),
-            KEY created_by (created_by),
-            KEY run_id (run_id),
-            KEY supplier_status (supplier, status)
-        ) {$charset_collate};";
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    supplier VARCHAR(100) NOT NULL,
+    file TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    total INT UNSIGNED NOT NULL DEFAULT 0,
+    processed INT UNSIGNED NOT NULL DEFAULT 0,
+    created INT UNSIGNED NOT NULL DEFAULT 0,
+    updated INT UNSIGNED NOT NULL DEFAULT 0,
+    skipped INT UNSIGNED NOT NULL DEFAULT 0,
+    errors INT UNSIGNED NOT NULL DEFAULT 0,
+    offset INT UNSIGNED NOT NULL DEFAULT 0,
+    run_id VARCHAR(64) NOT NULL DEFAULT '',
+    format VARCHAR(10) NOT NULL DEFAULT 'csv',
+    source VARCHAR(20) NOT NULL DEFAULT 'upload',
+    phase VARCHAR(20) NOT NULL DEFAULT 'products',
+    staging_file TEXT NULL,
+    cursor BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    sync_cursor BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    sync_checked BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    sync_unpublished BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    sync_republished BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    sync_protected_ids LONGTEXT NULL,
+    sync_unprotected_errors INT UNSIGNED NOT NULL DEFAULT 0,
+    started_at DATETIME NULL,
+    finished_at DATETIME NULL,
+    created_by BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    PRIMARY KEY  (id),
+    KEY supplier (supplier),
+    KEY status (status),
+    KEY created_by (created_by),
+    KEY run_id (run_id),
+    KEY supplier_status (supplier, status)
+) {$charset_collate};";
 
         dbDelta($sql_imports);
 
@@ -143,6 +136,29 @@ class Installer
         ) {$charset_collate};";
 
         dbDelta($sql_errors);
+
+        /*
+         * Таблица журналов импорта.
+         */
+        $logs_table =
+            $wpdb->prefix . 'supplier_import_logs';
+
+        $sql_logs = "CREATE TABLE {$logs_table} (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            import_id BIGINT UNSIGNED NOT NULL,
+            level VARCHAR(20) NOT NULL DEFAULT 'INFO',
+            message TEXT NOT NULL,
+            context LONGTEXT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+            PRIMARY KEY  (id),
+            KEY import_id (import_id),
+            KEY level (level),
+            KEY created_at (created_at),
+            KEY import_created (import_id, created_at)
+        ) {$charset_collate};";
+
+        dbDelta($sql_logs);
 
         /*
          * Таблица сопоставлений.

@@ -32,35 +32,45 @@ class Import_Error_Repository
     ) {
         global $wpdb;
 
-        $result = $wpdb->insert(
-            $this->table,
-            [
-                'import_id'  => (int) $import_id,
-                'csv_row'    => (int) $csv_row,
-                'sku'        => (string) $sku,
-                'error_type' => (string) $error_type,
-                'message'    => (string) $message,
-                'raw_data'   => wp_json_encode(
-                    $raw_data,
-                    JSON_UNESCAPED_UNICODE
-                        | JSON_UNESCAPED_SLASHES
-                ),
-            ],
-            [
-                '%d',
-                '%d',
-                '%s',
-                '%s',
-                '%s',
-                '%s',
-            ]
-        );
+        try {
+            $raw_json = wp_json_encode(
+                $raw_data,
+                JSON_UNESCAPED_UNICODE
+                    | JSON_UNESCAPED_SLASHES
+            );
 
-        if ($result === false) {
+            if ($raw_json === false) {
+                $raw_json = '{}';
+            }
+
+            $result = $wpdb->insert(
+                $this->table,
+                [
+                    'import_id'  => (int) $import_id,
+                    'csv_row'    => (int) $csv_row,
+                    'sku'        => (string) $sku,
+                    'error_type' => (string) $error_type,
+                    'message'    => (string) $message,
+                    'raw_data'   => $raw_json,
+                ],
+                [
+                    '%d',
+                    '%d',
+                    '%s',
+                    '%s',
+                    '%s',
+                    '%s',
+                ]
+            );
+
+            if ($result === false) {
+                return 0;
+            }
+
+            return (int) $wpdb->insert_id;
+        } catch (\Throwable $e) {
             return 0;
         }
-
-        return (int) $wpdb->insert_id;
     }
 
     /**

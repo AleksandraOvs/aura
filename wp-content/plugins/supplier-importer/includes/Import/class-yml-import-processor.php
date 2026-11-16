@@ -8,6 +8,7 @@ if (!defined('ABSPATH')) {
 
 use Supplier_Importer\Suppliers\Feed_Mapper;
 use Supplier_Importer\Core\Logger;
+use Supplier_Importer\Product\Product_Finder;
 
 class Yml_Import_Processor
 {
@@ -17,10 +18,12 @@ class Yml_Import_Processor
     private $mapper;
     private $reader;
     private $product_importer;
+    private $product_finder;
     private $repository;
     private $error_repository;
     private $on_success;
     private $attribute_mapper;
+
 
     public function __construct(
         Import_Session $session,
@@ -38,6 +41,7 @@ class Yml_Import_Processor
 
         $this->reader = new Jsonl_Reader();
         $this->product_importer = new Product_Importer();
+        $this->product_finder = new Product_Finder();
 
         $this->attribute_mapper = new Feed_Attribute_Mapper();
 
@@ -67,9 +71,18 @@ class Yml_Import_Processor
 
         $chunk_start = microtime(true);
 
-        $this->session->start();
-
         try {
+            $this->session->start();
+            Logger::info(
+                'Начата обработка порции YML.',
+                [
+                    'import_id'  => $this->session->get_import_id(),
+                    'phase'      => $this->session->get_phase(),
+                    'cursor'     => $this->session->get_cursor(),
+                    'batch_size' => $batch_size,
+                ]
+            );
+
             $batch = $this->reader->read_batch(
                 $this->session->get_staging_file(),
                 $this->session->get_cursor(),
@@ -78,39 +91,30 @@ class Yml_Import_Processor
 
             $items = $batch['items'];
 
-            Logger::info(
-                'YML JSONL DEBUG',
-                [
-                    'import_id' => $this->session->get_import_id(),
-                    'cursor_before' => $this->session->get_cursor(),
-                    'cursor_after' => $batch['cursor'],
-                    'items_count' => count($items),
-                    'finished' => $batch['finished'],
-                    'total' => $this->session->get_total(),
-                ]
-            );
+            $processed_before_batch = $this->session
+                ->get_progress()
+                ->get_processed();
 
-
-            foreach ($items as $record) {
-                Logger::info(
-                    'YML RECORD DEBUG',
-                    [
-                        'record' => $record,
-                    ]
-                );
-                $row_number = $this->session
-                    ->get_progress()
-                    ->get_processed() + 1;
+            foreach ($items as $index => $item) {
+                $row_number = $processed_before_batch + $index + 1;
 
                 $this->process_record(
-                    $record,
+                    $item,
                     $row_number
                 );
-
-                $this->session
-                    ->get_progress()
-                    ->increment_processed();
             }
+
+            Logger::info(
+                'Получена порция записей из JSONL.',
+                [
+                    'import_id'    => $this->session->get_import_id(),
+                    'cursor_before' => $this->session->get_cursor(),
+                    'cursor_after'  => $batch['cursor'],
+                    'items_count'   => count($items),
+                    'finished'      => $batch['finished'],
+                    'total'         => $this->session->get_total(),
+                ]
+            );
 
             // Сохраняем новую позицию чтения JSONL.
             $this->session->set_cursor(
@@ -133,18 +137,36 @@ class Yml_Import_Processor
             if ($batch['finished']) {
                 $progress = $this->session->get_progress();
 
-                $errors = $progress->get_errors();
                 $processed = $progress->get_processed();
                 $total = $this->session->get_total();
 
                 if (
-                    $errors > 0
+                    $this->session->get_sync_unprotected_errors() > 0
                     || $total <= 0
                     || $processed !== $total
                 ) {
                     $this->session->fail();
+
+                    Logger::warning(
+                        'YML-импорт не перешёл к синхронизации.',
+                        [
+                            'import_id'              => $this->session->get_import_id(),
+                            'total'                  => $total,
+                            'processed'              => $processed,
+                            'sync_unprotected_errors' => $this->session->get_sync_unprotected_errors(),
+                        ]
+                    );
                 } else {
                     $this->session->set_phase('sync');
+
+                    Logger::info(
+                        'Обработка товаров завершена. Начинается синхронизация каталога.',
+                        [
+                            'import_id' => $this->session->get_import_id(),
+                            'total'     => $total,
+                            'processed' => $processed,
+                        ]
+                    );
                 }
             }
 
@@ -157,6 +179,16 @@ class Yml_Import_Processor
             }
         } catch (\Throwable $e) {
             $this->session->fail();
+            Logger::error(
+                'Критическая ошибка пакетного YML-импорта.',
+                [
+                    'import_id' => $this->session->get_import_id(),
+                    'phase'     => $this->session->get_phase(),
+                    'message'   => $e->getMessage(),
+                    'file'      => $e->getFile(),
+                    'line'      => $e->getLine(),
+                ]
+            );
 
             try {
                 $this->repository->update(
@@ -203,9 +235,26 @@ class Yml_Import_Processor
     }
 
     /**
-     * Обработать одну исходную запись.
+     * Обрабатывает одну запись и гарантированно учитывает её в прогрессе.
      */
     private function process_record(array $record, $row_number)
+    {
+        try {
+            $this->process_record_internal(
+                $record,
+                $row_number
+            );
+        } finally {
+            $this->session
+                ->get_progress()
+                ->increment_processed();
+        }
+    }
+
+    /**
+     * Обработать одну исходную запись.
+     */
+    private function process_record_internal(array $record, $row_number)
     {
         $product_data = null;
 
@@ -260,7 +309,7 @@ class Yml_Import_Processor
             $this->session
                 ->get_progress()
                 ->increment_errors();
-
+            $this->session->increment_sync_unprotected_errors();
             return;
         }
 
@@ -325,6 +374,18 @@ class Yml_Import_Processor
             } else {
                 $progress->increment_skipped();
             }
+
+            Logger::info(
+                'Товар успешно обработан.',
+                [
+                    'import_id'   => $this->session->get_import_id(),
+                    'action'      => $action,
+                    'product_id'  => $product->get_id(),
+                    'supplier'    => $product_data->get_supplier(),
+                    'supplier_id' => $product_data->get_supplier_id(),
+                    'sku'         => $sku,
+                ]
+            );
         } catch (\Throwable $e) {
             $this->save_error(
                 $row_number,
@@ -333,6 +394,49 @@ class Yml_Import_Processor
                 'product',
                 $e
             );
+
+            /*
+     * Пытаемся подтвердить существующий товар
+     * только по точной паре поставщик + ID поставщика.
+     *
+     * Совпадения SKU или штрихкода недостаточно.
+     */
+            try {
+                $existing_product =
+                    $this->product_finder->find_confirmed_supplier_product(
+                        $product_data->get_supplier(),
+                        $product_data->get_supplier_id()
+                    );
+
+                if ($existing_product instanceof \WC_Product) {
+                    $this->session->add_sync_protected_id(
+                        $existing_product->get_id()
+                    );
+
+                    Logger::warning(
+                        'Товар защищён от снятия с публикации из-за ошибки импорта.',
+                        [
+                            'import_id'   => $this->session->get_import_id(),
+                            'product_id'  => $existing_product->get_id(),
+                            'supplier'    => $product_data->get_supplier(),
+                            'supplier_id' => $product_data->get_supplier_id(),
+                        ]
+                    );
+                } else {
+                    $this->session->increment_sync_unprotected_errors();
+                }
+            } catch (\Throwable $protection_error) {
+                $this->session->increment_sync_unprotected_errors();
+
+                Logger::error(
+                    'Не удалось защитить товар от синхронизации после ошибки импорта.',
+                    [
+                        'import_id' => $this->session->get_import_id(),
+                        'supplier'  => $product_data->get_supplier(),
+                        'message'   => $protection_error->getMessage(),
+                    ]
+                );
+            }
 
             $this->session
                 ->get_progress()
