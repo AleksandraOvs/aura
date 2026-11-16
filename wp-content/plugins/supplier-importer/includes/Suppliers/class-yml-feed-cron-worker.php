@@ -51,6 +51,21 @@ class Yml_Feed_Cron_Worker
         }
 
         if (!$this->acquire_lock($import_id)) {
+
+            $repository = new Import_Repository();
+            $session = $repository->load_session($import_id);
+
+            if (
+                !$session instanceof Import_Session
+                || !in_array(
+                    $session->get_status(),
+                    ['pending', 'running'],
+                    true
+                )
+            ) {
+                return;
+            }
+
             Logger::info(
                 'YML CRON BATCH: блокировка занята или недоступна, повторяем попытку.',
                 [
@@ -115,6 +130,17 @@ class Yml_Feed_Cron_Worker
                 }
 
                 if ($session->is_finished()) {
+                    if ($session->get_status() === 'cancelled') {
+                        Staging_Cleaner::clean($session);
+
+                        Logger::info(
+                            'YML CRON WORKER: staging очищен после отмены импорта.',
+                            [
+                                'import_id' => $import_id,
+                            ]
+                        );
+                    }
+
                     return;
                 }
 
@@ -176,6 +202,17 @@ class Yml_Feed_Cron_Worker
              * Следующую порцию не планируем.
              */
                 if ($session->is_finished()) {
+                    if ($session->get_status() === 'cancelled') {
+                        Staging_Cleaner::clean($session);
+
+                        Logger::info(
+                            'YML CRON WORKER: staging очищен после отмены импорта.',
+                            [
+                                'import_id' => $import_id,
+                            ]
+                        );
+                    }
+
                     Logger::info(
                         'YML CRON IMPORT FINISHED',
                         [
@@ -211,14 +248,15 @@ class Yml_Feed_Cron_Worker
                 try {
                     $session = $repository->load_session($import_id);
 
-                    if (
-                        $session instanceof Import_Session
-                        && !$session->is_finished()
-                    ) {
-                        $session->fail();
-                        $repository->update($session);
+                    if ($session instanceof Import_Session) {
+                        if ($session->get_status() === 'cancelled') {
+                            Staging_Cleaner::clean($session);
+                        } elseif (!$session->is_finished()) {
+                            $session->fail();
+                            $repository->update($session);
 
-                        Staging_Cleaner::clean($session);
+                            Staging_Cleaner::clean($session);
+                        }
                     }
                 } catch (\Throwable $storage_error) {
                     Logger::error(

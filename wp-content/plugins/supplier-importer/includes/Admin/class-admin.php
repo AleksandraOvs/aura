@@ -36,6 +36,11 @@ class Admin
         );
 
         add_action(
+            'wp_ajax_supplier_importer_cancel_import',
+            [$this, 'cancel_import']
+        );
+
+        add_action(
             'admin_post_supplier_importer_save_feed_settings',
             [$this, 'save_feed_settings']
         );
@@ -601,13 +606,26 @@ class Admin
                                     </td>
 
                                     <td>
-                                        <?php
-                                        echo esc_html(
-                                            $this->get_status_label(
-                                                $item['status']
-                                            )
-                                        );
-                                        ?>
+                                        <span class="supplier-importer__status-label">
+                                            <?php
+                                            echo esc_html(
+                                                $this->get_status_label($item['status'])
+                                            );
+                                            ?>
+                                        </span>
+
+                                        <?php if (
+                                            in_array($item['status'], ['pending', 'running'], true)
+                                            && ($item['source'] ?? '') === 'cron'
+                                            && in_array($item['format'] ?? '', ['yml', 'xml'], true)
+                                        ) : ?>
+                                            <button
+                                                type="button"
+                                                class="button button-small js-importer-cancel"
+                                                data-import-id="<?php echo esc_attr($item['id']); ?>">
+                                                Отменить импорт
+                                            </button>
+                                        <?php endif; ?>
                                     </td>
 
                                     <td>
@@ -661,6 +679,93 @@ class Admin
         ];
 
         return $statuses[$status] ?? $status;
+    }
+
+    public function cancel_import()
+    {
+        if (!current_user_can('manage_woocommerce')) {
+            wp_send_json_error(
+                ['message' => 'Недостаточно прав.'],
+                403
+            );
+        }
+
+        check_ajax_referer('supplier_import', 'nonce');
+
+        $import_id = isset($_POST['import_id'])
+            ? absint($_POST['import_id'])
+            : 0;
+
+        if (!$import_id) {
+            wp_send_json_error(
+                ['message' => 'Некорректный ID импорта.'],
+                400
+            );
+        }
+
+        try {
+            $repository = new Import_Repository();
+            $import = $repository->get($import_id);
+
+            if (!$import) {
+                wp_send_json_error(
+                    ['message' => 'Импорт не найден.'],
+                    404
+                );
+            }
+
+            if (
+                ($import['source'] ?? '') !== 'cron'
+                || !in_array($import['format'] ?? '', ['yml', 'xml'], true)
+            ) {
+                wp_send_json_error(
+                    ['message' => 'Можно отменить только автоматический YML/XML-импорт.'],
+                    400
+                );
+            }
+
+            if (!$repository->cancel_active($import_id)) {
+                wp_send_json_error(
+                    ['message' => 'Импорт уже завершён или отменён.'],
+                    409
+                );
+            }
+
+            // Удаляем запланированные пакетные события только этого импорта.
+            $hook = 'supplier_importer_process_feed_batch';
+            $cron = _get_cron_array();
+
+            foreach ($cron as $timestamp => $hooks) {
+                if (empty($hooks[$hook])) {
+                    continue;
+                }
+
+                foreach ($hooks[$hook] as $event) {
+                    $args = $event['args'] ?? [];
+
+                    if (
+                        isset($args[0])
+                        && (int) $args[0] === $import_id
+                    ) {
+                        wp_unschedule_event(
+                            (int) $timestamp,
+                            $hook,
+                            $args,
+                            true
+                        );
+                    }
+                }
+            }
+
+            wp_send_json_success([
+                'message' => 'Импорт отменён.',
+            ]);
+        } catch (\Throwable $e) {
+            wp_send_json_error(
+                ['message' => $e->getMessage()],
+                500
+            );
+        }
     }
 
     public function reset_statistics()

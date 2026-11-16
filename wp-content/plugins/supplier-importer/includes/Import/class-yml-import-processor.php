@@ -170,19 +170,53 @@ class Yml_Import_Processor
                 }
             }
 
-            $this->repository->update(
+            $saved = $this->repository->update(
                 $this->session
             );
+
+            if (!$saved) {
+                $current_session = $this->repository->load_session(
+                    $this->session->get_import_id()
+                );
+
+                if (
+                    $current_session instanceof Import_Session
+                    && $current_session->get_status() === 'cancelled'
+                ) {
+                    $this->session = $current_session;
+
+                    Staging_Cleaner::clean($current_session);
+
+                    return $this->get_result();
+                }
+            }
 
             if ($this->session->is_finished()) {
                 Staging_Cleaner::clean($this->session);
             }
         } catch (\Throwable $e) {
+
+            $import_id = $this->session->get_import_id();
+
+            $current_session = $this->repository->load_session(
+                $import_id
+            );
+
+            if (
+                $current_session instanceof Import_Session
+                && $current_session->get_status() === 'cancelled'
+            ) {
+                Staging_Cleaner::clean($current_session);
+
+                return $this->get_result();
+            }
+
             $this->session->fail();
+
             Logger::error(
                 'Критическая ошибка пакетного YML-импорта.',
                 [
-                    'import_id' => $this->session->get_import_id(),
+                    'import_id' => $import_id,
                     'phase'     => $this->session->get_phase(),
                     'message'   => $e->getMessage(),
                     'file'      => $e->getFile(),
@@ -191,14 +225,36 @@ class Yml_Import_Processor
             );
 
             try {
-                $this->repository->update(
+                $saved = $this->repository->update(
                     $this->session
                 );
+
+                if (!$saved) {
+                    $current_session = $this->repository->load_session(
+                        $this->session->get_import_id()
+                    );
+
+                    if (
+                        $current_session instanceof Import_Session
+                        && $current_session->get_status() === 'cancelled'
+                    ) {
+                        $this->session = $current_session;
+
+                        Staging_Cleaner::clean($current_session);
+
+                        return $this->get_result();
+                    }
+
+                    throw new \RuntimeException(
+                        'Не удалось сохранить прогресс пакетного импорта.'
+                    );
+                }
             } catch (\Throwable $storage_error) {
+
                 Logger::error(
                     'Не удалось сохранить статус failed после ошибки YML-импорта.',
                     [
-                        'import_id' => $this->session->get_import_id(),
+                        'import_id' => $import_id,
                         'message'   => $storage_error->getMessage(),
                     ]
                 );

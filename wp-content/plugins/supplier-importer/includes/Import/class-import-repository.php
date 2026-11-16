@@ -313,7 +313,8 @@ class Import_Repository
                 'finished_at' => current_time('mysql'),
             ],
             [
-                'id' => $import_id,
+                'id'     => $import_id,
+                'status' => 'running',
             ],
             [
                 '%s',
@@ -403,10 +404,48 @@ class Import_Repository
     }
 
     /**
-     * Обновляет состояние импорта.
+     * Отменяет активный импорт.
      *
-     * Сохраняет как старые поля CSV, так и состояние YML batch.
+     * @return bool true — отменён, false — уже не активен.
      */
+    public function cancel_active($import_id)
+    {
+        global $wpdb;
+
+        $import_id = absint($import_id);
+
+        if (!$import_id) {
+            throw new InvalidArgumentException(
+                'Не указан ID импорта для отмены.'
+            );
+        }
+
+        $result = $wpdb->query(
+            $wpdb->prepare(
+                "UPDATE {$this->table_name}
+            SET
+                status = %s,
+                finished_at = %s
+            WHERE id = %d
+                AND status IN (%s, %s)",
+                'cancelled',
+                current_time('mysql'),
+                $import_id,
+                'pending',
+                'running'
+            )
+        );
+
+        if ($result === false) {
+            throw new InvalidArgumentException(
+                'Не удалось отменить импорт: '
+                    . $wpdb->last_error
+            );
+        }
+
+        return $result === 1;
+    }
+
     public function update(Import_Session $session)
     {
         global $wpdb;
@@ -421,82 +460,97 @@ class Import_Repository
 
         $progress = $session->get_progress();
 
-        $result = $wpdb->update(
-            $this->table_name,
-            [
-                'supplier'          => $session->get_supplier(),
-                'file'              => $session->get_file(),
-                'status'            => $session->get_status(),
+        $data = [
+            'supplier'          => $session->get_supplier(),
+            'file'              => $session->get_file(),
+            'status'            => $session->get_status(),
 
-                'total'             => $session->get_total(),
-                'processed'         => $progress->get_processed(),
-                'created'           => $progress->get_created(),
-                'updated'           => $progress->get_updated(),
-                'skipped'           => $progress->get_skipped(),
-                'errors'            => $progress->get_errors(),
+            'total'             => $session->get_total(),
+            'processed'         => $progress->get_processed(),
+            'created'           => $progress->get_created(),
+            'updated'           => $progress->get_updated(),
+            'skipped'           => $progress->get_skipped(),
+            'errors'            => $progress->get_errors(),
 
-                'offset'            => $session->get_offset(),
+            'offset'            => $session->get_offset(),
 
-                'run_id'            => $session->get_run_id(),
-                'format'            => $session->get_format(),
-                'source'            => $session->get_source(),
-                'phase'             => $session->get_phase(),
+            'run_id'            => $session->get_run_id(),
+            'format'            => $session->get_format(),
+            'source'            => $session->get_source(),
+            'phase'             => $session->get_phase(),
 
-                'staging_file'      => $session->get_staging_file(),
-                'cursor'            => $session->get_cursor(),
+            'staging_file'      => $session->get_staging_file(),
+            'cursor'            => $session->get_cursor(),
 
-                'sync_cursor'       => $session->get_sync_cursor(),
-                'sync_checked'      => $session->get_sync_checked(),
-                'sync_unpublished'  => $session->get_sync_unpublished(),
-                'sync_republished'  => $session->get_sync_republished(),
+            'sync_cursor'       => $session->get_sync_cursor(),
+            'sync_checked'      => $session->get_sync_checked(),
+            'sync_unpublished'  => $session->get_sync_unpublished(),
+            'sync_republished'  => $session->get_sync_republished(),
 
-                'sync_protected_ids' => wp_json_encode(
-                    $session->get_sync_protected_ids()
-                ),
+            'sync_protected_ids' => wp_json_encode(
+                $session->get_sync_protected_ids()
+            ),
 
-                'sync_unprotected_errors' => $session->get_sync_unprotected_errors(),
+            'sync_unprotected_errors' => $session->get_sync_unprotected_errors(),
 
-                'started_at'        => $session->get_started_at(),
-                'finished_at'       => $session->get_finished_at(),
-            ],
-            [
-                'id' => $import_id,
-            ],
-            [
-                '%s',
-                '%s',
-                '%s',
+            'started_at'        => $session->get_started_at(),
+            'finished_at'       => $session->get_finished_at(),
+        ];
 
-                '%d',
-                '%d',
-                '%d',
-                '%d',
-                '%d',
-                '%d',
+        $formats = [
+            '%s',
+            '%s',
+            '%s',
 
-                '%d',
+            '%d',
+            '%d',
+            '%d',
+            '%d',
+            '%d',
+            '%d',
 
-                '%s',
-                '%s',
-                '%s',
-                '%s',
+            '%d',
 
-                '%s',
-                '%d',
+            '%s',
+            '%s',
+            '%s',
+            '%s',
 
-                '%d',
-                '%d',
-                '%d',
-                '%d',
+            '%s',
+            '%d',
 
-                '%s',
-                '%d',
-                '%s',
-                '%s',
-            ],
-            [
-                '%d',
-            ]
+            '%d',
+            '%d',
+            '%d',
+            '%d',
+
+            '%s',
+            '%d',
+
+            '%s',
+            '%s',
+        ];
+
+        $set = [];
+
+        foreach (array_keys($data) as $index => $column) {
+            $set[] = "`{$column}` = {$formats[$index]}";
+        }
+
+        $values = array_values($data);
+
+        $values[] = $import_id;
+        $values[] = 'cancelled';
+
+        $query = "
+        UPDATE {$this->table_name}
+        SET " . implode(', ', $set) . "
+        WHERE id = %d
+            AND status <> %s
+    ";
+
+        $result = $wpdb->query(
+            $wpdb->prepare($query, $values)
         );
 
         if ($result === false) {
@@ -506,13 +560,22 @@ class Import_Repository
             );
         }
 
-        if ($result === 0 && !$this->get($import_id)) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'Импорт с ID %d не найден при обновлении.',
-                    $import_id
-                )
-            );
+        // Проверяем, существует ли импорт и не был ли он отменён.
+        if ($result === 0) {
+            $current = $this->get($import_id);
+
+            if (!$current) {
+                throw new InvalidArgumentException(
+                    sprintf(
+                        'Импорт с ID %d не найден при обновлении.',
+                        $import_id
+                    )
+                );
+            }
+
+            if ($current['status'] === 'cancelled') {
+                return false;
+            }
         }
 
         return true;

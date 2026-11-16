@@ -3732,3 +3732,100 @@ document.addEventListener('DOMContentLoaded', function () {
         loadLogs(importId, button);
     });
 });
+
+/**
+ * DOM: Отмена автоматического YML/XML-импорта
+ */
+document.addEventListener('DOMContentLoaded', function () {
+
+    document.addEventListener('click', async function (event) {
+
+        const button = event.target.closest(
+            '.js-importer-cancel'
+        );
+
+        if (!button || button.disabled) {
+            return;
+        }
+
+        const confirmed = window.confirm(
+            'Отменить автоматический импорт?'
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        const importId = Number(button.dataset.importId);
+
+        if (!importId) {
+            return;
+        }
+
+        const originalText = button.textContent;
+
+        button.disabled = true;
+        button.textContent = 'Отменяем...';
+
+        const formData = new FormData();
+
+        formData.append(
+            'action',
+            'supplier_importer_cancel_import'
+        );
+
+        formData.append(
+            'nonce',
+            supplierImporter.nonce
+        );
+
+        formData.append(
+            'import_id',
+            importId
+        );
+
+        try {
+            const response = await fetch(
+                supplierImporter.ajaxUrl,
+                {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin'
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(
+                    result.data?.message
+                    || 'Не удалось отменить импорт.'
+                );
+            }
+
+            const cell = button.closest('td');
+
+            const status = cell?.querySelector(
+                '.supplier-importer__status-label'
+            );
+
+            if (status) {
+                status.textContent = 'Отменён';
+            }
+
+            button.remove();
+
+        } catch (error) {
+
+            console.error(
+                'Ошибка отмены импорта:',
+                error
+            );
+
+            button.disabled = false;
+            button.textContent = originalText;
+
+            window.alert(error.message);
+        }
+    });
+});

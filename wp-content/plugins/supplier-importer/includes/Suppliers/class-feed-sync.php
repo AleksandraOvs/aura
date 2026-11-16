@@ -1163,7 +1163,36 @@ class Feed_Sync
             $session->set_staging_file($staging_file);
             $session->set_phase('products');
 
-            $repository->update($session);
+            if (!$repository->update($session)) {
+
+                $current_session = $repository->load_session($import_id);
+
+                if (
+                    $current_session instanceof Import_Session
+                    && $current_session->get_status() === 'cancelled'
+                ) {
+                    if ($staging_file && is_file($staging_file)) {
+                        @unlink($staging_file);
+                    }
+
+                    if ($categories_file && is_file($categories_file)) {
+                        @unlink($categories_file);
+                    }
+
+                    return [
+                        'import_id' => $import_id,
+                        'run_id'    => $run_id,
+                        'status'    => 'cancelled',
+                        'phase'     => 'prepare',
+                        'total'     => $total,
+                        'analysis'  => $analysis,
+                    ];
+                }
+
+                throw new \RuntimeException(
+                    'Не удалось сохранить подготовленную сессию импорта.'
+                );
+            }
 
             Logger::info(
                 'YML IMPORT PREPARED.',
@@ -1389,41 +1418,44 @@ class Feed_Sync
                 max(1, absint($batch_size))
             );
         } catch (\Throwable $e) {
-            /*
-         * Закрываем сессию, если ошибка возникла
-         * до того, как её обработал Yml_Import_Processor.
-         */
+
+            $import_id = $session->get_import_id();
+
+            $current_session = $repository->load_session($import_id);
+
             $session_saved = false;
 
-            if (!$session->is_finished()) {
-                $session->fail();
+            if ($current_session instanceof Import_Session) {
 
-                try {
-                    $repository->update($session);
-                    $session_saved = true;
-                } catch (\Throwable $storage_error) {
-                    Logger::error(
-                        'Не удалось сохранить статус failed после ошибки подготовки пакета.',
-                        [
-                            'import_id' => $session->get_import_id(),
-                            'message'   => $storage_error->getMessage(),
-                        ]
-                    );
+                if ($current_session->get_status() === 'cancelled') {
+
+                    Staging_Cleaner::clean($current_session);
+                } elseif (!$current_session->is_finished()) {
+
+                    $current_session->fail();
+
+                    try {
+                        $session_saved = $repository->update($current_session);
+                    } catch (\Throwable $storage_error) {
+                        Logger::error(
+                            'Не удалось сохранить статус failed после ошибки подготовки пакета.',
+                            [
+                                'import_id' => $import_id,
+                                'message'   => $storage_error->getMessage(),
+                            ]
+                        );
+                    }
+
+                    if ($session_saved) {
+                        Staging_Cleaner::clean($current_session);
+                    }
                 }
-            }
-
-            /*
-         * Очищаем staging только после сохранения
-         * завершённого состояния сессии.
-         */
-            if ($session_saved) {
-                Staging_Cleaner::clean($session);
             }
 
             Logger::error(
                 'Ошибка подготовки пакетного импорта YML.',
                 [
-                    'import_id' => $session->get_import_id(),
+                    'import_id' => $import_id,
                     'supplier'  => $session->get_supplier(),
                     'message'   => $e->getMessage(),
                 ]
@@ -1650,25 +1682,39 @@ class Feed_Sync
                 ],
             ];
         } catch (\Throwable $e) {
-            $session->fail();
+
+            $session = $repository->load_session(
+                $session->get_import_id()
+            );
 
             $session_saved = false;
 
-            try {
-                $repository->update($session);
-                $session_saved = true;
-            } catch (\Throwable $storage_error) {
-                Logger::error(
-                    'Не удалось сохранить статус failed после ошибки синхронизации.',
-                    [
-                        'import_id' => $session->get_import_id(),
-                        'message'   => $storage_error->getMessage(),
-                    ]
-                );
-            }
+            if ($session instanceof Import_Session) {
 
-            if ($session_saved) {
-                Staging_Cleaner::clean($session);
+                if ($session->get_status() === 'cancelled') {
+
+                    Staging_Cleaner::clean($session);
+                } elseif (!$session->is_finished()) {
+
+                    $session->fail();
+
+                    try {
+                        $session_saved = $repository->update($session);
+                    } catch (\Throwable $storage_error) {
+
+                        Logger::error(
+                            'Не удалось сохранить статус failed после ошибки синхронизации.',
+                            [
+                                'import_id' => $session->get_import_id(),
+                                'message'   => $storage_error->getMessage(),
+                            ]
+                        );
+                    }
+
+                    if ($session_saved) {
+                        Staging_Cleaner::clean($session);
+                    }
+                }
             }
 
             Logger::error(
