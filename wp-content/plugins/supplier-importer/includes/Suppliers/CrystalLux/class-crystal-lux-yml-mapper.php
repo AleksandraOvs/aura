@@ -48,9 +48,16 @@ class Crystal_Lux_Yml_Mapper implements Feed_Mapper
             );
         }
 
-        $supplier_id = $this->scalar(
-            $offer_attributes['id'] ?? ''
+        $supplier_id = $this->get_param_value(
+            $params,
+            'Код'
         );
+
+        if ($supplier_id === '') {
+            $supplier_id = $this->scalar(
+                $offer_attributes['id'] ?? ''
+            );
+        }
 
         if ($supplier_id === '') {
             $supplier_id = $sku;
