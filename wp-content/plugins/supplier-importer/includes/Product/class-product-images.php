@@ -110,9 +110,6 @@ class Product_Images
         return $image_ids;
     }
 
-    /**
-     * Нормализует список URL.
-     */
     private function normalize_urls($image_urls)
     {
         $result = [];
@@ -135,12 +132,177 @@ class Product_Images
                 continue;
             }
 
+            // Не импортируем TIFF.
+            $path = wp_parse_url(
+                $image_url,
+                PHP_URL_PATH
+            );
+
+            $extension = strtolower(
+                pathinfo((string) $path, PATHINFO_EXTENSION)
+            );
+
+            if (in_array($extension, ['tif', 'tiff'], true)) {
+                Logger::info(
+                    'IMAGE DEBUG: TIFF SKIPPED'
+                        . ' url=' . $image_url
+                );
+
+                continue;
+            }
+
             $result[] = $image_url;
         }
 
         return array_values(
             array_unique($result)
         );
+    }
+
+    /**
+     * Конвертирует изображение в WebP.
+     *
+     * JPEG и PNG конвертируются с качеством 82.
+     * Существующий WebP не перекодируется.
+     *
+     * @param string $file_path Путь к временному файлу.
+     * @param string $mime_type MIME-тип.
+     * @param string $file_name Имя файла.
+     *
+     * @return true|\WP_Error
+     */
+    private function convert_to_webp(
+        &$file_path,
+        &$mime_type,
+        &$file_name
+    ) {
+        $quality = 82;
+
+        /*
+     * Если изображение уже WebP,
+     * повторно его не перекодируем.
+     */
+        if ($mime_type === 'image/webp') {
+            $file_name = pathinfo(
+                $file_name,
+                PATHINFO_FILENAME
+            ) . '.webp';
+
+            return true;
+        }
+
+        /*
+     * Проверяем исходное изображение.
+     */
+        $original_info = @getimagesize($file_path);
+
+        if (!$original_info) {
+            return new \WP_Error(
+                'webp_invalid_source',
+                'Не удалось прочитать исходное изображение.'
+            );
+        }
+
+        /*
+     * Создаём редактор WordPress.
+     */
+        $editor = wp_get_image_editor($file_path);
+
+        if (is_wp_error($editor)) {
+            return new \WP_Error(
+                'webp_editor_error',
+                $editor->get_error_message()
+            );
+        }
+
+        /*
+     * Устанавливаем качество WebP.
+     */
+        $editor->set_quality($quality);
+
+        /*
+     * Создаём временный WebP-файл.
+     */
+        $webp_file = $file_path . '.webp';
+
+        $result = $editor->save(
+            $webp_file,
+            'image/webp'
+        );
+
+        if (is_wp_error($result)) {
+            return new \WP_Error(
+                'webp_save_error',
+                $result->get_error_message()
+            );
+        }
+
+        /*
+     * Проверяем результат.
+     */
+        if (
+            !is_file($webp_file)
+            || !is_readable($webp_file)
+            || filesize($webp_file) <= 0
+        ) {
+            return new \WP_Error(
+                'webp_file_invalid',
+                'WebP-файл не создан или пуст.'
+            );
+        }
+
+        $webp_info = @getimagesize($webp_file);
+
+        if (
+            !$webp_info
+            || empty($webp_info['mime'])
+            || $webp_info['mime'] !== 'image/webp'
+        ) {
+            @unlink($webp_file);
+
+            return new \WP_Error(
+                'webp_format_invalid',
+                'Результат конвертации не является WebP.'
+            );
+        }
+
+        /*
+     * Проверяем сохранение размеров.
+     */
+        if (
+            (int) $webp_info[0] !== (int) $original_info[0]
+            || (int) $webp_info[1] !== (int) $original_info[1]
+        ) {
+            @unlink($webp_file);
+
+            return new \WP_Error(
+                'webp_dimensions_changed',
+                'Размеры изображения изменились.'
+            );
+        }
+
+        /*
+     * Используем WebP вместо оригинала.
+     */
+        $original_size = filesize($file_path);
+        $webp_size = filesize($webp_file);
+
+        $file_path = $webp_file;
+        $mime_type = 'image/webp';
+
+        $file_name = pathinfo(
+            $file_name,
+            PATHINFO_FILENAME
+        ) . '.webp';
+
+        Logger::info(
+            'IMAGE DEBUG: WEBP CONVERTED'
+                . ' original=' . size_format($original_size)
+                . ' webp=' . size_format($webp_size)
+                . ' quality=' . $quality
+        );
+
+        return true;
     }
 
     /**
@@ -165,20 +327,46 @@ class Product_Images
         );
     }
 
-    /**
-     * Ищет attachment по исходному URL.
-     */
     private function find_by_source_url($image_url)
     {
+        // 1. Сначала ищем в отдельной папке импортера.
         $query = new \WP_Query([
             'post_type'      => 'attachment',
             'post_status'    => 'inherit',
             'posts_per_page' => 1,
             'fields'         => 'ids',
+            'no_found_rows'  => true,
+            'meta_query'     => [
+                'relation' => 'AND',
+                [
+                    'key'     => self::SOURCE_URL_META,
+                    'value'   => $image_url,
+                    'compare' => '=',
+                ],
+                [
+                    'key'     => '_wp_attached_file',
+                    'value'   => 'supplier-importer-product-images/',
+                    'compare' => 'REGEXP',
+                ],
+            ],
+        ]);
+
+        if (!empty($query->posts)) {
+            return (int) $query->posts[0];
+        }
+
+        // 2. Если не нашли — ищем в старой медиатеке.
+        $query = new \WP_Query([
+            'post_type'      => 'attachment',
+            'post_status'    => 'inherit',
+            'posts_per_page' => 1,
+            'fields'         => 'ids',
+            'no_found_rows'  => true,
             'meta_query'     => [
                 [
-                    'key'   => self::SOURCE_URL_META,
-                    'value' => $image_url,
+                    'key'     => self::SOURCE_URL_META,
+                    'value'   => $image_url,
+                    'compare' => '=',
                 ],
             ],
         ]);
@@ -276,36 +464,41 @@ class Product_Images
             );
 
             /*
-         * 3. Оптимизируем JPEG и PNG.
-         */
-            if (
-                in_array(
-                    $mime_type,
-                    [
-                        'image/jpeg',
-                        'image/png',
-                    ],
-                    true
-                )
-            ) {
-                $optimization = $this->optimize_image(
-                    $tmp_file,
-                    $mime_type,
-                    $file_name
+ * 3. Проверяем формат и конвертируем в WebP.
+ */
+            $allowed_mime_types = [
+                'image/jpeg',
+                'image/png',
+                'image/webp',
+            ];
+
+            if (!in_array($mime_type, $allowed_mime_types, true)) {
+                Logger::info(
+                    'IMAGE DEBUG: UNSUPPORTED FORMAT'
+                        . ' url=' . $image_url
+                        . ' mime=' . $mime_type
+                        . ' upload=skipped'
                 );
 
-                if (is_wp_error($optimization)) {
-                    Logger::info(
-                        'IMAGE DEBUG: OPTIMIZATION FAILED'
-                            . ' url=' . $image_url
-                            . ' error=' . $optimization->get_error_message()
-                            . ' upload=skipped'
-                    );
-
-                    return 0;
-                }
+                return 0;
             }
 
+            $conversion = $this->convert_to_webp(
+                $tmp_file,
+                $mime_type,
+                $file_name
+            );
+
+            if (is_wp_error($conversion)) {
+                Logger::info(
+                    'IMAGE DEBUG: WEBP CONVERSION FAILED'
+                        . ' url=' . $image_url
+                        . ' error=' . $conversion->get_error_message()
+                        . ' upload=skipped'
+                );
+
+                return 0;
+            }
             /*
          * 4. Проверяем файл перед передачей WordPress.
          */
@@ -378,12 +571,35 @@ class Product_Images
                 3
             );
 
+            // Перенаправляем загрузку в отдельную папку.
+            $upload_dir_filter = static function ($uploads) {
+                $subdir = '/supplier-importer-product-images';
+
+                $uploads['subdir'] = $subdir;
+                $uploads['path']   = $uploads['basedir'] . $subdir;
+                $uploads['url']    = $uploads['baseurl'] . $subdir;
+
+                return $uploads;
+            };
+
+            add_filter(
+                'upload_dir',
+                $upload_dir_filter,
+                PHP_INT_MAX
+            );
+
             try {
                 $attachment_id = @media_handle_sideload(
                     $file,
                     $product_id
                 );
             } finally {
+                remove_filter(
+                    'upload_dir',
+                    $upload_dir_filter,
+                    PHP_INT_MAX
+                );
+
                 remove_filter(
                     'intermediate_image_sizes_advanced',
                     $image_sizes_filter,
