@@ -69,11 +69,23 @@ class Ajax_Feed_Import
          */
             $feed_sync = new Feed_Sync();
 
-            $result = $feed_sync->prepare_yml_import_from_url(
-                $supplier_id,
-                $settings,
-                'manual'
+            $format = strtolower(
+                sanitize_key($settings['format'] ?? '')
             );
+
+            if ($format === 'csv') {
+                $result = $feed_sync->prepare_csv_import_from_url(
+                    $supplier_id,
+                    $settings,
+                    'manual'
+                );
+            } else {
+                $result = $feed_sync->prepare_yml_import_from_url(
+                    $supplier_id,
+                    $settings,
+                    'manual'
+                );
+            }
 
             Logger::info(
                 'Фид поставщика подготовлен к импорту.',
@@ -92,6 +104,7 @@ class Ajax_Feed_Import
                 'phase'     => $result['phase'],
                 'total'     => $result['total'],
                 'analysis'  => $result['analysis'] ?? [],
+                'format'    => $result['format'] ?? $format,
             ]);
         } catch (\Throwable $e) {
             Logger::error(

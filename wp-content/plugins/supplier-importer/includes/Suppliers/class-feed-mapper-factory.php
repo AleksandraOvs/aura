@@ -12,6 +12,7 @@ use Supplier_Importer\Suppliers\Citilux\Citilux_Mapper;
 use Supplier_Importer\Suppliers\Citilux\Citilux_Yml_Category_Reader;
 use Supplier_Importer\Suppliers\Lightstar\Lightstar_Mapper;
 use Supplier_Importer\Suppliers\CrystalLux\Crystal_Lux_Yml_Mapper;
+use Supplier_Importer\Suppliers\Denkirs\Denkirs_Mapper;
 
 class Feed_Mapper_Factory
 {
@@ -39,6 +40,13 @@ class Feed_Mapper_Factory
 
         $supplier_id = sanitize_key($supplier_id);
         $format = strtolower(sanitize_key($format));
+
+        /*
+        * DENKIRS — CSV.
+        */
+        if ($supplier_id === 'denkirs' && $format === 'csv') {
+            return new Denkirs_Mapper();
+        }
 
         /*
          * MAYTONI — YML.

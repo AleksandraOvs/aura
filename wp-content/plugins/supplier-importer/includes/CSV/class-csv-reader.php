@@ -232,6 +232,15 @@ class Csv_Reader implements Row_Reader
         if ($row === false) {
             return null;
         }
+        /*
+ * Пропускаем полностью пустые строки CSV.
+ */
+        if (
+            count($row) === 1
+            && ($row[0] === null || trim((string) $row[0]) === '')
+        ) {
+            return $this->read();
+        }
 
         $this->row_number++;
 

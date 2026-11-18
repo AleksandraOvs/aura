@@ -219,7 +219,7 @@ document.addEventListener('DOMContentLoaded', function () {
             progress.total || data.total || 0
         );
         const progressCount = document.querySelector(
-            '#supplier-importer-progress-count'
+            '#supplier-import-progress-count'
         );
 
         const percent = Number(

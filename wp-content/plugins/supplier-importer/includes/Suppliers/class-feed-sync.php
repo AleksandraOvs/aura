@@ -11,6 +11,8 @@ use Supplier_Importer\Core\Logger;
 use Supplier_Importer\Import\Import_Manager;
 use Supplier_Importer\Import\Import_Repository;
 use Supplier_Importer\Import\Xml_Reader;
+use Supplier_Importer\CSV\Csv_Reader;
+use Supplier_Importer\CSV\Csv_Analyzer;
 use Supplier_Importer\Import\Yml_Validator;
 use Supplier_Importer\Product\Product_Meta;
 use Supplier_Importer\Import\Import_Session;
@@ -272,10 +274,34 @@ class Feed_Sync
                 $discovery['categories'] ?? null
             );
 
-            $reader = new Xml_Reader(
-                $file,
-                'offer'
-            );
+            /*
+ * Выбираем reader и mapper callback
+ * в зависимости от формата фида.
+ */
+            if ($format === 'csv' && $supplier_id === 'denkirs') {
+                $reader = new Csv_Reader($file);
+
+                $mapper_callback = function ($record) use ($mapper) {
+                    if (
+                        !is_array($record)
+                        || !isset($record['data'])
+                        || !is_array($record['data'])
+                    ) {
+                        throw new \UnexpectedValueException(
+                            'CSV-ридер вернул некорректную запись.'
+                        );
+                    }
+
+                    return $mapper->map($record['data']);
+                };
+            } else {
+                $reader = new Xml_Reader(
+                    $file,
+                    'offer'
+                );
+
+                $mapper_callback = [$mapper, 'map'];
+            }
 
             $import_manager = new Import_Manager();
 
@@ -288,7 +314,7 @@ class Feed_Sync
              */
             $result = $import_manager->import_stream(
                 $reader,
-                [$mapper, 'map'],
+                $mapper_callback,
                 function (
                     $product,
                     $product_data,
@@ -697,6 +723,7 @@ class Feed_Sync
             'citilux' => 'xml',
             'lightstar' => 'yml',
             'crystal_lux' => 'yml',
+            'denkirs' => 'csv',
         ];
 
 
@@ -726,14 +753,40 @@ class Feed_Sync
 
 
         /*
- * Поддерживаемые фиды используют структуру YML:
- * yml_catalog → shop → offers → offer.
- *
- * CITILUX предварительно нормализуется в эту структуру.
+ * YML/XML проверяем существующим валидатором.
+ * CSV Denkirs проверяем по заголовкам.
  */
-        $validator = new Yml_Validator();
+        if (in_array($format, ['yml', 'xml'], true)) {
+            $validator = new Yml_Validator();
+            $validator->validate($file);
+            return;
+        }
 
-        $validator->validate($file);
+        if ($format === 'csv' && $supplier_id === 'denkirs') {
+            $reader = new Csv_Reader($file);
+
+            try {
+                $reader->open();
+
+                $headers = $reader->get_headers();
+
+                $supplier = $manager->get($supplier_id);
+
+                if (!$supplier || !$supplier->supports($headers)) {
+                    throw new \RuntimeException(
+                        'Заголовки CSV не соответствуют формату фида Denkirs.'
+                    );
+                }
+            } finally {
+                $reader->close();
+            }
+
+            return;
+        }
+
+        throw new \RuntimeException(
+            sprintf('Проверка формата %s не реализована.', $format)
+        );
     }
 
 
@@ -931,6 +984,228 @@ class Feed_Sync
             }
         }
     }
+
+
+
+    /**
+     * Подготовить CSV-фид по URL к пакетному импорту.
+     *
+     * @param string $supplier_id ID поставщика.
+     * @param array  $settings    Настройки фида.
+     * @param string $source      Источник запуска.
+     *
+     * @return array
+     */
+    public function prepare_csv_import_from_url(
+        $supplier_id,
+        $settings,
+        $source = 'manual'
+    ) {
+        if (
+            !is_array($settings)
+            || empty($settings['url'])
+        ) {
+            throw new \RuntimeException(
+                'Не указан URL фида.'
+            );
+        }
+
+        $supplier_id = sanitize_key($supplier_id);
+
+        if ($supplier_id !== 'denkirs') {
+            throw new \RuntimeException(
+                'CSV-фиды этого поставщика не поддерживаются.'
+            );
+        }
+
+        $source = $source === 'cron'
+            ? 'cron'
+            : 'manual';
+
+        $downloader = new Supplier_Feed_Downloader();
+        $temp_file = '';
+        $saved_file = '';
+        $import_created = false;
+
+        try {
+            // Скачиваем фид во временный файл.
+            $temp_file = $downloader->download(
+                $settings['url']
+            );
+
+            if (is_wp_error($temp_file)) {
+                throw new \RuntimeException(
+                    $temp_file->get_error_message()
+                );
+            }
+
+            // Проверяем CSV после скачивания.
+            $this->validate_feed(
+                $supplier_id,
+                $temp_file,
+                $settings
+            );
+
+            $manager = Plugin::get_supplier_manager();
+            $supplier = $manager->get($supplier_id);
+
+            if (!$supplier) {
+                throw new \RuntimeException(
+                    'Не удалось получить поставщика.'
+                );
+            }
+
+            // Анализируем структуру CSV.
+            $reader = new Csv_Reader($temp_file);
+
+            try {
+                $reader->open();
+
+                $analyzer = new Csv_Analyzer();
+
+                $analysis = $analyzer->analyze(
+                    $reader,
+                    $supplier->get_csv_analysis_config()
+                );
+            } finally {
+                $reader->close();
+            }
+
+            // Считаем количество товарных строк.
+            $reader = new Csv_Reader($temp_file);
+            $total = 0;
+
+            try {
+                $reader->open();
+
+                while ($reader->read() !== null) {
+                    $total++;
+                }
+            } finally {
+                $reader->close();
+            }
+
+            if ($total < 1) {
+                throw new \RuntimeException(
+                    'В CSV-фиде не найдено товаров.'
+                );
+            }
+
+            // Создаём постоянную копию для пакетного импорта.
+            $upload_dir = wp_upload_dir();
+
+            if (!empty($upload_dir['error'])) {
+                throw new \RuntimeException(
+                    $upload_dir['error']
+                );
+            }
+
+            $import_dir = trailingslashit(
+                $upload_dir['basedir']
+            ) . 'supplier-importer';
+
+            if (
+                !is_dir($import_dir)
+                && !wp_mkdir_p($import_dir)
+            ) {
+                throw new \RuntimeException(
+                    'Не удалось создать каталог импорта.'
+                );
+            }
+
+            $url_path = wp_parse_url(
+                $settings['url'],
+                PHP_URL_PATH
+            );
+
+            $file_name = sanitize_file_name(
+                wp_basename((string) $url_path)
+            );
+
+            if (
+                !$file_name
+                || strtolower(pathinfo($file_name, PATHINFO_EXTENSION)) !== 'csv'
+            ) {
+                $file_name = 'denkirs-feed.csv';
+            }
+
+            $file_name = wp_unique_filename(
+                $import_dir,
+                $file_name
+            );
+
+            $saved_file = trailingslashit($import_dir)
+                . $file_name;
+
+            if (!copy($temp_file, $saved_file)) {
+                throw new \RuntimeException(
+                    'Не удалось сохранить CSV-фид для импорта.'
+                );
+            }
+
+            // Создаём стандартную CSV-сессию.
+            $session = new Import_Session(
+                $supplier_id,
+                $saved_file,
+                $total
+            );
+
+            $session->set_run_id(wp_generate_uuid4());
+            $session->set_format('csv');
+            $session->set_source($source);
+
+            $repository = new Import_Repository();
+
+            $import_id = $repository->create($session);
+
+            if (!$import_id) {
+                throw new \RuntimeException(
+                    'Не удалось создать сессию импорта CSV.'
+                );
+            }
+
+            $import_created = true;
+
+            Logger::info(
+                'CSV-фид подготовлен к импорту.',
+                [
+                    'import_id' => $import_id,
+                    'supplier'  => $supplier_id,
+                    'total'     => $total,
+                    'source'    => $source,
+                ]
+            );
+
+            return [
+                'import_id' => $import_id,
+                'run_id'    => $session->get_run_id(),
+                'supplier'  => $supplier_id,
+                'status'    => $session->get_status(),
+                'phase'     => $session->get_phase(),
+                'total'     => $total,
+                'analysis'  => $analysis,
+                'format'    => 'csv',
+            ];
+        } catch (\Throwable $e) {
+            // Удаляем постоянную копию, если сессия не создана.
+            if (
+                !$import_created
+                && $saved_file
+                && is_file($saved_file)
+            ) {
+                wp_delete_file($saved_file);
+            }
+
+            throw $e;
+        } finally {
+            // Временный скачанный файл больше не нужен.
+            if ($temp_file && !is_wp_error($temp_file)) {
+                $downloader->delete_temp_file($temp_file);
+            }
+        }
+    }
+
+
 
 
     /**
