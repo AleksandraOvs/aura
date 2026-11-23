@@ -7,6 +7,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const questionsContainer = builder.querySelector('[data-pwqb-questions]');
+
+    if (!questionsContainer) {
+        return;
+    }
+
     questionsContainer.addEventListener('click', (event) => {
         const header = event.target.closest('.pwqb-question__header');
 
@@ -16,8 +21,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const question = header.closest('[data-pwqb-question]');
 
-        question.classList.toggle('is-collapsed');
+        if (question) {
+            question.classList.toggle('is-collapsed');
+        }
     });
+
     const emptyMessage = builder.querySelector('[data-pwqb-empty]');
 
     const questionTemplate = document.getElementById('tmpl-pwqb-question');
@@ -44,6 +52,247 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    /**
+ * Ручной выбор товаров для результата квиза.
+ */
+    const initPriorityProducts = () => {
+        const container = builder.querySelector('[data-pwqb-priority-products]');
+
+        if (!container) {
+            return;
+        }
+
+        const search = container.querySelector('[data-pwqb-product-search]');
+        const results = container.querySelector('[data-pwqb-product-search-results]');
+        const selectedList = container.querySelector('[data-pwqb-priority-products-list]');
+
+        if (!search || !results || !selectedList) {
+            return;
+        }
+
+        let searchTimeout = null;
+        let requestNumber = 0;
+
+        /**
+         * Получение уже выбранных ID.
+         */
+        const getSelectedIds = () => {
+            return new Set(
+                [...selectedList.querySelectorAll('[data-pwqb-priority-product] input')]
+                    .map((input) => Number(input.value))
+            );
+        };
+
+        /**
+         * Добавление товара в выбранные.
+         */
+        const addProduct = (product) => {
+            const selectedIds = getSelectedIds();
+
+            if (selectedIds.has(Number(product.id))) {
+                return;
+            }
+
+            if (selectedIds.size >= 10) {
+                results.replaceChildren();
+
+                const limitMessage = document.createElement('div');
+                limitMessage.className = 'pwqb-priority-products__empty';
+                limitMessage.textContent = 'Можно выбрать не более 10 товаров.';
+
+                results.append(limitMessage);
+                results.hidden = false;
+
+                return;
+            }
+
+            const item = document.createElement('div');
+            item.className = 'pwqb-priority-product';
+            item.dataset.pwqbPriorityProduct = '';
+
+            const hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = 'pwqb_settings[priority_products][]';
+            hidden.value = product.id;
+
+            const imageWrapper = document.createElement('span');
+            imageWrapper.className = 'pwqb-priority-product__image';
+
+            if (product.image) {
+                const image = document.createElement('img');
+                image.src = product.image;
+                image.alt = '';
+                image.loading = 'lazy';
+
+                imageWrapper.append(image);
+            }
+
+            const name = document.createElement('span');
+            name.className = 'pwqb-priority-product__name';
+            name.textContent = product.name;
+
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'button-link-delete';
+            remove.textContent = 'Удалить';
+            remove.dataset.pwqbRemovePriorityProduct = '';
+            remove.setAttribute('aria-label', 'Удалить товар');
+
+            item.append(hidden, imageWrapper, name, remove);
+
+            selectedList.append(item);
+        };
+
+        /**
+         * Вывод результатов поиска.
+         */
+        const renderResults = (products) => {
+            results.replaceChildren();
+
+            const selectedIds = getSelectedIds();
+
+            const availableProducts = products.filter((product) => {
+                return !selectedIds.has(Number(product.id));
+            });
+
+            if (!availableProducts.length) {
+                const empty = document.createElement('div');
+                empty.className = 'pwqb-priority-products__empty';
+                empty.textContent = 'Товары не найдены';
+
+                results.append(empty);
+                results.hidden = false;
+
+                return;
+            }
+
+            availableProducts.forEach((product) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'pwqb-priority-products__result';
+
+                if (product.image) {
+                    const image = document.createElement('img');
+                    image.src = product.image;
+                    image.alt = '';
+                    image.loading = 'lazy';
+
+                    button.append(image);
+                }
+
+                const name = document.createElement('span');
+                name.textContent = product.name;
+
+                button.append(name);
+
+                button.addEventListener('click', () => {
+                    addProduct(product);
+
+                    search.value = '';
+                    results.replaceChildren();
+                    results.hidden = true;
+                    search.focus();
+                });
+
+                results.append(button);
+            });
+
+            results.hidden = false;
+        };
+
+        /**
+         * AJAX-поиск.
+         */
+        const searchProducts = async (term, currentRequest) => {
+            const formData = new FormData();
+
+            formData.append('action', 'pwqb_search_products');
+            formData.append('nonce', pwqbBuilderData.searchNonce);
+            formData.append('quiz_id', builderForm?.querySelector('#post_ID')?.value || '');
+            formData.append('search', term);
+
+            try {
+                const response = await fetch(pwqbBuilderData.ajaxUrl, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const data = await response.json();
+
+                // Игнорируем устаревшие ответы поиска.
+                if (currentRequest !== requestNumber) {
+                    return;
+                }
+
+                if (!data.success) {
+                    console.error('PWQB: Ошибка поиска товаров.', data.data);
+                    return;
+                }
+
+                renderResults(data.data.products || []);
+
+            } catch (error) {
+                if (currentRequest !== requestNumber) {
+                    return;
+                }
+
+                console.error('PWQB: Не удалось выполнить поиск товаров.', error);
+            }
+        };
+
+        /**
+         * Обработка ввода поискового запроса.
+         */
+        search.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+
+            const term = search.value.trim();
+            const currentRequest = ++requestNumber;
+
+            results.replaceChildren();
+
+            if (term.length < 2) {
+                results.hidden = true;
+                return;
+            }
+
+            const loading = document.createElement('div');
+            loading.className = 'pwqb-priority-products__empty';
+            loading.textContent = 'Поиск...';
+
+            results.append(loading);
+            results.hidden = false;
+
+            searchTimeout = setTimeout(() => {
+                searchProducts(term, currentRequest);
+            }, 300);
+        });
+
+        /**
+         * Удаление выбранного товара.
+         */
+        selectedList.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-pwqb-remove-priority-product]');
+
+            if (!button) {
+                return;
+            }
+
+            button.closest('[data-pwqb-priority-product]').remove();
+        });
+
+        /**
+         * Закрытие результатов при клике за пределами блока.
+         */
+        document.addEventListener('click', (event) => {
+            if (!container.contains(event.target)) {
+                results.hidden = true;
+            }
+        });
+    };
+
+    initPriorityProducts();
 
     const createId = (prefix) => {
         return prefix + '_' + Math.random().toString(36).slice(2, 10);

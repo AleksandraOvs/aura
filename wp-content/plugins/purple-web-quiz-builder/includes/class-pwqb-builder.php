@@ -20,6 +20,7 @@ class PWQB_Builder
         );
 
         add_action('admin_enqueue_scripts', [self::class, 'enqueue_assets']);
+        add_action('wp_ajax_pwqb_search_products', [self::class, 'ajax_search_products']);
     }
 
     /**
@@ -74,6 +75,8 @@ class PWQB_Builder
             'pwqbBuilderData',
             [
                 'attributes' => self::get_product_attributes(),
+                'ajaxUrl'    => admin_url('admin-ajax.php'),
+                'searchNonce' => wp_create_nonce('pwqb_search_products'),
             ]
         );
     }
@@ -126,6 +129,96 @@ class PWQB_Builder
     }
 
     /**
+     * AJAX-поиск товаров для ручного добавления в результат квиза.
+     */
+    public static function ajax_search_products(): void
+    {
+        if (
+            !isset($_POST['nonce']) ||
+            !wp_verify_nonce(
+                sanitize_text_field(wp_unslash($_POST['nonce'])),
+                'pwqb_search_products'
+            )
+        ) {
+            wp_send_json_error([
+                'message' => 'Ошибка проверки безопасности.',
+            ], 403);
+        }
+
+        $quiz_id = isset($_POST['quiz_id'])
+            ? absint($_POST['quiz_id'])
+            : 0;
+
+        if ($quiz_id) {
+            if (
+                get_post_type($quiz_id) !== PWQB_Quiz::POST_TYPE ||
+                !current_user_can('edit_post', $quiz_id)
+            ) {
+                wp_send_json_error([
+                    'message' => 'Нет доступа к этому квизу.',
+                ], 403);
+            }
+        } elseif (!current_user_can('edit_posts')) {
+            wp_send_json_error([
+                'message' => 'Недостаточно прав для поиска товаров.',
+            ], 403);
+        }
+
+        if (!class_exists('WooCommerce')) {
+            wp_send_json_error([
+                'message' => 'WooCommerce не активен.',
+            ], 400);
+        }
+
+        $search = isset($_POST['search'])
+            ? sanitize_text_field(wp_unslash($_POST['search']))
+            : '';
+
+        if (mb_strlen($search) < 2) {
+            wp_send_json_success([
+                'products' => [],
+            ]);
+        }
+
+        $query = new WP_Query([
+            'post_type'      => 'product',
+            'post_status'    => 'publish',
+            'posts_per_page' => 10,
+            's'              => $search,
+            'orderby'        => 'relevance',
+            'order'          => 'ASC',
+            'fields'         => 'ids',
+            'no_found_rows'  => true,
+        ]);
+
+        $products = [];
+
+        foreach ($query->posts as $product_id) {
+            $product = wc_get_product($product_id);
+
+            if (!$product || !$product->is_visible()) {
+                continue;
+            }
+
+            $image = get_the_post_thumbnail_url($product_id, 'thumbnail');
+
+            if (!$image) {
+                $image = wc_placeholder_img_src('woocommerce_thumbnail');
+            }
+
+            $products[] = [
+                'id'    => $product_id,
+                'name'  => $product->get_name(),
+                'image' => $image,
+            ];
+        }
+
+        wp_send_json_success([
+            'products' => $products,
+        ]);
+    }
+
+    /**
      * Получение настроек квиза.
      */
     private static function get_settings(int $post_id): array
@@ -164,6 +257,17 @@ class PWQB_Builder
             ? $settings['questions']
             : [];
 
+        $settings['priority_products'] = isset($settings['priority_products'])
+            && is_array($settings['priority_products'])
+            ? array_values(array_unique(array_filter(array_map('absint', $settings['priority_products']))))
+            : [];
+
+        $settings['priority_products'] = array_slice(
+            $settings['priority_products'],
+            0,
+            10
+        );
+
         return $settings;
     }
 
@@ -179,6 +283,20 @@ class PWQB_Builder
 
         $settings = self::get_settings($post->ID);
         $description = $settings['description'];
+
+        $priority_products = [];
+
+        if (function_exists('wc_get_product')) {
+            foreach ($settings['priority_products'] as $product_id) {
+                $product = wc_get_product($product_id);
+
+                if (!$product || !$product->is_visible()) {
+                    continue;
+                }
+
+                $priority_products[] = $product;
+            }
+        }
 
 ?>
         <div class="pwqb-builder">
@@ -215,6 +333,77 @@ class PWQB_Builder
                     Если включено, вместо результата посетителю будет показана форма
                     для отправки контактных данных.
                 </p>
+
+                <hr>
+
+                <h3>Товары, которые нужно показать в первую очередь</h3>
+
+                <p class="description">
+                    Выбранные товары будут показаны первыми, а оставшиеся места
+                    заполнятся автоматически. Всего — не более 10 товаров.
+                </p>
+
+                <?php if (class_exists('WooCommerce')) : ?>
+
+                    <div class="pwqb-priority-products" data-pwqb-priority-products>
+
+                        <input
+                            type="search"
+                            class="widefat"
+                            placeholder="Начните вводить название товара..."
+                            autocomplete="off"
+                            data-pwqb-product-search>
+
+                        <div
+                            class="pwqb-priority-products__search-results"
+                            data-pwqb-product-search-results
+                            hidden>
+                        </div>
+
+                        <div
+                            class="pwqb-priority-products__selected"
+                            data-pwqb-priority-products-list>
+
+                            <?php foreach ($priority_products as $product) : ?>
+
+                                <div
+                                    class="pwqb-priority-product"
+                                    data-pwqb-priority-product>
+
+                                    <input
+                                        type="hidden"
+                                        name="pwqb_settings[priority_products][]"
+                                        value="<?php echo esc_attr($product->get_id()); ?>">
+
+                                    <span class="pwqb-priority-product__image">
+                                        <?php echo wp_kses_post($product->get_image('thumbnail')); ?>
+                                    </span>
+
+                                    <span class="pwqb-priority-product__name">
+                                        <?php echo esc_html($product->get_name()); ?>
+                                    </span>
+
+                                    <button
+                                        type="button"
+                                        class="button-link-delete"
+                                        data-pwqb-remove-priority-product
+                                        aria-label="Удалить товар">
+                                        Удалить
+                                    </button>
+
+                                </div>
+
+                            <?php endforeach; ?>
+
+                        </div>
+
+                    </div>
+
+                <?php else : ?>
+
+                    <p>Для выбора товаров необходимо установить WooCommerce.</p>
+
+                <?php endif; ?>
             </section>
 
 
@@ -792,6 +981,10 @@ class PWQB_Builder
 
             'categories'  => self::sanitize_categories($_POST['tax_input']['product_cat'] ?? []),
 
+            'priority_products' => self::sanitize_priority_products(
+                $raw['priority_products'] ?? []
+            ),
+
             'questions'   => self::sanitize_questions($raw['questions'] ?? []),
         ];
 
@@ -807,6 +1000,40 @@ class PWQB_Builder
             PWQB_Quiz::META_DESCRIPTION,
             $settings['description']
         );
+    }
+
+    /**
+     * Проверка товаров, выбранных вручную для результата.
+     */
+    private static function sanitize_priority_products($products): array
+    {
+        if (!is_array($products) || !function_exists('wc_get_product')) {
+            return [];
+        }
+
+        $result = [];
+
+        foreach ($products as $product_id) {
+            $product_id = absint($product_id);
+
+            if (!$product_id || in_array($product_id, $result, true)) {
+                continue;
+            }
+
+            $product = wc_get_product($product_id);
+
+            if (!$product || !$product->is_visible()) {
+                continue;
+            }
+
+            $result[] = $product_id;
+
+            if (count($result) >= 10) {
+                break;
+            }
+        }
+
+        return $result;
     }
 
     /**

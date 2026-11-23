@@ -3518,14 +3518,20 @@ document.addEventListener('DOMContentLoaded', function () {
                     renderAnalysisType: typeof window.supplierImporterRenderAnalysis
                 });
 
+                const format = String(prepared.format || 'yml').toLowerCase();
+
+                const importContext = format === 'csv'
+                    ? { type: 'csv' }
+                    : {
+                        type: 'yml',
+                        info: info
+                    };
+
                 await window.supplierImporterRenderAnalysis(
                     prepared.analysis,
                     supplier,
                     importId,
-                    {
-                        type: 'yml',
-                        info: info
-                    }
+                    importContext
                 );
 
                 console.log('[FEED URL] renderAnalysis завершена');
