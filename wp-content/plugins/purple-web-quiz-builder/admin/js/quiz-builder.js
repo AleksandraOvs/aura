@@ -1094,5 +1094,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initCategoryTree();
 
+    async function loadCategoryAttributes() {
+        const formData = new FormData();
+
+        formData.append('action', 'pwqb_get_category_attributes');
+        formData.append('nonce', window.pwqbBuilderData.categoryAttributesNonce);
+        formData.append('quiz_id', document.querySelector('#post_ID').value);
+
+        builder.querySelectorAll(
+            'input[name="tax_input[product_cat][]"]:checked'
+        ).forEach((checkbox) => {
+            formData.append('categories[]', checkbox.value);
+        });
+
+        try {
+            const response = await fetch(window.pwqbBuilderData.ajaxUrl, {
+                method: 'POST',
+                body: formData,
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                window.pwqbBuilderData.attributes = result.data.attributes;
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки атрибутов:', error);
+        }
+    }
+
+    builder.addEventListener('change', (event) => {
+        if (event.target.matches('input[name="tax_input[product_cat][]"]')) {
+            loadCategoryAttributes();
+        }
+    });
+
+    loadCategoryAttributes();
+
     reindex();
 });

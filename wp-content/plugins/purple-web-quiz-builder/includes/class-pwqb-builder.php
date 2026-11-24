@@ -21,6 +21,7 @@ class PWQB_Builder
 
         add_action('admin_enqueue_scripts', [self::class, 'enqueue_assets']);
         add_action('wp_ajax_pwqb_search_products', [self::class, 'ajax_search_products']);
+        add_action('wp_ajax_pwqb_get_category_attributes', [self::class, 'ajax_get_category_attributes']);
     }
 
     /**
@@ -77,28 +78,72 @@ class PWQB_Builder
                 'attributes' => self::get_product_attributes(),
                 'ajaxUrl'    => admin_url('admin-ajax.php'),
                 'searchNonce' => wp_create_nonce('pwqb_search_products'),
-            ]
+                'categoryAttributesNonce' => wp_create_nonce('pwqb_category_attributes'),
+            ],
+
         );
     }
 
-    /**
-     * Получение атрибутов WooCommerce для конструктора.
-     */
-    private static function get_product_attributes(): array
+    private static function get_product_attributes(array $category_ids = []): array
     {
         if (!function_exists('wc_get_attribute_taxonomies')) {
             return [];
         }
 
+        $product_ids = [];
+
+        if (!empty($category_ids)) {
+            $all_category_ids = $category_ids;
+
+            foreach ($category_ids as $category_id) {
+                $children = get_term_children($category_id, 'product_cat');
+
+                if (!is_wp_error($children)) {
+                    $all_category_ids = array_merge($all_category_ids, $children);
+                }
+            }
+
+            $product_ids = get_objects_in_term(
+                array_unique($all_category_ids),
+                'product_cat'
+            );
+
+            if (is_wp_error($product_ids) || empty($product_ids)) {
+                return [];
+            }
+
+            $product_ids = get_posts([
+                'post_type'      => 'product',
+                'post_status'    => 'publish',
+                'post__in'       => array_unique(array_map('absint', $product_ids)),
+                'posts_per_page' => -1,
+                'fields'         => 'ids',
+                'no_found_rows'  => true,
+            ]);
+
+            if (empty($product_ids)) {
+                return [];
+            }
+        }
+
         $result = [];
 
-        $attributes = wc_get_attribute_taxonomies();
-
-        foreach ($attributes as $attribute) {
+        foreach (wc_get_attribute_taxonomies() as $attribute) {
             $taxonomy = wc_attribute_taxonomy_name($attribute->attribute_name);
 
             if (!taxonomy_exists($taxonomy)) {
                 continue;
+            }
+
+            // Если категории выбраны, проверяем наличие значений атрибута у товаров.
+            if (!empty($category_ids)) {
+                $used_terms = wp_get_object_terms($product_ids, $taxonomy, [
+                    'fields' => 'ids',
+                ]);
+
+                if (is_wp_error($used_terms) || empty($used_terms)) {
+                    continue;
+                }
             }
 
             $terms = get_terms([
@@ -1250,5 +1295,28 @@ class PWQB_Builder
         }
 
         return $image_id;
+    }
+
+    public static function ajax_get_category_attributes(): void
+    {
+        check_ajax_referer('pwqb_category_attributes', 'nonce');
+
+        $quiz_id = absint($_POST['quiz_id'] ?? 0);
+
+        if (!$quiz_id || !current_user_can('edit_post', $quiz_id)) {
+            wp_send_json_error([
+                'message' => 'Недостаточно прав.',
+            ], 403);
+        }
+
+        $category_ids = isset($_POST['categories'])
+            ? array_map('absint', (array) $_POST['categories'])
+            : [];
+
+        $attributes = self::get_product_attributes($category_ids);
+
+        wp_send_json_success([
+            'attributes' => $attributes,
+        ]);
     }
 }
