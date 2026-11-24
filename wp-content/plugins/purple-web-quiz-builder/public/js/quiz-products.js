@@ -22,6 +22,7 @@ window.PWQB.products = {
             formData.append('nonce', PWQBQuiz.productsNonce);
             formData.append('quiz_id', event.detail.quizId);
             formData.append('attributes', JSON.stringify(event.detail.attributes));
+            formData.append('categories', JSON.stringify(event.detail.categories));
 
             try {
                 const response = await fetch(PWQBQuiz.ajaxUrl, {

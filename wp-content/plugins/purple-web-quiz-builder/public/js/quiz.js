@@ -115,10 +115,10 @@ window.PWQBInitQuiz = (quiz) => {
     });
 
 
-    /**
-     * Повторное прохождение.
-     */
     const restart = () => {
+        // Отменяем результаты незавершённых запросов фильтрации.
+        filterRequestId++;
+
         Object.keys(answers).forEach((key) => {
             delete answers[key];
         });
@@ -129,16 +129,22 @@ window.PWQBInitQuiz = (quiz) => {
             });
         });
 
+        // Возвращаем все варианты ответов.
+        PWQB.filter.reset(questions);
+
         finished = false;
 
         navigation.reset();
         navigation.showQuestion(navigation.getPath()[0]);
     };
 
+    // Идентификатор последнего запроса фильтрации.
+    let filterRequestId = 0;
+
     /**
      * Обработка выбора ответа.
      */
-    quiz.addEventListener('change', (event) => {
+    quiz.addEventListener('change', async (event) => {
         if (!event.target.matches('[data-pwqb-answer-input]')) {
             return;
         }
@@ -154,7 +160,7 @@ window.PWQBInitQuiz = (quiz) => {
             return;
         }
 
-        const selected = PWQB.answers.getSelected(question)
+        const selected = PWQB.answers.getSelected(question);
         const previous = answers[question.dataset.questionId] || [];
 
         if (!PWQB.answers.areEqual(previous, selected)) {
@@ -163,12 +169,89 @@ window.PWQBInitQuiz = (quiz) => {
 
         answers[question.dataset.questionId] = selected;
 
+        const requestId = ++filterRequestId;
+
+        const currentPath = navigation.getPath();
+
+        const categories = PWQB.attributes.collectCategories(
+            quiz,
+            answers,
+            currentPath
+        );
+
+        console.group('PWQB: выбор ответа');
+
+        console.log('Вопрос:', question.dataset.questionId);
+        console.log('Выбранные ответы:', selected);
+        console.log('Все ответы:', structuredClone(answers));
+        console.log('Путь квиза:', [...currentPath]);
+        console.log('Категории:', categories);
+        console.log(
+            'Атрибуты:',
+            PWQB.attributes.collect(quiz, answers, currentPath)
+        );
+
+        console.groupEnd();
+
         navigation.updateNextButton();
 
-        if (question.dataset.questionType === 'single') {
+        const { nextButton } = getQuestionControls(question);
+
+        if (nextButton) {
+            nextButton.disabled = true;
+        }
+
+        try {
+            if (categories.length) {
+                const availableAttributes =
+                    await PWQB.filter.getAvailableAttributes(categories);
+
+                if (
+                    requestId !== filterRequestId ||
+                    navigation.getCurrentQuestion() !== question
+                ) {
+                    return;
+                }
+
+                PWQB.filter.apply(
+                    questions,
+                    question,
+                    availableAttributes
+                );
+            } else {
+                if (requestId !== filterRequestId) {
+                    return;
+                }
+
+                PWQB.filter.reset(questions);
+            }
+        } catch (error) {
+            if (requestId !== filterRequestId) {
+                return;
+            }
+
+            console.error('PWQB: Ошибка фильтрации ответов.', error);
+        } finally {
+            if (
+                requestId === filterRequestId &&
+                navigation.getCurrentQuestion() === question
+            ) {
+                navigation.updateNextButton();
+            }
+        }
+
+        // Переходим дальше только для актуального выбора.
+        if (
+            requestId === filterRequestId &&
+            navigation.getCurrentQuestion() === question &&
+            question.dataset.questionType === 'single'
+        ) {
             navigation.goNext();
         }
+
+
     });
+
 
     questions.forEach((question) => {
         const { nextButton } = getQuestionControls(question);

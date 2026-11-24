@@ -365,6 +365,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     field.name = `${answerPrefix}[${field.dataset.field}]`;
                 });
 
+                const categoriesSelect = answer.querySelector('[data-field="categories"]');
+
+                if (categoriesSelect) {
+                    categoriesSelect.name = `${answerPrefix}[categories][]`;
+                }
+
                 // Назначаем имена полям критериев подбора.
                 answer.querySelectorAll('[data-pwqb-criterion]').forEach((criterion, criterionIndex) => {
                     const criterionPrefix = `${answerPrefix}[attributes][${criterionIndex}]`;
@@ -461,8 +467,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     /**
-     * Добавление ответа.
-     */
+   * Добавление ответа.
+   */
     const addAnswer = (question) => {
         const answersContainer = question.querySelector('[data-pwqb-answers]');
 
@@ -473,6 +479,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const answer = createElementFromTemplate(answerTemplate);
 
         answer.querySelector('[data-field="id"]').value = createId('a');
+
+
+
+        const categoriesSelect = answer.querySelector('[data-field="categories"]');
+        const categories = Array.isArray(window.pwqbBuilderData?.categories)
+            ? window.pwqbBuilderData.categories
+            : [];
+
+        categories.forEach((category) => {
+            const option = document.createElement('option');
+
+            option.value = category.id;
+            option.textContent = category.name;
+
+            categoriesSelect.append(option);
+        });
 
         answersContainer.append(answer);
 

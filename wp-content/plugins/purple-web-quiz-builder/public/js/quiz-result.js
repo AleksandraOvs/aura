@@ -25,6 +25,12 @@ window.PWQB.result = {
             config.path
         );
 
+        const selectedCategories = PWQB.attributes.collectCategories(
+            config.quiz,
+            config.answers,
+            config.path
+        );
+
         config.quiz.dispatchEvent(
             new CustomEvent('pwqb:completed', {
                 bubbles: true,
@@ -32,6 +38,7 @@ window.PWQB.result = {
                     quizId: config.quiz.dataset.quizId,
                     answers: { ...config.answers },
                     attributes: selectedAttributes,
+                    categories: selectedCategories,
                 }
             })
         );

@@ -130,6 +130,7 @@ class PWQB_Shortcode
         $scripts = [
             'quiz-answers',
             'quiz-attributes',
+            'quiz-filter',
             'quiz-navigation',
             'quiz-result',
             'quiz-form',
@@ -374,6 +375,12 @@ class PWQB_Shortcode
 
                                     $answer_attributes_json = wp_json_encode($answer_attributes);
 
+                                    $answer_categories = isset($answer['categories']) && is_array($answer['categories'])
+                                        ? array_map('absint', $answer['categories'])
+                                        : [];
+
+                                    $answer_categories_json = wp_json_encode($answer_categories);
+
 
                                     $answer_image_id = absint($answer['image_id'] ?? 0);
 
@@ -392,7 +399,8 @@ class PWQB_Shortcode
                                         data-pwqb-frontend-answer
                                         data-answer-id="<?php echo esc_attr($answer_id); ?>"
                                         data-next-question="<?php echo esc_attr($next_question); ?>"
-                                        data-attributes="<?php echo esc_attr($answer_attributes_json); ?>">
+                                        data-attributes="<?php echo esc_attr($answer_attributes_json); ?>"
+                                        data-categories="<?php echo esc_attr($answer_categories_json); ?>">
                                         <?php
                                         echo self::render_image(
                                             $answer_image_id,

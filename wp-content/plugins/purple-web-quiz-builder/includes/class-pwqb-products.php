@@ -12,6 +12,118 @@ class PWQB_Products
     {
         add_action('wp_ajax_pwqb_get_products', [self::class, 'ajax_get_products']);
         add_action('wp_ajax_nopriv_pwqb_get_products', [self::class, 'ajax_get_products']);
+
+        add_action('wp_ajax_pwqb_get_available_attributes', [self::class, 'ajax_get_available_attributes']);
+        add_action('wp_ajax_nopriv_pwqb_get_available_attributes', [self::class, 'ajax_get_available_attributes']);
+    }
+
+    /**
+     * Получение доступных значений атрибутов товаров выбранных категорий.
+     */
+    public static function ajax_get_available_attributes(): void
+    {
+        if (
+            !isset($_POST['nonce']) ||
+            !wp_verify_nonce(
+                sanitize_text_field(wp_unslash($_POST['nonce'])),
+                'pwqb_get_products'
+            )
+        ) {
+            wp_send_json_error([
+                'message' => 'Ошибка проверки безопасности.',
+            ], 403);
+        }
+
+        $categories = isset($_POST['categories'])
+            ? json_decode(wp_unslash($_POST['categories']), true)
+            : [];
+
+        if (!is_array($categories)) {
+            wp_send_json_error([
+                'message' => 'Некорректные категории.',
+            ], 400);
+        }
+
+        $categories = array_values(array_unique(array_filter(
+            array_map('absint', $categories)
+        )));
+
+        if (empty($categories)) {
+            wp_send_json_success([
+                'attributes' => [],
+            ]);
+        }
+
+        $valid_categories = [];
+
+        foreach ($categories as $category_id) {
+            $term = get_term($category_id, 'product_cat');
+
+            if ($term && !is_wp_error($term)) {
+                $valid_categories[] = $category_id;
+            }
+        }
+
+        if (empty($valid_categories)) {
+            wp_send_json_success([
+                'attributes' => [],
+            ]);
+        }
+
+        $products = get_posts([
+            'post_type'              => 'product',
+            'post_status'            => 'publish',
+            'posts_per_page'         => -1,
+            'fields'                 => 'ids',
+            'no_found_rows'          => true,
+            'update_post_meta_cache' => false,
+            'update_post_term_cache' => false,
+            'tax_query'              => [
+                [
+                    'taxonomy'         => 'product_cat',
+                    'field'            => 'term_id',
+                    'terms'            => $valid_categories,
+                    'operator'         => 'IN',
+                    'include_children' => true,
+                ],
+            ],
+        ]);
+
+        if (empty($products)) {
+            wp_send_json_success([
+                'attributes' => [],
+            ]);
+        }
+
+        $available_attributes = [];
+
+        $taxonomies = wc_get_attribute_taxonomies();
+
+        foreach ($taxonomies as $attribute) {
+            $taxonomy = wc_attribute_taxonomy_name($attribute->attribute_name);
+
+            if (!taxonomy_exists($taxonomy)) {
+                continue;
+            }
+
+            $terms = wp_get_object_terms(
+                $products,
+                $taxonomy,
+                ['fields' => 'slugs']
+            );
+
+            if (is_wp_error($terms) || empty($terms)) {
+                continue;
+            }
+
+            $available_attributes[$taxonomy] = array_values(
+                array_unique($terms)
+            );
+        }
+
+        wp_send_json_success([
+            'attributes' => $available_attributes,
+        ]);
     }
 
     public static function ajax_get_products()
@@ -54,6 +166,20 @@ class PWQB_Products
             ], 400);
         }
 
+        $categories = isset($_POST['categories'])
+            ? json_decode(wp_unslash($_POST['categories']), true)
+            : [];
+
+        if (!is_array($categories)) {
+            wp_send_json_error([
+                'message' => 'Некорректные категории.',
+            ], 400);
+        }
+
+        $categories = array_values(array_unique(array_filter(
+            array_map('absint', $categories)
+        )));
+
         /*
          * 1. Получаем товары, выбранные вручную.
          */
@@ -66,6 +192,28 @@ class PWQB_Products
          * 2. Формируем критерии автоматического подбора.
          */
         $tax_query = [];
+
+        if (!empty($categories)) {
+            $valid_categories = [];
+
+            foreach ($categories as $category_id) {
+                $term = get_term($category_id, 'product_cat');
+
+                if ($term && !is_wp_error($term)) {
+                    $valid_categories[] = $category_id;
+                }
+            }
+
+            if (!empty($valid_categories)) {
+                $tax_query[] = [
+                    'taxonomy'         => 'product_cat',
+                    'field'            => 'term_id',
+                    'terms'            => $valid_categories,
+                    'operator'         => 'IN',
+                    'include_children' => true,
+                ];
+            }
+        }
 
         foreach ($attributes as $taxonomy => $values) {
 
@@ -115,6 +263,9 @@ class PWQB_Products
                 $tax_query['relation'] = 'AND';
             }
 
+            error_log('PWQB PRODUCTS: tax_query');
+            error_log(print_r($tax_query, true));
+
             $query = new WP_Query([
                 'post_type'      => 'product',
                 'post_status'    => 'publish',
@@ -127,6 +278,12 @@ class PWQB_Products
                 'post__not_in'   => $priority_ids,
                 'tax_query'      => $tax_query,
             ]);
+
+            error_log('PWQB PRODUCTS: найдено товаров — ' . $query->found_posts);
+            error_log('PWQB PRODUCTS: ID товаров — ' . print_r(
+                wp_list_pluck($query->posts, 'ID'),
+                true
+            ));
 
             $automatic_ids = wp_list_pluck($query->posts, 'ID');
         }

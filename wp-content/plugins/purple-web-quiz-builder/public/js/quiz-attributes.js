@@ -59,4 +59,55 @@ window.PWQB.attributes = {
 
         return collected;
     },
+
+    /**
+ * Собирает категории выбранных ответов.
+ */
+    collectCategories(quiz, answers, path) {
+        const collected = [];
+
+        path.forEach((questionId) => {
+            const question = quiz.querySelector(
+                `[data-question-id="${questionId}"]`
+            );
+
+            if (!question) {
+                return;
+            }
+
+            const selectedAnswers = answers[questionId] || [];
+
+            selectedAnswers.forEach((answerId) => {
+                const answer = [
+                    ...question.querySelectorAll('[data-pwqb-frontend-answer]')
+                ].find((element) => {
+                    return element.dataset.answerId === answerId;
+                });
+
+                if (!answer) {
+                    return;
+                }
+
+                let categories = [];
+
+                try {
+                    categories = JSON.parse(
+                        answer.dataset.categories || '[]'
+                    );
+                } catch (error) {
+                    console.error('PWQB: Ошибка чтения категорий ответа.', error);
+                }
+
+                categories.forEach((categoryId) => {
+                    categoryId = Number(categoryId);
+
+                    if (categoryId && !collected.includes(categoryId)) {
+                        collected.push(categoryId);
+                    }
+                });
+            });
+        });
+
+        return collected;
+    },
 };

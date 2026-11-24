@@ -40,6 +40,55 @@ class PWQB_Builder
     }
 
     /**
+     * Получение выбранных категорий и их подкатегорий.
+     */
+    private static function get_quiz_categories(int $quiz_id): array
+    {
+        $settings = self::get_settings($quiz_id);
+        $category_ids = $settings['categories'] ?? [];
+
+        if (empty($category_ids)) {
+            return [];
+        }
+
+        $result = [];
+
+        foreach ($category_ids as $category_id) {
+            $term = get_term($category_id, 'product_cat');
+
+            if (!$term || is_wp_error($term)) {
+                continue;
+            }
+
+            $result[] = [
+                'id'   => $term->term_id,
+                'name' => $term->name,
+            ];
+
+            $children = get_term_children($term->term_id, 'product_cat');
+
+            if (is_wp_error($children)) {
+                continue;
+            }
+
+            foreach ($children as $child_id) {
+                $child = get_term($child_id, 'product_cat');
+
+                if (!$child || is_wp_error($child)) {
+                    continue;
+                }
+
+                $result[] = [
+                    'id'   => $child->term_id,
+                    'name' => str_repeat('— ', count(get_ancestors($child->term_id, 'product_cat'))) . $child->name,
+                ];
+            }
+        }
+
+        return $result;
+    }
+
+    /**
      * Подключение ресурсов.
      */
     public static function enqueue_assets(string $hook): void
@@ -79,6 +128,9 @@ class PWQB_Builder
                 'ajaxUrl'    => admin_url('admin-ajax.php'),
                 'searchNonce' => wp_create_nonce('pwqb_search_products'),
                 'categoryAttributesNonce' => wp_create_nonce('pwqb_category_attributes'),
+                'categories' => self::get_quiz_categories(
+                    isset($_GET['post']) ? absint($_GET['post']) : 0
+                ),
             ],
 
         );
@@ -493,8 +545,14 @@ class PWQB_Builder
 
                 <div class="pwqb-questions" data-pwqb-questions>
                     <?php
+                    $quiz_categories = self::get_quiz_categories($post->ID);
+
                     foreach ($settings['questions'] as $index => $question) {
-                        self::render_question($question, (int) $index);
+                        self::render_question(
+                            $question,
+                            (int) $index,
+                            $quiz_categories
+                        );
                     }
                     ?>
                 </div>
@@ -513,8 +571,11 @@ class PWQB_Builder
     /**
      * Вывод одного вопроса.
      */
-    private static function render_question(array $question, int $index): void
-    {
+    private static function render_question(
+        array $question,
+        int $index,
+        array $quiz_categories
+    ): void {
         $id = isset($question['id'])
             ? sanitize_key($question['id'])
             : 'q_' . wp_generate_password(8, false, false);
@@ -618,7 +679,8 @@ class PWQB_Builder
                             self::render_answer(
                                 $answer,
                                 $index,
-                                (int) $answer_index
+                                (int) $answer_index,
+                                $quiz_categories
                             );
                         }
                         ?>
@@ -636,7 +698,8 @@ class PWQB_Builder
     private static function render_answer(
         array $answer,
         int $question_index,
-        int $answer_index
+        int $answer_index,
+        array $quiz_categories
     ): void {
         $id = isset($answer['id'])
             ? sanitize_key($answer['id'])
@@ -657,6 +720,10 @@ class PWQB_Builder
         $next_question = isset($answer['next_question'])
             ? sanitize_key($answer['next_question'])
             : '';
+
+        $categories = isset($answer['categories']) && is_array($answer['categories'])
+            ? array_map('absint', $answer['categories'])
+            : [];
 
     ?>
         <div class="pwqb-answer" data-pwqb-answer>
@@ -716,6 +783,22 @@ class PWQB_Builder
 
                     <p class="description">
                         Выберите атрибуты и значения, которым должны соответствовать товары.
+                    </p>
+
+                    <p>
+                        <label><strong>Категории товаров</strong></label>
+                        <select
+                            name="pwqb_settings[questions][<?php echo esc_attr($question_index); ?>][answers][<?php echo esc_attr($answer_index); ?>][categories][]"
+                            data-field="categories"
+                            multiple>
+                            <?php foreach ($quiz_categories as $category) : ?>
+                                <option
+                                    value="<?php echo esc_attr($category['id']); ?>"
+                                    <?php selected(in_array((int) $category['id'], $categories, true)); ?>>
+                                    <?php echo esc_html($category['name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </p>
 
                     <div class="pwqb-answer__attributes__list" data-pwqb-attribute-rules>
@@ -943,6 +1026,12 @@ class PWQB_Builder
                             Выберите атрибуты и значения, которым должны соответствовать товары.
                         </p>
 
+                        <p>
+                            <label><strong>Категории товаров</strong></label>
+                            <select data-field="categories" multiple>
+                            </select>
+                        </p>
+
                         <div data-pwqb-attribute-rules></div>
 
                         <button
@@ -1149,6 +1238,28 @@ class PWQB_Builder
 
                     $attributes = [];
 
+                    $categories = [];
+
+                    if (isset($answer['categories']) && is_array($answer['categories'])) {
+                        foreach ($answer['categories'] as $category_id) {
+                            $category_id = absint($category_id);
+
+                            if (!$category_id) {
+                                continue;
+                            }
+
+                            $term = get_term($category_id, 'product_cat');
+
+                            if (!$term || is_wp_error($term)) {
+                                continue;
+                            }
+
+                            if (!in_array($category_id, $categories, true)) {
+                                $categories[] = $category_id;
+                            }
+                        }
+                    }
+
                     if (
                         isset($answer['attributes']) &&
                         is_array($answer['attributes']) &&
@@ -1230,6 +1341,7 @@ class PWQB_Builder
                             ? sanitize_key($answer['next_question'])
                             : '',
                         'attributes'    => $attributes,
+                        'categories' => $categories,
                     ];
                 }
             }
