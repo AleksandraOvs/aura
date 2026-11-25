@@ -29,20 +29,28 @@ class Product_Attributes
         $product_attributes = $product->get_attributes();
 
         foreach ($attributes as $taxonomy => $value) {
-            $taxonomy = trim((string) $taxonomy);
-            $label = $taxonomy;
+            $label = '';
 
             if (is_array($value)) {
+                // Формат списка: ['name' => 'Цвет', 'value' => 'Белый'].
+                if (isset($value['name'])) {
+                    $taxonomy = $value['name'];
+                }
+
                 $label = isset($value['label'])
                     ? trim((string) $value['label'])
-                    : $taxonomy;
+                    : trim((string) $taxonomy);
 
                 $value = isset($value['value'])
                     ? trim((string) $value['value'])
                     : '';
             } else {
+                $taxonomy = trim((string) $taxonomy);
                 $value = trim((string) $value);
+                $label = $taxonomy;
             }
+
+            $taxonomy = trim((string) $taxonomy);
 
             if ($taxonomy === '' || $value === '') {
                 continue;
