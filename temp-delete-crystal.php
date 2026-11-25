@@ -57,12 +57,6 @@ foreach ($attributes as $attribute) {
 
     $object_ids = array_unique(array_map('intval', $object_ids));
 
-    foreach ($object_ids as $object_id) {
-        if (get_post_meta($object_id, '_supplier', true) !== $supplier) {
-            exit("ОТМЕНА: атрибут {$taxonomy} используется другим объектом ID {$object_id}\n");
-        }
-    }
-
     $numeric_attributes[] = [
         'id'       => (int) $attribute->attribute_id,
         'taxonomy' => $taxonomy,
@@ -92,18 +86,31 @@ echo "Удалено товаров: {$deleted_products}\n";
 $deleted_attributes = 0;
 
 foreach ($numeric_attributes as $attribute) {
+    $taxonomy = $attribute['taxonomy'];
+
+    // Удаляем значения атрибута.
+    $terms = get_terms([
+        'taxonomy'   => $taxonomy,
+        'hide_empty' => false,
+    ]);
+
+    if (!is_wp_error($terms)) {
+        foreach ($terms as $term) {
+            wp_delete_term($term->term_id, $taxonomy);
+        }
+    }
+
+    // Удаляем глобальный атрибут.
     $result = wc_delete_attribute($attribute['id']);
 
-    if (is_wp_error($result)) {
-        echo "Ошибка удаления {$attribute['taxonomy']}: "
-            . $result->get_error_message() . PHP_EOL;
-
+    if (!$result || is_wp_error($result)) {
+        echo "Ошибка удаления {$taxonomy}\n";
         continue;
     }
 
     $deleted_attributes++;
 
-    echo "Удалён атрибут: {$attribute['taxonomy']}\n";
+    echo "Удалён атрибут: {$taxonomy}\n";
 }
 
 delete_transient('wc_attribute_taxonomies');
