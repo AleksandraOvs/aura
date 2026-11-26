@@ -132,6 +132,15 @@ class Ajax_Import
                 $total
             );
 
+            // Флаги действуют только для текущего ручного импорта.
+            $session->set_process_categories(
+                empty($_POST['skip_categories'])
+            );
+
+            $session->set_process_attributes(
+                empty($_POST['skip_attributes'])
+            );
+
             $import_id = $this->repository->create($session);
             $import_created = true;
 

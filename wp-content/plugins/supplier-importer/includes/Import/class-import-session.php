@@ -26,6 +26,12 @@ class Import_Session
     private $status = 'pending';
 
     /**
+     * Управление обработкой категорий и атрибутов.
+     */
+    private $process_categories = true;
+    private $process_attributes = true;
+
+    /**
      * Параметры пакетного импорта.
      */
     private $run_id = '';
@@ -136,6 +142,32 @@ class Import_Session
     public function get_total()
     {
         return $this->total;
+    }
+
+    /**
+     * Обрабатывать категории товаров.
+     */
+    public function get_process_categories()
+    {
+        return $this->process_categories;
+    }
+
+    public function set_process_categories($value)
+    {
+        $this->process_categories = (bool) $value;
+    }
+
+    /**
+     * Обрабатывать атрибуты товаров.
+     */
+    public function get_process_attributes()
+    {
+        return $this->process_attributes;
+    }
+
+    public function set_process_attributes($value)
+    {
+        $this->process_attributes = (bool) $value;
     }
 
     public function get_status()
@@ -538,8 +570,10 @@ class Import_Session
             'supplier'          => $this->supplier,
             'file'              => $this->file,
             'offset'            => $this->offset,
-            'total'             => $this->total,
-            'status'            => $this->status,
+            'total'              => $this->total,
+            'status'             => $this->status,
+            'process_categories' => $this->process_categories,
+            'process_attributes' => $this->process_attributes,
 
             'run_id'            => $this->run_id,
             'format'            => $this->format,
@@ -585,6 +619,14 @@ class Import_Session
 
         $session->set_status(
             $data['status'] ?? 'pending'
+        );
+
+        $session->set_process_categories(
+            $data['process_categories'] ?? true
+        );
+
+        $session->set_process_attributes(
+            $data['process_attributes'] ?? true
         );
 
         $session->set_run_id(

@@ -13,7 +13,7 @@ class Installer
      *
      * Увеличивать при изменении структуры таблиц.
      */
-    private const DB_VERSION = '8';
+    const DB_VERSION = '9';
 
     private const DB_VERSION_OPTION = 'supplier_importer_db_version';
 
@@ -81,6 +81,8 @@ class Installer
     file TEXT NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
     total INT UNSIGNED NOT NULL DEFAULT 0,
+    process_categories TINYINT(1) NOT NULL DEFAULT 1,
+process_attributes TINYINT(1) NOT NULL DEFAULT 1,
     processed INT UNSIGNED NOT NULL DEFAULT 0,
     created INT UNSIGNED NOT NULL DEFAULT 0,
     updated INT UNSIGNED NOT NULL DEFAULT 0,

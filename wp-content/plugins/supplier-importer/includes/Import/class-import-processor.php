@@ -22,7 +22,10 @@ class Import_Processor
     ) {
         $this->session = $session;
         $this->chunk = new Import_Chunk($reader);
-        $this->import_manager = new Import_Manager();
+        $this->import_manager = new Import_Manager(
+            $session->get_process_categories(),
+            $session->get_process_attributes()
+        );
         $this->mapper = $supplier->get_mapper();
         $this->repository = new Import_Repository();
         $this->error_repository = new Import_Error_Repository();

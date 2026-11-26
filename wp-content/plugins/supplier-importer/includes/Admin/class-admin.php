@@ -220,6 +220,34 @@ class Admin
                     hidden>
                 </div>
 
+                <div class="supplier-importer__field">
+                    <label>
+                        <input
+                            type="checkbox"
+                            name="skip_attributes"
+                            value="1">
+                        Не учитывать атрибуты товаров
+                    </label>
+                    <p class="description">
+                        Существующие атрибуты товаров останутся без изменений.
+                        Новые товары будут созданы без атрибутов из фида.
+                    </p>
+                </div>
+
+                <div class="supplier-importer__field">
+                    <label>
+                        <input
+                            type="checkbox"
+                            name="skip_categories"
+                            value="1">
+                        Не учитывать категории товаров
+                    </label>
+                    <p class="description">
+                        Существующие категории товаров останутся без изменений.
+                        Новые товары не получат категории из фида.
+                    </p>
+                </div>
+
                 <button
                     type="submit"
                     class="button button-primary"
@@ -271,6 +299,34 @@ class Admin
                     id="supplier-yml-upload-info"
                     class="supplier-importer__info"
                     hidden>
+                </div>
+
+                <div class="supplier-importer__field">
+                    <label>
+                        <input
+                            type="checkbox"
+                            name="skip_attributes"
+                            value="1">
+                        Не учитывать атрибуты товаров
+                    </label>
+                    <p class="description">
+                        Существующие атрибуты товаров останутся без изменений.
+                        Новые товары будут созданы без атрибутов из фида.
+                    </p>
+                </div>
+
+                <div class="supplier-importer__field">
+                    <label>
+                        <input
+                            type="checkbox"
+                            name="skip_categories"
+                            value="1">
+                        Не учитывать категории товаров
+                    </label>
+                    <p class="description">
+                        Существующие категории товаров останутся без изменений.
+                        Новые товары не получат категории из фида.
+                    </p>
                 </div>
 
                 <button
@@ -334,6 +390,34 @@ class Admin
                     id="supplier-feed-run-info"
                     class="supplier-importer__info"
                     hidden>
+                </div>
+
+                <div class="supplier-importer__field">
+                    <label>
+                        <input
+                            type="checkbox"
+                            name="skip_attributes"
+                            value="1">
+                        Не учитывать атрибуты товаров
+                    </label>
+                    <p class="description">
+                        Существующие атрибуты товаров останутся без изменений.
+                        Новые товары будут созданы без атрибутов из фида.
+                    </p>
+                </div>
+
+                <div class="supplier-importer__field">
+                    <label>
+                        <input
+                            type="checkbox"
+                            name="skip_categories"
+                            value="1">
+                        Не учитывать категории товаров
+                    </label>
+                    <p class="description">
+                        Существующие категории товаров останутся без изменений.
+                        Новые товары не получат категории из фида.
+                    </p>
                 </div>
 
                 <button
@@ -933,7 +1017,8 @@ class Admin
                 : 'csv',
 
             'enabled' => isset($_POST['enabled']),
-
+            'process_categories' => empty($_POST['skip_categories']),
+            'process_attributes' => empty($_POST['skip_attributes']),
             'schedule' => isset($_POST['schedule'])
                 ? sanitize_text_field(wp_unslash($_POST['schedule']))
                 : 'daily',
@@ -941,6 +1026,7 @@ class Admin
             'time' => isset($_POST['time'])
                 ? sanitize_text_field(wp_unslash($_POST['time']))
                 : '03:00',
+
         ];
 
         if (!Supplier_Feed_Settings::save($supplier_id, $data)) {
@@ -1062,6 +1148,38 @@ class Admin
                                 <?php checked($data['enabled']); ?>>
                             Включить автоматическую синхронизацию
                         </label>
+                    </p>
+
+                    <p>
+                        <label>
+                            <input
+                                type="checkbox"
+                                name="skip_attributes"
+                                value="1"
+                                <?php checked(!$data['process_attributes']); ?>>
+                            Не учитывать атрибуты товаров
+                        </label>
+                        <br>
+                        <span class="description">
+                            При автоматическом импорте атрибуты не будут обновляться
+                            и назначаться новым товарам.
+                        </span>
+                    </p>
+
+                    <p>
+                        <label>
+                            <input
+                                type="checkbox"
+                                name="skip_categories"
+                                value="1"
+                                <?php checked(!$data['process_categories']); ?>>
+                            Не учитывать категории товаров
+                        </label>
+                        <br>
+                        <span class="description">
+                            При автоматическом импорте категории не будут обновляться
+                            и назначаться новым товарам.
+                        </span>
                     </p>
 
                     <p>

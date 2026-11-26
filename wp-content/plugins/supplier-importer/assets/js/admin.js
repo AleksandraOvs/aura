@@ -1,3 +1,20 @@
+/**
+ * Передать настройки пропуска категорий и атрибутов.
+ * Неотмеченный checkbox тоже должен отправляться со значением 0.
+ */
+function appendImportSkipOptions(form, formData) {
+    ['skip_attributes', 'skip_categories'].forEach(function (name) {
+        const checkbox = form.querySelector(
+            `[name="${name}"]`
+        );
+
+        formData.append(
+            name,
+            checkbox && checkbox.checked ? '1' : '0'
+        );
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
 
     console.log('SUPPLIER IMPORTER JS LOADED');
@@ -76,6 +93,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 'file',
                 file
             );
+
+            appendImportSkipOptions(form, formData);
 
             fetch(
                 supplierImporter.ajaxUrl,
@@ -3397,6 +3416,8 @@ document.addEventListener('DOMContentLoaded', function () {
             formData.append('nonce', supplierImporter.nonce);
             formData.append('file', file);
 
+            appendImportSkipOptions(ymlForm, formData);
+
             button.disabled = true;
             showFeedMessage(info, 'Загрузка файла и импорт. Не закрывайте страницу...', 'info');
 
@@ -3483,6 +3504,8 @@ document.addEventListener('DOMContentLoaded', function () {
             formData.append('action', 'supplier_import_feed_start');
             formData.append('nonce', supplierImporter.nonce);
             formData.append('supplier_id', supplierId);
+
+            appendImportSkipOptions(feedForm, formData);
 
             button.disabled = true;
             showFeedMessage(info, 'Запуск импорта по URL. Дождитесь завершения...', 'info');
@@ -3577,8 +3600,23 @@ document.addEventListener('DOMContentLoaded', function () {
     const content = document.createElement('div');
     content.className = 'supplier-importer__logs-content';
 
+    const tabs = document.createElement('div');
+    tabs.className = 'supplier-importer__logs-tabs';
+
+    const infoTab = document.createElement('button');
+    infoTab.type = 'button';
+    infoTab.className = 'button supplier-importer__logs-tab';
+    infoTab.textContent = 'INFO';
+
+    const errorsTab = document.createElement('button');
+    errorsTab.type = 'button';
+    errorsTab.className = 'button supplier-importer__logs-tab';
+    errorsTab.textContent = 'ERRORS';
+
+    tabs.append(infoTab, errorsTab);
+
     header.append(title, closeButton);
-    dialog.append(header, content);
+    dialog.append(header, tabs, content);
     document.body.append(dialog);
 
     function closeDialog() {
@@ -3596,12 +3634,58 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    function renderLogs(logs) {
+    let allLogs = [];
+    let activeLogTab = 'ERRORS';
+
+    function renderCurrentLogs() {
+        const errors = allLogs.filter(function (log) {
+            const level = String(log.level || 'INFO').toUpperCase();
+
+            return [
+                'ERROR',
+                'CRITICAL',
+                'ALERT',
+                'EMERGENCY',
+                'FATAL'
+            ].includes(level);
+        });
+
+        const logs = activeLogTab === 'ERRORS'
+            ? errors
+            : allLogs.filter(function (log) {
+                const level = String(log.level || 'INFO').toUpperCase();
+
+                return ![
+                    'ERROR',
+                    'CRITICAL',
+                    'ALERT',
+                    'EMERGENCY',
+                    'FATAL'
+                ].includes(level);
+            });
+
+        infoTab.textContent = 'INFO (' + (allLogs.length - errors.length) + ')';
+        errorsTab.textContent = 'ERRORS (' + errors.length + ')';
+
+        infoTab.classList.toggle(
+            'is-active',
+            activeLogTab === 'INFO'
+        );
+
+        errorsTab.classList.toggle(
+            'is-active',
+            activeLogTab === 'ERRORS'
+        );
+
         content.replaceChildren();
 
-        if (!Array.isArray(logs) || !logs.length) {
+        if (!logs.length) {
             const empty = document.createElement('p');
-            empty.textContent = 'Записей в журнале пока нет.';
+
+            empty.textContent = activeLogTab === 'ERRORS'
+                ? 'Ошибок нет.'
+                : 'Записей INFO пока нет.';
+
             content.append(empty);
             return;
         }
@@ -3661,6 +3745,35 @@ document.addEventListener('DOMContentLoaded', function () {
             content.append(item);
         });
     }
+
+    function renderLogs(logs) {
+        allLogs = Array.isArray(logs) ? logs : [];
+
+        // Если есть ошибки — сразу открываем вкладку ERRORS.
+        const hasErrors = allLogs.some(function (log) {
+            return [
+                'ERROR',
+                'CRITICAL',
+                'ALERT',
+                'EMERGENCY',
+                'FATAL'
+            ].includes(String(log.level || 'INFO').toUpperCase());
+        });
+
+        activeLogTab = hasErrors ? 'ERRORS' : 'INFO';
+
+        renderCurrentLogs();
+    }
+
+    infoTab.addEventListener('click', function () {
+        activeLogTab = 'INFO';
+        renderCurrentLogs();
+    });
+
+    errorsTab.addEventListener('click', function () {
+        activeLogTab = 'ERRORS';
+        renderCurrentLogs();
+    });
 
     async function loadLogs(importId, button) {
         const formData = new FormData();

@@ -47,6 +47,8 @@ class Import_Repository
                 'status'            => $session->get_status(),
 
                 'total'             => $session->get_total(),
+                'process_categories' => $session->get_process_categories() ? 1 : 0,
+                'process_attributes' => $session->get_process_attributes() ? 1 : 0,
                 'processed'         => $progress->get_processed(),
                 'created'           => $progress->get_created(),
                 'updated'           => $progress->get_updated(),
@@ -84,6 +86,8 @@ class Import_Repository
                 '%s',
                 '%s',
 
+                '%d',
+                '%d',
                 '%d',
                 '%d',
                 '%d',
@@ -466,6 +470,8 @@ class Import_Repository
             'status'            => $session->get_status(),
 
             'total'             => $session->get_total(),
+            'process_categories' => $session->get_process_categories() ? 1 : 0,
+            'process_attributes' => $session->get_process_attributes() ? 1 : 0,
             'processed'         => $progress->get_processed(),
             'created'           => $progress->get_created(),
             'updated'           => $progress->get_updated(),
@@ -502,6 +508,8 @@ class Import_Repository
             '%s',
             '%s',
 
+            '%d',
+            '%d',
             '%d',
             '%d',
             '%d',

@@ -152,6 +152,10 @@ class Ajax_Yml_Upload
             $settings = Supplier_Feed_Settings::get($supplier_id);
             $settings['format'] = 'yml';
 
+            // Флаги действуют только на текущую ручную загрузку.
+            $settings['process_categories'] = empty($_POST['skip_categories']);
+            $settings['process_attributes'] = empty($_POST['skip_attributes']);
+
             // Подготовка YML к пакетному импорту.
             $feed_sync = new Feed_Sync();
 

@@ -23,9 +23,16 @@ class Product_Updater
     private $product_images;
     private $product_brand;
     private $supplier_product_meta;
+    private $process_categories;
+    private $process_attributes;
 
-    public function __construct()
-    {
+    public function __construct(
+        $process_categories = true,
+        $process_attributes = true
+    ) {
+        $this->process_categories = (bool) $process_categories;
+        $this->process_attributes = (bool) $process_attributes;
+
         $this->product_meta = new Product_Meta();
         $this->product_categories = new Product_Categories();
         $this->product_attributes = new Product_Attributes();
@@ -104,57 +111,61 @@ class Product_Updater
 
         $start = microtime(true);
 
-        try {
-            $category_path = trim(
-                (string) $product_data->get('category', '')
-            );
-
-            if ($category_path !== '') {
-                $this->product_categories->assign(
-                    $product,
-                    $category_path,
-                    $product_data->get_supplier()
+        if ($this->process_categories) {
+            try {
+                $category_path = trim(
+                    (string) $product_data->get('category', '')
                 );
+
+                if ($category_path !== '') {
+                    $this->product_categories->assign(
+                        $product,
+                        $category_path,
+                        $product_data->get_supplier()
+                    );
+                }
+
+                \Supplier_Importer\Core\Logger::info(
+                    'UPDATE DEBUG: categories START SKU=' . $sku
+                        . ', path=' . (string) $category_path
+                );
+
+                \Supplier_Importer\Core\Logger::info(
+                    'SUPPLIER DEBUG: ' . wp_json_encode([
+                        'supplier' => $product_data->get_supplier(),
+                    ], JSON_UNESCAPED_UNICODE)
+                );
+
+                \Supplier_Importer\Core\Logger::info(
+                    'UPDATE DEBUG: categories SKU=' . $sku
+                        . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+                );
+            } catch (\Throwable $e) {
+                \Supplier_Importer\Core\Logger::info(
+                    'UPDATE ERROR: categories SKU=' . $sku
+                        . ', message=' . $e->getMessage()
+                        . ', file=' . $e->getFile()
+                        . ', line=' . $e->getLine()
+                );
+
+                throw $e;
             }
-
-            \Supplier_Importer\Core\Logger::info(
-                'UPDATE DEBUG: categories START SKU=' . $sku
-                    . ', path=' . (string) $category_path
-            );
-
-            \Supplier_Importer\Core\Logger::info(
-                'SUPPLIER DEBUG: ' . wp_json_encode([
-                    'supplier' => $product_data->get_supplier(),
-                ], JSON_UNESCAPED_UNICODE)
-            );
-
-            \Supplier_Importer\Core\Logger::info(
-                'UPDATE DEBUG: categories SKU=' . $sku
-                    . ', time=' . round(microtime(true) - $start, 2) . ' sec'
-            );
-        } catch (\Throwable $e) {
-            \Supplier_Importer\Core\Logger::info(
-                'UPDATE ERROR: categories SKU=' . $sku
-                    . ', message=' . $e->getMessage()
-                    . ', file=' . $e->getFile()
-                    . ', line=' . $e->getLine()
-            );
-
-            throw $e;
         }
 
 
-        $start = microtime(true);
+        if ($this->process_attributes) {
+            $start = microtime(true);
 
-        $this->product_attributes->assign(
-            $product,
-            $product_data->get_attributes()
-        );
+            $this->product_attributes->assign(
+                $product,
+                $product_data->get_attributes()
+            );
 
-        \Supplier_Importer\Core\Logger::info(
-            'UPDATE DEBUG: attributes SKU=' . $sku
-                . ', time=' . round(microtime(true) - $start, 2) . ' sec'
-        );
+            \Supplier_Importer\Core\Logger::info(
+                'UPDATE DEBUG: attributes SKU=' . $sku
+                    . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+            );
+        }
 
         $start = microtime(true);
 

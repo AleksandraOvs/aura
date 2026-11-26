@@ -64,6 +64,10 @@ class Ajax_Feed_Import
                 );
             }
 
+            // Флаги действуют только на текущий ручной запуск.
+            $settings['process_categories'] = empty($_POST['skip_categories']);
+            $settings['process_attributes'] = empty($_POST['skip_attributes']);
+
             /*
          * Ручной запуск не зависит от настройки расписания.
          */

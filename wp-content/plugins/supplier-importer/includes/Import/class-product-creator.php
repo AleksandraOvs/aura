@@ -31,12 +31,19 @@ class Product_Creator
     private $product_brand;
     private $product_finder;
     private $supplier_product_meta;
+    private $process_categories;
+    private $process_attributes;
 
     /**
      * Конструктор.
      */
-    public function __construct()
-    {
+    public function __construct(
+        $process_categories = true,
+        $process_attributes = true
+    ) {
+        $this->process_categories = (bool) $process_categories;
+        $this->process_attributes = (bool) $process_attributes;
+
         $this->product_meta = new Product_Meta();
         $this->product_categories = new Product_Categories();
         $this->product_attributes = new Product_Attributes();
@@ -147,52 +154,56 @@ class Product_Creator
 
         $start = microtime(true);
 
-        try {
-            $category_path = $product_data->get('category', '');
+        if ($this->process_categories) {
+            try {
+                $category_path = $product_data->get('category', '');
 
-            \Supplier_Importer\Core\Logger::info(
-                'CREATE DEBUG: categories START SKU=' . $sku
-                    . ', path=' . (string) $category_path
-            );
+                \Supplier_Importer\Core\Logger::info(
+                    'CREATE DEBUG: categories START SKU=' . $sku
+                        . ', path=' . (string) $category_path
+                );
 
-            \Supplier_Importer\Core\Logger::info(
-                'SUPPLIER DEBUG: ' . wp_json_encode([
-                    'supplier' => $product_data->get_supplier(),
-                ], JSON_UNESCAPED_UNICODE)
-            );
+                \Supplier_Importer\Core\Logger::info(
+                    'SUPPLIER DEBUG: ' . wp_json_encode([
+                        'supplier' => $product_data->get_supplier(),
+                    ], JSON_UNESCAPED_UNICODE)
+                );
 
-            $this->product_categories->assign(
-                $product,
-                $category_path,
-                $product_data->get_supplier()
-            );
+                $this->product_categories->assign(
+                    $product,
+                    $category_path,
+                    $product_data->get_supplier()
+                );
 
-            \Supplier_Importer\Core\Logger::info(
-                'CREATE DEBUG: categories SKU=' . $sku
-                    . ', time=' . round(microtime(true) - $start, 2) . ' sec'
-            );
-        } catch (\Throwable $e) {
-            \Supplier_Importer\Core\Logger::info(
-                'CREATE ERROR: categories SKU=' . $sku
-                    . ', message=' . $e->getMessage()
-                    . ', file=' . $e->getFile()
-                    . ', line=' . $e->getLine()
-            );
+                \Supplier_Importer\Core\Logger::info(
+                    'CREATE DEBUG: categories SKU=' . $sku
+                        . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+                );
+            } catch (\Throwable $e) {
+                \Supplier_Importer\Core\Logger::info(
+                    'CREATE ERROR: categories SKU=' . $sku
+                        . ', message=' . $e->getMessage()
+                        . ', file=' . $e->getFile()
+                        . ', line=' . $e->getLine()
+                );
 
-            throw $e;
+                throw $e;
+            }
         }
 
-        $start = microtime(true);
+        if ($this->process_attributes) {
+            $start = microtime(true);
 
-        $this->product_attributes->assign(
-            $product,
-            $product_data->get_attributes()
-        );
+            $this->product_attributes->assign(
+                $product,
+                $product_data->get_attributes()
+            );
 
-        \Supplier_Importer\Core\Logger::info(
-            'CREATE DEBUG: attributes SKU=' . $sku
-                . ', time=' . round(microtime(true) - $start, 2) . ' sec'
-        );
+            \Supplier_Importer\Core\Logger::info(
+                'CREATE DEBUG: attributes SKU=' . $sku
+                    . ', time=' . round(microtime(true) - $start, 2) . ' sec'
+            );
+        }
 
         $start = microtime(true);
 

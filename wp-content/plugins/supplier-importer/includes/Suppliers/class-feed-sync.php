@@ -303,7 +303,10 @@ class Feed_Sync
                 $mapper_callback = [$mapper, 'map'];
             }
 
-            $import_manager = new Import_Manager();
+            $import_manager = new Import_Manager(
+                $settings['process_categories'] ?? true,
+                $settings['process_attributes'] ?? true
+            );
 
             $run_id = wp_generate_uuid4();
 
@@ -894,6 +897,14 @@ class Feed_Sync
             0
         );
 
+        $session->set_process_categories(
+            $settings['process_categories'] ?? true
+        );
+
+        $session->set_process_attributes(
+            $settings['process_attributes'] ?? true
+        );
+
         $session->set_run_id($run_id);
         $session->set_format(
             strtolower(sanitize_key($settings['format'] ?? ''))
@@ -1150,6 +1161,14 @@ class Feed_Sync
                 $total
             );
 
+            $session->set_process_categories(
+                $settings['process_categories'] ?? true
+            );
+
+            $session->set_process_attributes(
+                $settings['process_attributes'] ?? true
+            );
+
             $session->set_run_id(wp_generate_uuid4());
             $session->set_format('csv');
             $session->set_source($source);
@@ -1295,6 +1314,14 @@ class Feed_Sync
             $session->set_source($source);
             $session->set_phase('prepare');
             $session->start();
+
+            $session->set_process_categories(
+                $settings['process_categories'] ?? true
+            );
+
+            $session->set_process_attributes(
+                $settings['process_attributes'] ?? true
+            );
 
             $import_id = $repository->create($session);
 

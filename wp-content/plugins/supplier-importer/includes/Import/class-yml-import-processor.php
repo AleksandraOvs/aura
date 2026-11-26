@@ -40,7 +40,10 @@ class Yml_Import_Processor
         $this->mapper = $mapper;
 
         $this->reader = new Jsonl_Reader();
-        $this->product_importer = new Product_Importer();
+        $this->product_importer = new Product_Importer(
+            $session->get_process_categories(),
+            $session->get_process_attributes()
+        );
         $this->product_finder = new Product_Finder();
 
         $this->attribute_mapper = new Feed_Attribute_Mapper();

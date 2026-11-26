@@ -34,6 +34,8 @@ class Supplier_Feed_Settings
             'enabled'  => false,
             'schedule' => 'daily',
             'time'     => '03:00',
+            'process_categories' => true,
+            'process_attributes' => true,
         ];
 
         $settings = $all[$supplier_id] ?? [];
@@ -94,6 +96,9 @@ class Supplier_Feed_Settings
             return false;
         }
 
+        $process_categories = !empty($data['process_categories']);
+        $process_attributes = !empty($data['process_attributes']);
+
         $all = self::get_all();
 
         $all[$supplier_id] = [
@@ -102,6 +107,8 @@ class Supplier_Feed_Settings
             'enabled' => !empty($data['enabled']),
             'schedule' => $schedule,
             'time'     => $time,
+            'process_categories' => $process_categories,
+            'process_attributes' => $process_attributes,
         ];
 
         update_option(self::OPTION_NAME, $all);

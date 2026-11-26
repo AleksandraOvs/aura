@@ -16,11 +16,21 @@ class Product_Importer
     private $creator;
     private $updater;
 
-    public function __construct()
-    {
+    public function __construct(
+        $process_categories = true,
+        $process_attributes = true
+    ) {
         $this->finder = new Product_Finder();
-        $this->creator = new Product_Creator();
-        $this->updater = new Product_Updater();
+
+        $this->creator = new Product_Creator(
+            $process_categories,
+            $process_attributes
+        );
+
+        $this->updater = new Product_Updater(
+            $process_categories,
+            $process_attributes
+        );
     }
 
     /**

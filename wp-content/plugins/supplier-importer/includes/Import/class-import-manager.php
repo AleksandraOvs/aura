@@ -13,9 +13,14 @@ class Import_Manager
 {
     private $product_importer;
 
-    public function __construct()
-    {
-        $this->product_importer = new Product_Importer();
+    public function __construct(
+        $process_categories = true,
+        $process_attributes = true
+    ) {
+        $this->product_importer = new Product_Importer(
+            $process_categories,
+            $process_attributes
+        );
     }
 
     /**

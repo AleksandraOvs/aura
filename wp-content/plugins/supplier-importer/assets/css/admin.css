@@ -615,6 +615,25 @@
     filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, .3));
 }
 
+.supplier-importer__logs-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 12px 20px;
+    border-bottom: 1px solid #ddd;
+}
+
+.supplier-importer__logs-tab.is-active {
+    background: #614881;
+    border-color: #614881;
+    color: #fff;
+}
+
+.supplier-importer__logs-tab.is-active:hover {
+    background: #50386d;
+    border-color: #50386d;
+    color: #fff;
+}
+
 @media (max-width: 600px) {
     .supplier-importer__logs-dialog {
         width: calc(100% - 20px);
